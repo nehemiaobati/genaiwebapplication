@@ -1,0 +1,15 @@
+/system/
+/tests/
+/writable/
+/vendor/
+composer.lock
+.env
+.DS_Store
+.clinerules/workflows/auto-commit-push.md
+
+
+composer.lock
+
+public/index.html
+public/assets
+
