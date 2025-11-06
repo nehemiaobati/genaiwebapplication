@@ -20,7 +20,7 @@ set -e
 
 # --- !! IMPORTANT: SET YOUR PROJECT AND DATABASE DETAILS HERE !! ---
 readonly GIT_REPO_URL="https://github.com/nehemiaobati/genaiwebapplication.git"
-readonly PROJECT_DIR_NAME="wasmercodegniter"
+readonly PROJECT_DIR_NAME="genaiwebapplication"
 readonly PROJECT_PATH="/var/www/${PROJECT_DIR_NAME}"
 
 readonly DB_NAME="server_codeigniter"
