@@ -1,15 +1,7 @@
-/system/
-/tests/
-/writable/
-/vendor/
+vendor
 composer.lock
 .env
 .DS_Store
-.clinerules/workflows/auto-commit-push.md
+.clinerules/workflows/
 
-
-composer.lock
-
-public/index.html
-public/assets
 
