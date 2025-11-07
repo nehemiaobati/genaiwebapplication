@@ -138,7 +138,7 @@ class GeminiController extends BaseController
     }
 
     /**
-     * Handles a single, asynchronous file upload and stores it temporarily in a user-specific directory.
+     * Handles the upload of media files for Gemini interaction.
      *
      * @return ResponseInterface A JSON response indicating success or failure.
      */

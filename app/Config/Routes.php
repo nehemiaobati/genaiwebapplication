@@ -7,6 +7,12 @@ use CodeIgniter\Router\RouteCollection;
  */
 
 //--------------------------------------------------------------------
+// CLI Routes
+//--------------------------------------------------------------------
+// These routes are only accessible from the command line.
+$routes->cli('train', 'TrainingController::index', ['as' => 'train.run']);
+
+//--------------------------------------------------------------------
 // Public Routes (No Authentication Required)
 //--------------------------------------------------------------------
 // These routes are accessible to everyone.

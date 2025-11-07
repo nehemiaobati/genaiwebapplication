@@ -6,6 +6,7 @@ use CodeIgniter\Config\BaseService;
 use App\Libraries\EmbeddingService;
 use App\Libraries\MemoryService;
 use App\Libraries\TokenService;
+use App\Libraries\TrainingService;
 
 /**
  * Services Configuration file.
@@ -92,5 +93,13 @@ class Services extends BaseService
             return static::getSharedInstance('tokenService');
         }
         return new TokenService();
+    }
+
+    public static function trainingService($getShared = true): TrainingService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('trainingService');
+        }
+        return new TrainingService();
     }
 }
