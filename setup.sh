@@ -143,6 +143,8 @@ configure_project() {
 
     echo "Running database migrations..."
     php spark migrate
+    php spark cache:clear 
+    php spark optimize
 
     echo "Setting file permissions..."
     chown -R www-data:www-data "${PROJECT_PATH}"
