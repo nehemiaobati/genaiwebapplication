@@ -20,7 +20,8 @@
         position: sticky;
         top: 85px;
         z-index: 999;
-        background-color: rgba(var(--card-bg-rgb), 0.9); /* MODIFICATION: Theme-aware background */
+        /* MODIFICATION: Use a theme-aware RGBA variable for transparency */
+        background-color: rgba(var(--bs-body-bg-rgb), 0.9);
         backdrop-filter: blur(10px);
         border-radius: 0.75rem;
         padding: 0.5rem 1rem;
@@ -131,7 +132,8 @@
         content: '';
         position: absolute;
         width: 4px;
-        background-color: var(--border-color); /* MODIFICATION */
+        /* MODIFICATION: Use theme-aware variable */
+        background-color: var(--border-color); 
         top: 0;
         bottom: 0;
         left: 50%;
@@ -160,7 +162,8 @@
         height: 20px;
         right: -10px;
         background-color: var(--primary-color);
-        border: 4px solid var(--light-bg); /* MODIFICATION */
+         /* MODIFICATION: Use theme-aware variable */
+        border: 4px solid var(--bs-body-bg);
         top: 25px;
         border-radius: 50%;
         z-index: 1;
@@ -472,12 +475,12 @@
                     </ul>
                 </div>
                 <div class="blueprint-card p-4">
-                    <?= form_open(url_to('portfolio.sendEmail')) ?>
+                    <?= form_open(url_to('portfolio.sendEmail'), ['id' => 'contactForm']) ?>
                     <div class="form-floating mb-3"><input type="text" class="form-control" id="name" name="name" placeholder="Name" required><label for="name">Name</label></div>
                     <div class="form-floating mb-3"><input type="email" class="form-control" id="email" name="email" placeholder="Email" required><label for="email">Email</label></div>
                     <div class="form-floating mb-3"><input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" required><label for="subject">Subject</label></div>
                     <div class="form-floating mb-3"><textarea class="form-control" placeholder="Your Message" id="message" name="message" style="height: 120px" required></textarea><label for="message">Your Message</label></div>
-                    <button type="submit" class="btn btn-primary">Send Message</button>
+                    <button type="submit" class="btn btn-primary" id="sendMessageButton">Send Message</button>
                     <?= form_close() ?>
                 </div>
             </div>
@@ -509,6 +512,16 @@
         sections.forEach(section => {
             observer.observe(section);
         });
+
+        const contactForm = document.getElementById('contactForm');
+        const sendMessageButton = document.getElementById('sendMessageButton');
+
+        if (contactForm && sendMessageButton) {
+            contactForm.addEventListener('submit', function() {
+                sendMessageButton.setAttribute('disabled', 'disabled');
+                sendMessageButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+            });
+        }
     });
 </script>
 <?= $this->endSection() ?>

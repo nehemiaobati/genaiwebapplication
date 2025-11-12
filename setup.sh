@@ -45,7 +45,7 @@ update_and_install_essentials() {
     log_step 1 "Updating system and installing essential utilities"
     apt-get update
     apt-get upgrade -y
-    apt-get install -y openssl unzip git sudo nano perl
+    apt-get install -y openssl unzip git sudo nano perl pandoc ffmpeg 
 }
 
 generate_secure_credentials() {
