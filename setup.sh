@@ -193,13 +193,14 @@ encryption.key = ${ENCRYPTION_KEY}
 #--------------------------------------------------------------------
 # EMAIL Configuration
 #--------------------------------------------------------------------
-email_fromEmail = '_@gmail.com'
-email_fromName = ''
-email_SMTPHost = 'smtp.gmail.com'
-email_SMTPUser = '_@gmail.com'
-email_SMTPPass = ''
-email_SMTPPort = 587
-email_SMTPCrypto = 'tls'
+email.fromEmail = '_@gmail.com'
+email.fromName = ''
+email.SMTPHost = 'smtp.gmail.com'
+email.SMTPUser = '_@gmail.com'
+email.SMTPPass = ''
+email.SMTPPort = 587
+email.SMTPCrypto = 'tls'
+email.mailType = 'html'
 
 #--------------------------------------------------------------------
 # AI & API KEYS (Required for GeminiService.php)
