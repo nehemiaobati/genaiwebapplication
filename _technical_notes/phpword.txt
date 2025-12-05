@@ -1,0 +1,96 @@
+# PHPWord Implementation Notes & "Breakthroughs"
+Date: 2025-11-24
+Topic: HTML to DOCX Conversion (Code Block & Entity Handling)
+
+## 1. Context
+We needed a lightweight solution to convert Markdown/HTML to DOCX without relying on heavy external engines like Pandoc (which is our Strategy A, but not always available). We used `PhpOffice\PhpWord`.
+
+## 2. The Problem
+PHPWord's `\PhpOffice\PhpWord\Shared\Html::addHtml()` method is convenient but has two major bugs/limitations that break modern content:
+
+### A. The "Ampersand" Bug (XML Corruption)
+**Issue:** If your HTML contains an ampersand (e.g., "R&D" or "Tom & Jerry"), PHPWord's internal parser un-escapes it back to a raw `&` character.
+**Result:** The generated DOCX file (which is XML under the hood) becomes invalid because raw `&` is illegal in XML. Word refuses to open the file.
+**Fix:** We must **double-escape** ampersands before passing them to PHPWord.
+- "R&D" -> `str_replace` -> "R&amp;D"
+- PHPWord processes "R&amp;D" -> writes "R&amp;D" to XML (Correct!)
+
+### B. The "Code Block" Formatting Loss
+**Issue:** PHPWord treats HTML whitespace as insignificant (standard HTML behavior). However, for `<pre><code>` blocks, we *need* whitespace to be significant. PHPWord strips all newlines and indentation, rendering code as a single blob of text.
+**Result:** Code snippets become unreadable.
+**Fix:** We use a Regex callback to manually translate whitespace *inside* code blocks into HTML entities that force formatting.
+- Newlines (`\n`) -> `<br/>` (Forces a line break)
+- Spaces (` `) -> `&nbsp;` (Forces a non-breaking space, preserving indentation)
+- **Refinement:** We also normalize line endings (`\r\n` -> `\n`) to prevent double-spacing issues.
+
+## 3. The Solution (Code Snippet)
+Located in: `app/Modules/Gemini/Libraries/DocumentService.php`
+
+```php
+// 1. Fix Ampersands
+$fixedHtml = str_replace('&', '&amp;', $htmlContent);
+
+// 2. Fix Code Blocks
+$fixedHtml = preg_replace_callback('/<pre><code(.*?)>(.*?)<\/code><\/pre>/s', function($matches) {
+    $codeContent = $matches[2];
+    
+    // Normalize line endings (prevent double spacing)
+    $codeContent = str_replace(["\r\n", "\r"], "\n", $codeContent);
+
+    // Convert newlines to <br/> tags
+    $codeContent = str_replace("\n", '<br/>', $codeContent);
+    
+    // Convert spaces to non-breaking spaces
+    $codeContent = str_replace(' ', '&nbsp;', $codeContent);
+    
+    // Apply inline styling for Monospace font
+    return '<pre><code' . $matches[1] . ' style="font-family: \'Courier New\'; font-size: 9pt;">' . $codeContent . '</code></pre>';
+}, $fixedHtml);
+```
+
+## 4. Future Fine-Tuning
+If you need to adjust this in the future:
+
+- **Font Style:** Change `'Courier New'` to `'Consolas'` or another font in the return string.
+- **Font Size:** Adjust `9pt` if the text is too small/large.
+- **Spacing:** If code looks double-spaced, check if `\r\n` is sneaking in. The normalization step should handle this.
+- **Background Color:** PHPWord `addHtml` support for background colors on inline elements is limited. If you need a gray background, you might need to wrap the code in a `<table>` with a single cell and background color, but that adds complexity.
+
+## 5. Testing & Debugging Methodology
+If you encounter new issues with PHPWord generation, do not guess. Follow this "Forensic" approach:
+
+### Step A: Create a Standalone Reproduction Script
+Don't test inside the full CodeIgniter app immediately. Create a simple PHP script (e.g., `repro.php`) in the root that uses `vendor/autoload.php` directly. This isolates the library from framework noise.
+
+```php
+<?php
+require_once __DIR__ . '/vendor/autoload.php';
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\Shared\Html;
+use PhpOffice\PhpWord\IOFactory;
+
+$phpWord = new PhpWord();
+$section = $phpWord->addSection();
+// Add your problematic HTML here
+Html::addHtml($section, '<h1>Test Content</h1>'); 
+$objWriter = IOFactory::createWriter($phpWord, 'Word2007');
+$objWriter->save('debug.docx');
+```
+
+### Step B: The "Unzip" Trick
+A `.docx` file is simply a zipped folder of XML files. If Word says the file is "corrupted," it usually means the internal XML is invalid.
+1.  Run your script to generate the corrupted `debug.docx`.
+2.  Unzip the file to inspect the internals:
+    ```bash
+    unzip -p debug.docx word/document.xml | xmllint --format -
+    ```
+    *(Note: `xmllint --format -` pretty-prints the XML so it's readable)*
+
+### Step C: Analyze the XML
+Look at the output from Step B.
+- **Did the ampersand break it?** Look for raw `&` characters. XML requires `&amp;`.
+- **Did the code block lose formatting?** Look for `<w:br/>` tags. If they are missing, your newlines are gone.
+- **Did the styling fail?** Look for `<w:rFonts>` or `<w:sz>` tags to see if your styles were applied.
+
+## 6. Why this matters
+This approach allows us to have "good enough" DOCX generation natively in PHP without installing binary dependencies like Pandoc on the server. It's a critical fallback for shared hosting or restricted environments.

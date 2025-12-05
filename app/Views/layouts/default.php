@@ -39,13 +39,17 @@
             "operatingSystem": "Web",
             "description": "<?= esc($metaDescription ?? 'A platform offering generative AI insights and real-time cryptocurrency data queries, with payment options including Mobile Money and Credit Cards for the African market.') ?>",
             "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
-            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KES" }
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "KES"
+            }
         }
     </script>
 
     <!-- Stylesheets -->
     <link href="<?= base_url('assets/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="<?= base_url('assets/bootstrap-icons/font/bootstrap-icons.css') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -55,20 +59,28 @@
         :root {
             --primary-color: var(--bs-primary);
             --secondary-color: var(--bs-secondary);
-            
+
             --light-bg: var(--bs-body-bg);
             --card-bg: var(--bs-card-bg);
             --text-body: var(--bs-body-color);
             --text-heading: var(--bs-heading-color);
             --border-color: var(--bs-border-color);
             --header-bg: var(--bs-body-bg);
+
+            /* Landing Page specific */
+            --hero-gradient: linear-gradient(135deg, var(--bs-primary), var(--bs-dark));
+            --cta-bg: var(--bs-dark);
+            /* Using Bootstrap dark for CTA background */
+            --feature-icon-color: var(--bs-white);
+            /* White for feature icons */
         }
 
         body {
             font-family: 'Poppins', sans-serif;
             background-color: var(--light-bg);
             color: var(--text-body);
-            visibility: hidden; /* Prevents FOUC */
+            visibility: hidden;
+            /* Prevents FOUC */
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
@@ -94,9 +106,9 @@
             border-bottom: 1px solid var(--border-color);
             transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease;
         }
-        
+
         .navbar.scrolled {
-            box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+            box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .075);
         }
 
         .navbar-brand {
@@ -112,13 +124,19 @@
             color: var(--primary-color);
             background-color: rgba(var(--bs-primary-rgb), 0.1);
         }
-        
+
         .footer {
             background-color: var(--card-bg);
             color: var(--text-body);
         }
-        .footer h5 { color: var(--text-heading); }
-        .footer a:hover { color: var(--primary-color); }
+
+        .footer h5 {
+            color: var(--text-heading);
+        }
+
+        .footer a:hover {
+            color: var(--primary-color);
+        }
     </style>
     <?= $this->renderSection('styles') ?>
 
@@ -127,32 +145,32 @@
 
 <body class="d-flex flex-column min-vh-100">
     <?php
-        // Navigation logic is defined directly in the layout file.
-        $navLinks = [
-            'loggedIn' => [
-                ['id' => 'dashboard', 'url' => url_to('home'), 'title' => 'Dashboard'],
-                ['id' => 'ai-studio', 'url' => url_to('gemini.index'), 'title' => 'AI Studio'],
-                ['id' => 'crypto-query', 'url' => url_to('crypto.index'), 'title' => 'Crypto Query'],
-                ['id' => 'top-up', 'url' => url_to('payment.index'), 'title' => 'Top Up'],
-            ],
-            'loggedOut' => [
-                ['id' => 'home', 'url' => url_to('landing'), 'title' => 'Home'],
-                ['id' => 'ai-studio', 'url' => url_to('gemini.public'), 'title' => 'AI Studio'],
-                ['id' => 'crypto-query', 'url' => url_to('crypto.public'), 'title' => 'Crypto Query'],
-            ]
-        ];
-        
-        $linksToRender = function($pageIdentifier, $extraClasses = '') use ($navLinks) {
-            $linksToShow = session()->get('isLoggedIn') ? $navLinks['loggedIn'] : $navLinks['loggedOut'];
-            $currentIdentifier = $pageIdentifier ?? '';
+    // Navigation logic is defined directly in the layout file.
+    $navLinks = [
+        'loggedIn' => [
+            ['id' => 'dashboard', 'url' => url_to('home'), 'title' => 'Dashboard'],
+            ['id' => 'ai-studio', 'url' => url_to('gemini.index'), 'title' => 'AI Studio'],
+            ['id' => 'crypto-query', 'url' => url_to('crypto.index'), 'title' => 'Crypto Query'],
+            ['id' => 'top-up', 'url' => url_to('payment.index'), 'title' => 'Top Up'],
+        ],
+        'loggedOut' => [
+            ['id' => 'home', 'url' => url_to('landing'), 'title' => 'Home'],
+            ['id' => 'ai-studio', 'url' => url_to('gemini.public'), 'title' => 'AI Studio'],
+            ['id' => 'crypto-query', 'url' => url_to('crypto.public'), 'title' => 'Crypto Query'],
+        ]
+    ];
 
-            foreach ($linksToShow as $link) {
-                $isActive = ($currentIdentifier === $link['id']) ? 'active' : '';
-                echo '<li class="nav-item">';
-                echo '<a class="nav-link ' . $extraClasses . ' ' . $isActive . '" href="' . $link['url'] . '">' . esc($link['title']) . '</a>';
-                echo '</li>';
-            }
-        };
+    $linksToRender = function ($pageIdentifier, $extraClasses = '') use ($navLinks) {
+        $linksToShow = session()->get('isLoggedIn') ? $navLinks['loggedIn'] : $navLinks['loggedOut'];
+        $currentIdentifier = $pageIdentifier ?? '';
+
+        foreach ($linksToShow as $link) {
+            $isActive = ($currentIdentifier === $link['id']) ? 'active' : '';
+            echo '<li class="nav-item">';
+            echo '<a class="nav-link ' . $extraClasses . ' ' . $isActive . '" href="' . $link['url'] . '">' . esc($link['title']) . '</a>';
+            echo '</li>';
+        }
+    };
     ?>
 
     <nav id="mainNavbar" class="navbar navbar-expand-lg sticky-top py-3">
@@ -166,8 +184,9 @@
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
-                    
-                    <?php $linksToRender($pageIdentifier ?? '', 'fw-medium'); // EDIT: Passed .fw-medium to the links ?>
+
+                    <?php $linksToRender($pageIdentifier ?? '', 'fw-medium'); // EDIT: Passed .fw-medium to the links 
+                    ?>
 
                     <?php if (session()->get('isLoggedIn')): ?>
                         <li class="nav-item dropdown">
@@ -180,7 +199,9 @@
                                     <li><a class="dropdown-item" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
                                 <?php endif; ?>
                                 <li><a class="dropdown-item" href="<?= url_to('account.index') ?>">My Account</a></li>
-                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
                                 <li><a class="dropdown-item" href="<?= url_to('logout') ?>">Logout</a></li>
                             </ul>
                         </li>
@@ -192,7 +213,7 @@
                     <?php endif; ?>
                     <li class="nav-item ms-lg-3">
                         <!-- EDIT: Added .cursor-pointer utility class -->
-                        <span class="nav-link theme-toggle cursor-pointer" id="theme-toggle-desktop" role="button" aria-label="Toggle theme"></span>
+                        <span class="nav-link theme-toggle cursor-pointer" id="theme-toggle-desktop" role="button" aria-label="Toggle theme" tabindex="0"></span>
                     </li>
                 </ul>
             </div>
@@ -206,14 +227,17 @@
         </div>
         <div class="offcanvas-body">
             <ul class="navbar-nav">
-                
-                <?php $linksToRender($pageIdentifier ?? '', 'fw-medium'); // EDIT: Passed .fw-medium to the links ?>
-                
-                <li class="nav-item"><hr class="dropdown-divider"></li>
+
+                <?php $linksToRender($pageIdentifier ?? '', 'fw-medium'); // EDIT: Passed .fw-medium to the links 
+                ?>
+
+                <li class="nav-item">
+                    <hr class="dropdown-divider">
+                </li>
 
                 <?php if (session()->get('isLoggedIn')): ?>
                     <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('account.index') ?>">My Account</a></li>
-                     <?php if (session()->get('is_admin')): ?>
+                    <?php if (session()->get('is_admin')): ?>
                         <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
                     <?php endif; ?>
                     <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('logout') ?>">Logout</a></li>
@@ -228,7 +252,7 @@
                 <li class="nav-item mt-3 d-flex justify-content-between align-items-center">
                     <span class="fw-medium">Theme</span>
                     <!-- EDIT: Added .cursor-pointer utility class -->
-                    <span class="theme-toggle cursor-pointer" id="theme-toggle-mobile" role="button" aria-label="Toggle theme"></span>
+                    <span class="theme-toggle cursor-pointer" id="theme-toggle-mobile" role="button" aria-label="Toggle theme" tabindex="0"></span>
                 </li>
             </ul>
         </div>
@@ -248,18 +272,20 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4">
                     <h5>AFRIKENKID</h5>
-                    <p class="small">Build smarter with a pay-as-you-go platform. Leverage Generative AI, query real-time BTC & LTC wallet data, and securely top up with M-Pesa. Built for developers in Kenya and Africa.</p>
+                    <p class="small">Build smarter with a pay-as-you-go platform. Leverage Generative AI, query real-time BTC & LTC wallet data, and securely top up with M-Pesa. Built for creators, businesses, and developers in Kenya and Africa.</p>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>
                     <ul class="list-unstyled">
                         <li><a href="<?= url_to('gemini.public') ?>">Gemini AI</a></li>
+                        <li><a href="<?= url_to('ollama.index') ?>">Ollama AI</a></li>
                         <li><a href="<?= url_to('crypto.public') ?>">Crypto Data</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-3 col-6">
-                     <h5>Support</h5>
+                    <h5>Support</h5>
                     <ul class="list-unstyled">
+                        <li><a href="<?= url_to('blog.index') ?>">Blog</a></li>
                         <li><a href="<?= url_to('contact.form') ?>">Contact Us</a></li>
                         <li><a href="<?= url_to('documentation') ?>">Documentation</a></li>
                     </ul>
@@ -281,7 +307,11 @@
         </div>
     </footer>
 
-    <?php if ($showCookieBanner ?? false): ?>
+    <?php
+    // Check for cookie consent directly using the Request service
+    $hasConsent = service('request')->getCookie('user_cookie_consent') === 'accepted';
+    ?>
+    <?php if (! $hasConsent): ?>
         <?= $this->include('partials/cookie_banner') ?>
     <?php endif; ?>
 
@@ -291,10 +321,15 @@
             // JavaScript remains unchanged as it is already well-structured.
             const themeManager = {
                 toggles: document.querySelectorAll('.theme-toggle'),
-                icons: { dark: '<i class="bi bi-moon-stars-fill"></i>', light: '<i class="bi bi-brightness-high-fill"></i>' },
+                icons: {
+                    dark: '<i class="bi bi-moon-stars-fill"></i>',
+                    light: '<i class="bi bi-brightness-high-fill"></i>'
+                },
                 init() {
                     const preferredTheme = this.getPreferredTheme();
-                    this.setTheme(preferredTheme); this.updateToggleIcons(preferredTheme); this.bindEvents();
+                    this.setTheme(preferredTheme);
+                    this.updateToggleIcons(preferredTheme);
+                    this.bindEvents();
                     document.body.style.visibility = 'visible';
                 },
                 getStoredTheme: () => localStorage.getItem('theme'),
@@ -309,28 +344,39 @@
                     document.documentElement.setAttribute('data-bs-theme', effectiveTheme);
                 },
                 updateToggleIcons(theme) {
-                    this.toggles.forEach(toggle => { toggle.innerHTML = theme === 'dark' ? this.icons.light : this.icons.dark; });
+                    this.toggles.forEach(toggle => {
+                        toggle.innerHTML = theme === 'dark' ? this.icons.light : this.icons.dark;
+                    });
                 },
                 bindEvents() {
                     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
                         if (!this.getStoredTheme()) {
-                            const newTheme = this.getPreferredTheme(); this.setTheme(newTheme); this.updateToggleIcons(newTheme);
+                            const newTheme = this.getPreferredTheme();
+                            this.setTheme(newTheme);
+                            this.updateToggleIcons(newTheme);
                         }
                     });
                     this.toggles.forEach(toggle => {
                         toggle.addEventListener('click', () => {
                             const currentTheme = document.documentElement.getAttribute('data-bs-theme');
                             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                            this.setStoredTheme(newTheme); this.setTheme(newTheme); this.updateToggleIcons(newTheme);
+                            this.setStoredTheme(newTheme);
+                            this.setTheme(newTheme);
+                            this.updateToggleIcons(newTheme);
                         });
                     });
                 }
             };
             themeManager.init();
             const navbar = document.getElementById('mainNavbar');
-            if (navbar) { window.addEventListener('scroll', function() { navbar.classList.toggle('scrolled', window.scrollY > 50); }); }
+            if (navbar) {
+                window.addEventListener('scroll', function() {
+                    navbar.classList.toggle('scrolled', window.scrollY > 50);
+                });
+            }
         });
     </script>
     <?= $this->renderSection('scripts') ?>
 </body>
+
 </html>

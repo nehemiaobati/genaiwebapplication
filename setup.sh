@@ -1,24 +1,21 @@
 #!/bin/bash
 
 #==============================================================================
-# Comprehensive Setup Script for CodeIgniter 4 Project on Ubuntu (Refactored)
+# Comprehensive Setup Script for AI Studio (CodeIgniter 4) on Ubuntu
 #==============================================================================
 # DESCRIPTION:
-# This script automates the installation and configuration of a complete
-# LEMP/LAMP-like stack required to run a CodeIgniter 4 application.
-# It handles the web server, database, PHP, and project-specific setup.
+# Automates the stack installation for the AI Studio application.
+# Includes requirements for: Apache, MySQL, PHP 8.2, FFMpeg, Pandoc + LaTeX.
 #
 # HOW TO USE:
-# 1. Save this script as setup.sh on your fresh Ubuntu server.
-# 2. Make it executable:  chmod +x setup.sh
-# 3. Run it with sudo:     sudo ./setup.sh
+# 1. Save as setup.sh:   nano setup.sh
+# 2. Make executable:    chmod +x setup.sh
+# 3. Run with sudo:      sudo ./setup.sh
 #==============================================================================
 
-# --- Script Configuration ---
-# Exit immediately if a command exits with a non-zero status.
 set -e
 
-# --- !! IMPORTANT: SET YOUR PROJECT AND DATABASE DETAILS HERE !! ---
+# --- Configuration ---
 readonly GIT_REPO_URL="https://github.com/nehemiaobati/genaiwebapplication.git"
 readonly PROJECT_DIR_NAME="genaiwebapplication"
 readonly PROJECT_PATH="/var/www/${PROJECT_DIR_NAME}"
@@ -26,145 +23,153 @@ readonly PROJECT_PATH="/var/www/${PROJECT_DIR_NAME}"
 readonly DB_NAME="server_codeigniter"
 readonly DB_USER="ci4_user"
 
-# --- Global Variables ---
+# Global Vars
 DB_PASSWORD=""
 ENCRYPTION_KEY=""
 STEP_COUNT=10
 
-# --- Helper Functions ---
 log_step() {
-    local step_number=$1
-    local message=$2
     echo ""
-    echo "--- [${step_number}/${STEP_COUNT}] ${message} ---"
+    echo "--- [${1}/${STEP_COUNT}] ${2} ---"
 }
 
-# --- Installation and Configuration Functions ---
+# --- Functions ---
 
 update_and_install_essentials() {
-    log_step 1 "Updating system and installing essential utilities"
+    log_step 1 "Updating system and installing dependencies"
+    
+    # Add PHP repository
     apt-get update
-    apt-get upgrade -y
-    apt-get install -y openssl unzip git sudo nano perl pandoc ffmpeg 
+    apt-get install -y software-properties-common
+    add-apt-repository ppa:ondrej/php -y
+    apt-get update
+
+    # 1. Basic Utils
+    apt-get install -y openssl unzip git sudo nano curl
+    
+    # 2. Multimedia & Document Processing (Crucial for your App)
+    # ffmpeg: Required by FfmpegService.php
+    # pandoc: Required by PandocService.php
+    # texlive-xetex: Required by PandocService (--pdf-engine=xelatex)
+    echo "Installing Multimedia and PDF engines (this may take a few minutes)..."
+    apt-get install -y ffmpeg pandoc 
+    #apt-get texlive-xetex texlive-fonts-recommended lmodern
 }
 
 generate_secure_credentials() {
-    echo "Generating secure database password and encryption key..."
+    echo "Generating secure credentials..."
     DB_PASSWORD=$(openssl rand -base64 16)
-    ENCRYPTION_KEY=$(openssl rand -base64 32) # A longer key for encryption
+    ENCRYPTION_KEY=$(openssl rand -base64 32)
 }
 
 install_apache() {
-    log_step 2 "Installing Apache2 Web Server"
+    log_step 2 "Installing Apache2"
     apt-get install -y apache2
 }
 
 install_php() {
-    log_step 3 "Installing PHP 8.2 and required extensions"
-    apt-get install -y software-properties-common
-    add-apt-repository ppa:ondrej/php -y
-    apt-get update
+    log_step 3 "Installing PHP 8.2 and Extensions"
+    # Added specific extensions used in your provided code (intl, gd, curl, mbstring)
     apt-get install -y php8.2 php8.2-mysql php8.2-intl php8.2-mbstring \
-                       php8.2-bcmath php8.2-curl php8.2-xml php8.2-zip php8.2-gd
+                       php8.2-bcmath php8.2-curl php8.2-xml php8.2-zip php8.2-gd \
+                       php8.2-imagick
 }
 
 install_and_configure_mysql() {
-    log_step 4 "Installing and configuring MySQL"
+    log_step 4 "Installing MySQL"
     apt-get install -y mysql-server
-
-    echo "Starting MySQL service..."
     service mysql start
-    service mysql status
 
-    echo "Waiting for MySQL service to become ready..."
-    local max_tries=15
-    local tries=0
-    while ! mysqladmin ping -u root --silent; do
-        tries=$((tries + 1))
-        if [ "${tries}" -ge "${max_tries}" ]; then
-            echo "ERROR: MySQL server did not respond after multiple attempts. Exiting."
-            exit 1
-        fi
-        echo "MySQL not ready yet, waiting 2 seconds... (Attempt ${tries}/${max_tries})"
-        sleep 2
-    done
-    echo "MySQL service is ready."
+    echo "Waiting for MySQL..."
+    sleep 5
 
-    echo "Creating database and user..."
+    echo "Configuring Database..."
     mysql -u root -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
     mysql -u root -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
     mysql -u root -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';"
     mysql -u root -e "FLUSH PRIVILEGES;"
-    echo "[SUCCESS] Database '${DB_NAME}' and user '${DB_USER}' created."
 }
 
 install_composer() {
     log_step 5 "Installing Composer"
-    local expected_checksum
-    expected_checksum="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')"
-    php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-    local actual_checksum
-    actual_checksum="$(php -r "echo hash_file('sha384', 'composer-setup.php');")"
-
-    if [ "${expected_checksum}" != "${actual_checksum}" ]; then
-        >&2 echo 'ERROR: Invalid Composer installer checksum'
-        rm composer-setup.php
-        exit 1
-    fi
-
-    php composer-setup.php --install-dir=/usr/local/bin --filename=composer
-    rm composer-setup.php
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 }
 
 install_nodejs() {
-    log_step 6 "Installing Node.js and NPM"
+    log_step 6 "Installing Node.js (for frontend assets)"
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt-get install -y nodejs
 }
 
 clone_project() {
-    log_step 7 "Cloning project from Git repository"
+    log_step 7 "Cloning Repository"
     if [ -d "${PROJECT_PATH}" ]; then
-        echo "[WARNING] Project directory already exists. Skipping clone."
+        echo "Directory exists. Pulling latest changes..."
+        cd "${PROJECT_PATH}"
+        git pull origin main || git pull origin master
     else
         git clone "${GIT_REPO_URL}" "${PROJECT_PATH}"
     fi
 }
 
 configure_project() {
-    log_step 8 "Setting up CodeIgniter project"
+    log_step 8 "Configuring Application"
     cd "${PROJECT_PATH}"
 
-    echo "Installing PHP dependencies..."
+    echo "Installing PHP Dependencies..."
+    # Ensure composer installs dependencies required by your code (dompdf, php-ffmpeg, nlp-tools)
     composer install --no-dev --optimize-autoloader
 
-    echo "Creating and configuring .env file..."
+    echo "Creating .env file..."
     create_env_file
 
-    echo "Running database migrations..."
-    php spark migrate
-    php spark cache:clear 
-    php spark optimize
+    echo "Setting up Directory Permissions..."
+    # Create specific directories required by your Controllers/Services
+    mkdir -p "${PROJECT_PATH}/writable/uploads/gemini_temp"
+    mkdir -p "${PROJECT_PATH}/writable/uploads/ttsaudio_secure"
+    mkdir -p "${PROJECT_PATH}/writable/uploads/pandoc_temp"
+    mkdir -p "${PROJECT_PATH}/writable/uploads/dompdf_temp"
+    mkdir -p "${PROJECT_PATH}/writable/nlp" # For TrainingService.php models
+    mkdir -p "${PROJECT_PATH}/writable/session"
+    mkdir -p "${PROJECT_PATH}/writable/cache"
+    mkdir -p "${PROJECT_PATH}/writable/logs"
 
-    echo "Setting file permissions..."
+    # Set Ownership to web server user
     chown -R www-data:www-data "${PROJECT_PATH}"
+    
+    # Set Permissions
+    find "${PROJECT_PATH}" -type f -exec chmod 644 {} \;
+    find "${PROJECT_PATH}" -type d -exec chmod 755 {} \;
     chmod -R 775 "${PROJECT_PATH}/writable"
+    chmod -R 775 "${PROJECT_PATH}/public"
+    
+    echo "Running Migrations..."
+    # Run migrations as www-data to ensure created files have right permissions, 
+    # OR run as root and fix permissions after. Running as root is easier in setup script.
+    php spark migrate
+    
+    # If TrainingService needs a seed or initial training, strictly speaking it should be done here,
+    # but we will leave that for manual execution or a seeder.
+    
+    php spark cache:clear
 }
 
 create_env_file() {
+    # Updated based on the keys found in your provided PHP code
     cat <<EOF > "${PROJECT_PATH}/.env"
 #--------------------------------------------------------------------
-# ENVIRONMENT (configured by setup script)
+# ENVIRONMENT
 #--------------------------------------------------------------------
 CI_ENVIRONMENT = production
 
 #--------------------------------------------------------------------
-# APP (configured by setup script)
+# APP
 #--------------------------------------------------------------------
-app.baseURL = 'http://localhost:80'
+app.baseURL = 'http://localhost'
+# If you have a domain, change localhost to your domain
 
 #--------------------------------------------------------------------
-# DATABASE (configured by setup script)
+# DATABASE
 #--------------------------------------------------------------------
 database.default.hostname = 127.0.0.1
 database.default.database = ${DB_NAME}
@@ -174,43 +179,34 @@ database.default.DBDriver = MySQLi
 database.default.port = 3306
 
 #--------------------------------------------------------------------
-# ENCRYPTION (configured by setup script)
+# ENCRYPTION
 #--------------------------------------------------------------------
 encryption.key = ${ENCRYPTION_KEY}
 
 #--------------------------------------------------------------------
-# PAYMENT GATEWAY CONFIGURATION (User Input Required)
+# AI & API KEYS (Required for GeminiService.php)
+#--------------------------------------------------------------------
+GEMINI_API_KEY="" 
+# ^^^ ENTER YOUR GOOGLE GEMINI API KEY ABOVE ^^^
+
+#--------------------------------------------------------------------
+# OTHER CONFIGS
 #--------------------------------------------------------------------
 PAYSTACK_SECRET_KEY=""
-GEMINI_API_KEY=""
-
-#--------------------------------------------------------------------
-# RECAPTCHA CONFIGURATION (User Input Required)
-#--------------------------------------------------------------------
-recaptcha_siteKey=''
-recaptcha_secretKey=''
-
-#--------------------------------------------------------------------
-# EMAIL CONFIGURATION (User Input Required for User/Pass)
-#--------------------------------------------------------------------
-email_fromEmail = ''
-email_fromName = 'AFRIKENKID'
-email_SMTPHost = 'smtp.gmail.com'
-email_SMTPUser = ''
-email_SMTPPass = ''
-email_SMTPPort = 587
-email_SMTPCrypto = 'tls'
+recaptcha_siteKey=""
+recaptcha_secretKey=""
 EOF
 }
 
 configure_apache() {
-    log_step 9 "Configuring Apache Virtual Host"
+    log_step 9 "Configuring Apache vHost"
     local vhost_file="/etc/apache2/sites-available/${PROJECT_DIR_NAME}.conf"
 
     cat <<EOF > "${vhost_file}"
 <VirtualHost *:80>
     ServerAdmin webmaster@localhost
     DocumentRoot ${PROJECT_PATH}/public
+    ServerName localhost
 
     <Directory ${PROJECT_PATH}/public>
         Options Indexes FollowSymLinks
@@ -226,59 +222,41 @@ EOF
     a2ensite "${PROJECT_DIR_NAME}.conf"
     a2enmod rewrite
     a2dissite 000-default.conf
-
-    echo "Restarting Apache to apply changes..."
     service apache2 restart
 }
 
 final_summary() {
-    log_step 10 "Setup Complete!"
+    log_step 10 "Installation Complete"
     echo "============================================================"
-    echo "          🚀 DEPLOYMENT SUCCESSFUL 🚀"
+    echo "SUCCESS! The AI Studio is installed."
     echo "============================================================"
+    echo "Path: ${PROJECT_PATH}"
+    echo "DB User: ${DB_USER}"
+    echo "DB Pass: ${DB_PASSWORD}"
     echo ""
-    echo "Your application has been deployed to: ${PROJECT_PATH}"
-    echo ""
-    echo "DATABASE DETAILS (save these securely!):"
-    echo "  Database Name: ${DB_NAME}"
-    echo "  Database User: ${DB_USER}"
-    echo "  Database Password: ${DB_PASSWORD}"
-    echo ""
-    echo "VERSIONS INSTALLED:"
-    php -v | head -n 1
-    mysql --version
-    composer --version
-    node -v
-    npm -v
-    echo ""
-    echo "NEXT STEPS:"
-    echo "1. Point your domain's DNS 'A' record to this server's IP address."
-    echo "2. SSH back into the server and edit the .env file with your API keys:"
+    echo "!!! IMPORTANT NEXT STEPS !!!"
+    echo "1. Edit the .env file and add your GEMINI_API_KEY:"
     echo "   nano ${PROJECT_PATH}/.env"
-    echo "3. (Optional) For HTTPS, install Certbot: apt install certbot python3-certbot-apache && certbot --apache"
+    echo "2. If your app uses custom namespaces (e.g. App\Modules), ensure"
+    echo "   composer.json is configured correctly and run 'composer dump-autoload'."
     echo "============================================================"
 }
 
+# --- Execution ---
 
-# --- Main Execution ---
-main() {
-    # Goal 3: Enforce root execution and clarify sudo usage
-    if [[ "${EUID}" -ne 0 ]]; then
-        echo "ERROR: This script must be run with sudo or as the root user."
-        exit 1
-    fi
+if [[ "${EUID}" -ne 0 ]]; then
+    echo "ERROR: Run as root (sudo ./setup.sh)"
+    exit 1
+fi
 
-    update_and_install_essentials
-    generate_secure_credentials
-    install_apache
-    install_php
-    install_and_configure_mysql
-    install_composer
-    install_nodejs
-    clone_project
-    configure_project
-    configure_apache
-    final_summary
-}
-
-main "$@"
+update_and_install_essentials
+generate_secure_credentials
+install_apache
+install_php
+install_and_configure_mysql
+install_composer
+install_nodejs
+clone_project
+configure_project
+configure_apache
+final_summary

@@ -1,10 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Models\UserModel;
+use CodeIgniter\I18n\Time;
 
 /**
  * Handles user authentication processes, including registration, login, logout,
@@ -25,7 +28,7 @@ class AuthController extends BaseController
         }
         $data = [
             'pageTitle'       => 'Create Your Account | Afrikenkid',
-            'metaDescription' => 'Sign up for a free account and get KSH 30 in starter credits. Access powerful AI tools and real-time crypto data queries instantly.',
+            'metaDescription' => 'Sign up for a free account and get KSH 30 in starter credits. Generate content, text-to-speech ouput, and view crypto market data instantly.',
             'canonicalUrl'    => url_to('register'),
         ];
         return view('auth/register', $data);
@@ -70,22 +73,21 @@ class AuthController extends BaseController
         $userModel = new UserModel();
         // Generate a unique token for email verification.
         $token = bin2hex(random_bytes(50));
-        $data = [
-            'username' => $this->request->getVar('username'),
-            'email'    => $this->request->getVar('email'),
-            'password' => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
-            'balance'  => 30, // Set initial balance for new users.
-            'verification_token' => $token,
-        ];
+        $user = new \App\Entities\User();
+        $user->username = $this->request->getVar('username');
+        $user->email    = $this->request->getVar('email');
+        $user->password = password_hash($this->request->getVar('password'), PASSWORD_DEFAULT);
+        $user->balance  = 30.00; // Set initial balance for new users.
+        $user->verification_token = $token;
 
         // Prepare and send the email verification message.
         $emailService = service('email');
-        $emailService->setTo($data['email']);
+        $emailService->setTo($user->email);
         $emailService->setReplyTo('afrikenkid@gmail.com');
         $emailService->setSubject('Email Verification');
         $verificationLink = url_to('verify_email', $token);
         $message = view('emails/verification_email', [
-            'name' => $data['username'],
+            'name' => $user->username,
             'verificationLink' => $verificationLink
         ]);
         $emailService->setMessage($message);
@@ -93,7 +95,7 @@ class AuthController extends BaseController
         // If email sending is successful, save the user and redirect to login with a success message.
         if ($emailService->send()) {
             // Save the new user data to the database.
-            $userModel->save($data);
+            $userModel->save($user);
             return redirect()->to(url_to('login'))->with('success', 'Registration successful. Please check your email to verify your account.');
         }
 
@@ -107,9 +109,12 @@ class AuthController extends BaseController
      *
      * @return string The rendered login view.
      */
-    public function login(): string
+    public function login(): string|ResponseInterface
     {
         helper(['form']);
+        if ($this->session->has('isLoggedIn')) {
+            return redirect()->to(url_to('home'));
+        }
         $data = [
             'pageTitle'       => 'Login | Afrikenkid',
             'metaDescription' => 'Access your dashboard. Log in to use the AI Studio, run crypto queries, and manage your account balance.',
@@ -178,6 +183,24 @@ class AuthController extends BaseController
             'is_admin'   => $user->is_admin,
             'member_since' => $user->created_at, // Store creation date as member since.
         ]);
+
+        // Prevent session fixation attacks
+        $this->session->regenerate();
+
+        // --- NEW LOGIC STARTS HERE ---
+
+        // 1. Check if a redirect_url exists in the session
+        if ($this->session->has('redirect_url')) {
+            $redirectUrl = $this->session->get('redirect_url');
+
+            // 2. Remove it from session so it doesn't persist
+            $this->session->remove('redirect_url');
+
+            // 3. Redirect the user back to where they came from
+            return redirect()->to($redirectUrl)->with('success', 'Welcome back!');
+        }
+
+        // --- NEW LOGIC ENDS HERE ---
 
         // Redirect to the home page with a success message.
         return redirect()->to(url_to('home'))->with('success', 'Login Successful');
@@ -260,14 +283,14 @@ class AuthController extends BaseController
             // Generate a reset token and set its expiration time (1 hour).
             $token = bin2hex(random_bytes(50));
             $user->reset_token = $token;
-            $user->reset_expires = date('Y-m-d H:i:s', time() + 3600); // Token expires in 1 hour.
+            $user->reset_expires = Time::now()->addHours(1)->toDateTimeString(); // Token expires in 1 hour.
             $userModel->save($user);
 
             // Prepare and send the password reset email.
             $emailService = service('email');
-        $emailService->setTo($user->email);
-        $emailService->setReplyTo('afrikenkid@gmail.com');
-        $emailService->setSubject('Password Reset Request');
+            $emailService->setTo($user->email);
+            $emailService->setReplyTo('afrikenkid@gmail.com');
+            $emailService->setSubject('Password Reset Request');
             $resetLink = url_to('auth.reset_password', $token);
             $message = view('emails/reset_password_email', [
                 'name' => $user->username,
@@ -301,7 +324,7 @@ class AuthController extends BaseController
         $user = $userModel->where('reset_token', $token)->first();
 
         // Check if the token is valid and has not expired.
-        if (! $user || strtotime($user->reset_expires) < time()) {
+        if (! $user || Time::parse($user->reset_expires)->isBefore(Time::now())) {
             return redirect()->to(url_to('auth.forgot_password'))->with('error', 'Invalid or expired password reset token.');
         }
 
@@ -335,7 +358,7 @@ class AuthController extends BaseController
         $user = $userModel->where('reset_token', $this->request->getVar('token'))->first();
 
         // Re-validate token and expiration.
-        if (! $user || strtotime($user->reset_expires) < time()) {
+        if (! $user || Time::parse($user->reset_expires)->isBefore(Time::now())) {
             return redirect()->to(url_to('auth.forgot_password'))->with('error', 'Invalid or expired password reset token.');
         }
 

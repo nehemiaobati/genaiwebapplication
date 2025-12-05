@@ -3,17 +3,19 @@
 namespace Config;
 
 use CodeIgniter\Config\BaseService;
-use App\Libraries\EmbeddingService;
-use App\Libraries\MemoryService;
-use App\Libraries\TokenService;
-use App\Libraries\TrainingService;
-use App\Libraries\PaystackService;
-use App\Libraries\CryptoService;
-use App\Libraries\GeminiService;
+use App\Modules\Gemini\Libraries\EmbeddingService;
+use App\Modules\Gemini\Libraries\MemoryService;
+use App\Modules\Gemini\Libraries\TokenService;
+use App\Modules\Gemini\Libraries\TrainingService;
+use App\Modules\Payments\Libraries\PaystackService;
+use App\Modules\Crypto\Libraries\CryptoService;
+use App\Modules\Gemini\Libraries\GeminiService;
 use App\Libraries\RecaptchaService;
-use App\Libraries\FfmpegService;
-use App\Libraries\PandocService;
-use App\Libraries\DocumentService;
+use App\Modules\Gemini\Libraries\FfmpegService;
+use App\Modules\Gemini\Libraries\PandocService;
+use App\Modules\Gemini\Libraries\DocumentService;
+use App\Modules\Gemini\Libraries\ModelPayloadService;
+use App\Modules\Gemini\Libraries\MediaGenerationService;
 
 /**
  * Services Configuration file.
@@ -192,5 +194,33 @@ class Services extends BaseService
             return static::getSharedInstance('documentService');
         }
         return new DocumentService();
+    }
+
+    /**
+     * The Model Payload service.
+     *
+     * @param bool $getShared
+     * @return ModelPayloadService
+     */
+    public static function modelPayloadService(bool $getShared = true): ModelPayloadService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('modelPayloadService');
+        }
+        return new ModelPayloadService();
+    }
+
+    /**
+     * The Media Generation service.
+     *
+     * @param bool $getShared
+     * @return MediaGenerationService
+     */
+    public static function mediaGenerationService(bool $getShared = true): MediaGenerationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('mediaGenerationService');
+        }
+        return new MediaGenerationService();
     }
 }
