@@ -1,4 +1,6 @@
-"PROJECT DOCUMENTATION: GENAI WEB PLATFORM
+# PROJECT DOCUMENTATION: GENAI WEB PLATFORM
+
+## Table of Contents
 
 ---
 
@@ -67,6 +69,10 @@
 6.6.2. Admin Management Interface
 6.7. Self-Hosted Documentation
 6.7.1. Serving Documentation Pages
+6.8. Local AI Service (Ollama)
+6.8.1. Configuration & Model Selection
+6.8.2. Chat & Assistant Mode
+6.8.3. Multimodal Input
 
 ---
 
@@ -240,6 +246,9 @@ The `setup.sh` script is designed for a clean Ubuntu server and automates the en
 8.  **Set Permissions:** Ensure the `writable/` directory is writable by the web server. Specifically ensure `writable/uploads` and `writable/nlp` are writable.
 9.  **Configure Web Server:** Point your web server's document root to the project's `public/` directory.
 
+    > [!IMPORTANT] > **Session Schema Warning:** The default CodeIgniter session table (`ci_sessions`) uses a `BLOB` field for data, which is limited to 64KB. This is insufficient for this application's AI context. You **MUST** manually alter the table to use `MEDIUMBLOB` (16MB) or larger to prevent session truncation and data loss.
+    > SQL: `ALTER TABLE ci_sessions MODIFY data MEDIUMBLOB;`
+
 **3.4. Environment Configuration (`.env`)**
 
 The `.env` file is critical for configuring the application. You must fill in the following values:
@@ -314,13 +323,22 @@ The application uses CodeIgniter's service container to manage class instances. 
 
 **4.4. Directory Structure Explained**
 
+- **Modules (Features):** The `app/Modules/` directory contains self-contained business features (e.g., Gemini, Payments).
+- **Core (App):** The root `app/` directory contains core application logic (Controllers, Models for Auth/Admin/Users) that are shared or fundamental to the system.
 - `app/Modules/Gemini/`:
   - `Libraries/`: Contains `GeminiService`, `MediaGenerationService`, `ModelPayloadService`, `MemoryService`, `EmbeddingService`, `FfmpegService`, `PandocService`, `TokenService`, `TrainingService`.
   - `Models/`: Contains `InteractionModel`, `EntityModel`, `PromptModel`, `UserSettingsModel`.
+- `app/Modules/Blog/`:
+  - `Controllers/`: Contains `BlogController` (Public & Admin).
+- `app/Modules/Crypto/`:
+  - `Controllers/`: Contains `CryptoController`.
+  - `Libraries/`: Contains `CryptoService`.
 - `app/Modules/Ollama/`:
   - `Libraries/`: Contains `OllamaService`, `OllamaPayloadService`.
   - `Controllers/`: Contains `OllamaController`.
   - `Config/`: Contains `Ollama.php` configuration.
+- `app/Controllers/`: Contains core controllers like `AuthController`, `AdminController`.
+- `app/Libraries/`: Contains shared services like `RecaptchaService`, `WalletService` (Balance Management), `LogViewer` (Secure Log Reading).
 - `writable/nlp/`: Stores trained Naive Bayes models (`classifier.model`).
 - `writable/uploads/`: Stores temporary media, PDF generation artifacts, and secure audio files.
 
@@ -396,7 +414,7 @@ Create `app/Modules/Notes/Views/index.php`.
 
 **6.1. User Authentication**
 
-- **6.1.1. Registration & Login Flow**: Managed by `AuthController.php`, this feature handles user registration with validation and reCAPTCHA, credential verification for login, and session management.
+- **6.1.1. Registration & Login Flow**: Managed by `AuthController.php`. This controller acts as an **Orchestrator**, coordinating multiple components to complete the user flow. It validates input, verifies reCAPTCHA via `RecaptchaService`, creates/authenticates users via `UserModel`, and sends verification emails via the `Email` service.
 - **6.1.2. Email Verification & Password Resets**: A unique token is generated and emailed to the user for verification. The password reset flow uses a secure, expiring token sent via email.
 - **6.1.3. Access Control with Filters**: The `AuthFilter` (`app/Filters/AuthFilter.php`) is applied to routes to protect pages that require a user to be logged in.
 - **6.1.4. Password Security**:
@@ -405,22 +423,51 @@ Create `app/Modules/Notes/Views/index.php`.
 
 **6.2. Payment Gateway Integration**
 
+### Module Manifest
+
+- **Controller:** `PaymentsController`
+- **Service:** `PaystackService`
+- **Model:** `PaymentModel`
+- **Entity:** `Payment`
+
+### Features
+
 - **6.2.1. Configuration**: The Paystack secret key is configured in the `.env` file (`PAYSTACK_SECRET_KEY`).
-- **6.2.2. Initiating a Transaction**: `PaymentsController::initiate()` calls `PaystackService::initializeTransaction()`. The service sends a request to Paystack, which returns a unique authorization URL. The user is then redirected to this URL.
-- **6.2.3. Verifying a Payment**: After payment, Paystack redirects the user back to the application. `PaymentsController::verify()` uses `PaystackService::verifyTransaction()` to confirm the payment status. If successful, the user's balance is updated within a database transaction.
+- **6.2.2. Transaction Lifecycle**:
+  1.  **Orchestration**: `PaymentsController::initiate()` calls `PaystackService::initializeTransaction()`.
+  2.  **API Request**: The service sends a request to Paystack, returning a unique authorization URL.
+  3.  **User Action**: The user is redirected to the payment page.
+  4.  **Verification**: Upon return, `PaymentsController::verify()` uses `PaystackService::verifyTransaction()`.
+  5.  **Completion (Transactional Integrity)**: If successful, the system opens a Database Transaction (`transStart`) to:
+      - Log the transaction in the `payments` table via `PaymentModel`.
+      - Credit the user's `account_balance` in the `users` table via `UserModel`.
+      - Commit the transaction (`transComplete`).
 
 **6.3. AI Service Integration**
 
 This module (`App\Modules\Gemini`) is the core of the platform.
 
-- **6.3.1. Generative Text & Multimodal Input**: `GeminiController::generate()` accepts text prompts and uploaded files (images/PDFs). It uses `GeminiService` to communicate with models like `gemini-2.5-flash`. The system uses `ModelPayloadService` to dynamically construct payloads for different model architectures. Token usage is calculated and costs are deducted from the user's balance in real-time.
+### Module Manifest
+
+- **Controller:** `GeminiController`
+- **Service:** `GeminiService` (The 'Fat Service'), `MemoryService`, `ModelPayloadService`
+- **Model:** `InteractionModel`
+- **Entity:** `Interaction`
+
+### Features
+
+- **6.3.1. Generative Text & Resilience Strategy**:
+  - **Priority Fallback Mechanism**: The `GeminiService` defines a `MODEL_PRIORITIES` constant (a clear list of models, e.g., Pro -> Flash -> Lite). If the primary model fails with a **Quota Error (429)**, the system automatically retries with the next model in the list. This ensures high availability.
+  - **Streaming (SSE)**: For real-time feedback, the `processInteraction` method supports Server-Sent Events. It streams text chunks to the frontend, where **Marked.js** renders Markdown incrementally.
+  - **Service Layer Logic**: `GeminiService::processInteraction()` encapsulates the entire lifecycle. It handles context retrieval, cost estimation, API interaction, and TTS generation.
+  - **Data Integrity**: Balance deduction and memory updates are wrapped in a **Database Transaction** to ensure data consistency.
+  - **Payloads**: The `ModelPayloadService` dynamically constructs payloads for specific model architectures.
 - **6.3.2. Hybrid Memory System (Vector + Keyword)**: Managed by `MemoryService.php`.
   - **Storage:** Interactions are stored in the `interactions` table. Entities (keywords) are stored in `entities`.
   - **Retrieval:** The system uses `EmbeddingService` to get vector embeddings of the user's query. It performs a cosine similarity search (Semantic) AND a keyword-based search (Lexical).
   - **Fusion:** Results are fused using a weighted algorithm (Alpha 0.5) to provide context that is both conceptually similar and keyword-relevant.
   - **Short-Term Memory:** The system forces the retrieval of the most recent interactions (configurable via `AGI.php`) to maintain immediate conversational flow.
 - **6.3.3. Text-to-Speech (TTS) & Audio Processing**:
-  - **Generation:** If `voice_output_enabled` is true, `GeminiService` requests audio data from the API.
   - **Generation:** If `voice_output_enabled` is true, `GeminiService` requests audio data from the API.
   - **Conversion:** The API returns raw PCM data. `FfmpegService` converts this raw data into a web-compatible MP3 file using the `ffmpeg` binary installed on the server.
   - **Ephemeral Storage:** Generated audio files are stored in `writable/uploads/ttsaudio_secure/{userId}/` and are **deleted immediately** after being served to the user ("Read-Once" policy).
@@ -449,7 +496,7 @@ This module (`App\Modules\Gemini`) is the core of the platform.
 
 - **6.5.1. User Management**: `AdminController.php` provides methods to list, search, view details, update balances, and delete users.
 - **6.5.2. Sending Email Campaigns**: `CampaignController.php` allows an administrator to compose an email that is sent to every registered user. It also provides functionality to save, load, and delete campaign templates.
-- **6.5.3. Viewing Application Logs**: `AdminController::logs()` provides a secure interface for administrators to view and select daily log files from the `writable/logs/` directory for debugging purposes.
+- **6.5.3. Viewing Application Logs**: `AdminController::logs()` uses the `LogViewer` library to securely view and select daily log files from the `writable/logs/` directory for debugging purposes.
 
 **6.6. Blog & Content Management**
 
@@ -519,15 +566,16 @@ Located at `app/Config/App.php`, this file contains the base configuration for t
 
 Located at `app/Config/Database.php`, this file defines the database connection parameters.
 
-**8.3. Custom Configurations (`AGI.php`, `Recaptcha.php`)**
+**8.3. Module & Service Configurations**
 
-Custom configuration files are placed in `app/Config/Custom/` or `app/Modules/Gemini/Config/AGI.php`.
+Module-specific configurations are located within their respective module directories (e.g., `app/Modules/Gemini/Config/AGI.php`).
 
-- `AGI.php`: Contains settings for the AI service, including:
+- `AGI.php` (`app/Modules/Gemini/Config/`): Contains settings for the AI service, including:
   - **Memory Logic:** `rewardScore`, `decayScore`, `pruningThreshold`.
   - **Search Tuning:** `hybridSearchAlpha` (balance between vector and keyword search).
   - **NLP:** `nlpStopWords` (list of words to ignore during keyword extraction).
-- `Recaptcha.php`: Stores the site and secret keys for the Google reCAPTCHA service.
+- **Recaptcha:**
+  - **Configuration:** Keys (`recaptcha_siteKey`, `recaptcha_secretKey`) MUST be stored in `.env`. The `RecaptchaService` reads these directly. Custom config files for keys are discouraged.
 
 **9. Testing**
 
@@ -608,10 +656,132 @@ Ensure your code is well-documented, follows the project's architectural pattern
 
 - **Module:** A self-contained directory in `app/Modules/` that encapsulates a single business feature.
 - **Embeddings:** Numerical representations of text used for semantic search.
-- **Hybrid Search:** A search technique combining vector similarity and keyword matching.
+  - **Hybrid Search:** A search technique combining vector similarity and keyword matching.
 - **PCM:** Pulse-Code Modulation, a raw audio format returned by Gemini API.
 
 **13.2. Changelog & Release History**
+
+**v1.9.0 - 2025-12-20**
+
+### Fixed
+
+- **Streaming CSRF Synchronization (Ollama & Gemini):**
+  - **Issue:** Streaming requests (especially second/subsequent attempts) would often fail with a 403 Forbidden (CSRF) error if the previous stream was interrupted or failed before completion.
+  - **Root Cause:** The client only received a fresh CSRF token at the _end_ of a successful stream (`event: close`). If the stream died early, the client was left with a stale token.
+  - **Resolution:** Updated both `GeminiController` and `OllamaController` to transmit the new CSRF token immediately at the **start** of the stream (as a `data: {"csrf_token": "..."}` packet).
+  - **Impact:** Robust reliability for streaming interfaces; clients now possess a valid token for the next request regardless of stream stability.
+
+**v1.8.9 - 2025-12-20**
+
+### Fixed
+
+- **CSRF Streaming Session Lock:**
+  - Fixed critical issue where second and subsequent streaming requests would fail with "The action you requested is not allowed" error.
+  - **Root Cause:** Session remained locked during streaming, preventing CSRF verification filter from accessing session on subsequent requests.
+  - **Solution:** Added `session_write_close()` in `GeminiController::stream()` method before sending headers, releasing session lock while preserving session data.
+  - This matches the pattern already correctly implemented in `OllamaController::stream()` (line 318).
+  - Now all streaming requests (first, second, nth) work reliably with proper CSRF token verification.
+
+**v1.8.8 - 2025-12-17**
+
+### Changed
+
+- **Gemini Module Refactoring (PHP 8.2+ Modernization & Logic Centralization):**
+  - Applied **Constructor Property Promotion** across all 6 Gemini module files (MemoryService, GeminiService, GeminiController, ModelPayloadService, DocumentService, MediaController).
+  - **MemoryService:** Created new `buildContextualPrompt()` method to centralize duplicated prompt construction logic previously found in both `GeminiController` and `GeminiService`. This eliminates ~40 lines of code duplication and establishes a single source of truth for context-aware prompt building.
+  - **GeminiService:** Removed duplicated `_prepareContext()` method, now delegates to `MemoryService::buildContextualPrompt()`.
+  - **GeminiController:** Removed duplicated `_prepareContext()` method, integrated with centralized `MemoryService::buildContextualPrompt()`.
+  - **ModelPayloadService:** Replaced large `switch ($modelId)` statement with **PHP 8.0 `match` expression** for cleaner, more maintainable model configuration selection.
+  - **DocumentService:** Replaced `if-elseif` format selection with **PHP 8.0 `match` expression**.
+  - All files now leverage modern PHP 8.2+ syntax while maintaining 100% business logic compatibility and passing syntax validation.
+
+**v1.8.7 - 2025-12-17**
+
+### Changed
+
+- **Ollama Module Refactoring (PHP 8.2+ Modernization):**
+  - Applied **Constructor Property Promotion** across all 5 Ollama module files for cleaner, more concise code.
+  - **OllamaController:** Extracted helper methods (`_processUploadedFiles`, `_hasBalance`, `_buildMessages`, `_buildUserMessage`) following DRY principle to eliminate code duplication in `generate()` and `stream()` methods.
+  - **OllamaService:** Refactored with constructor property promotion and removed redundant comments for improved readability.
+  - **OllamaMemoryService:** Streamlined context building loop and simplified decay logic with fluent query chains.
+  - **OllamaDocumentService:** Replaced `if-elseif` block with **PHP 8.0 `match` expression** for format selection, improving code clarity.
+  - **OllamaPayloadService:** Simplified message formatting using `array_map()` for cleaner array transformations.
+  - All files now follow **PSR-12** strictly and leverage modern PHP syntax while maintaining 100% backward compatibility.
+
+**v1.8.6 - 2025-12-14**
+
+### Fixed
+
+- **Stream Error Handling:** Addressed JSON parse errors and backend stream failures by catching them and displaying user-friendly flash messages.
+- **Code Quality:** Removed deprecated `curl_close` usage in `GeminiService.php` to resolve IDE warnings.
+
+**v1.8.5 - 2025-12-14**
+
+### Added
+
+- **Logging:** Added successful generation log entry for Gemini TTS service to improve observability.
+
+**v1.8.4 - 2025-12-14**
+
+### Fixed
+
+- **Gemini Streaming Resilience:**
+  - **Controller:** Implemented explicit `flush()` logic and independent `event: close` packets in `GeminiController` to ensure final cost data is reliably sent to the client, solving potential buffering issues.
+  - **Frontend:** Refactored `handleStreaming` in `query_form.php` with a robust line-based parser. It now correctly handles mixed-content chunks (e.g., `event: close` appearing in the same packet as data), ensuring the interface consistently displays the "Cost Deducted" flash message.
+- **TinyMCE Integration:**
+  - **Prompt Loading:** Fixed issue where loading a saved prompt would not update the editor. Now explicitly uses `tinymce.get('prompt').setContent()`.
+  - **AJAX Saving:** Improved `savePrompt` workflow to dynamically update the saved prompts dropdown without triggering a full page reload.
+
+**v1.8.3 - 2025-12-14**
+
+### Changed
+
+- **Codebase-Wide Helper Method Standardization:**
+  - Enforced underscore-prefix naming convention (`_methodName`) for all private helper methods across 12 files (34 methods total).
+  - Updated all services in Gemini module: `GeminiService`, `MemoryService`, `MediaGenerationService`, `ModelPayloadService`, `FfmpegService`, `DocumentService`.
+  - Updated Ollama services: `OllamaMemoryService`, `OllamaDocumentService`.
+  - Updated utility services: `CryptoService`, `PaystackService`.
+  - Updated controllers: `GeminiController`, `BlogController`.
+  - Updated commands: `MakeModule`.
+  - Added helper method organization rules to `.clinerules/clinerules.md` for future compliance.
+
+### Fixed
+
+- **File Upload Validation & UX Improvements (Gemini Module):**
+  - Added frontend MIME type validation with instant toast feedback for unsupported file types.
+  - Improved batch upload handling to intelligently accept valid files while rejecting invalid ones with detailed error messages.
+  - Fixed file removal functionality by adding missing `data-id` attribute to remove buttons.
+  - Enhanced user feedback with specific error messages (file type, size limit with MB display, file count).
+  - Batch upload summary now shows "X uploaded, Y rejected" for multi-file operations.
+
+**v1.8.2 - 2025-12-13**
+
+### Changed
+
+- **Gemini Module Architecture Refactoring:**
+  - **ModelPayloadService:** Implemented standalone pattern for infinite model scalability. Grouped models by architecture (Gemini 2.5/3.0, Pro/Thinking, Image Generation, Imagen 4.0, Veo 2.0) with explicit configuration for each group. Added helper methods for text extraction and standardized endpoint construction.
+  - **MediaGenerationService:** Refactored with decoupled parsing and unified artifact persistence. Introduced pure parser methods (`parseImagenResponse`, `parseGeminiImageResponse`) and consolidated file writing, balance deduction, and DB logging into a single atomic `finalizeArtifact` flow for better serverless compliance.
+  - **GeminiService:** Flattened execution logic with simplified `processInteraction` method. Consolidated retry mechanisms into `executeRequest` method and improved stream buffer processing with dedicated `processStreamBuffer` helper. Reduced code complexity while maintaining all core functionality.
+  - **Controllers (Serverless Compliance):** Updated `GeminiController::serveAudio` and `MediaController::serve` methods with strict unlink pattern, ensuring immediate file deletion after serving for serverless/stateless environment compliance.
+
+**v1.8.1 - 2025-12-13**
+
+### Fixed
+
+- **Documentation Routes:** Fixed a `RouterException` in `DocumentationController` where the canonical URL was pointing to a non-existent route name ('index'). It now correctly points to 'documentation'.
+
+**v1.8.0 - 2025-12-10**
+
+### Changed
+
+- **Gemini Module Architecture:**
+  - **Service Layer:** Encapsulated business logic into `GeminiService::processInteraction`.
+  - **Data Integrity:** Implemented database transactions for atomic balance deduction and memory updates.
+  - **Configuration:** Converted service configurations to immutable constants (`MODEL_PRIORITIES`, `MEDIA_CONFIGS`).
+  - **Presentation:** Refactored `DocumentService` to use Heredoc syntax for cleaner HTML generation.
+  - **Frontend:** Modernized `query_form.php` JS into a modular, class-based architecture (`GeminiApp`, `UIManager`).
+    - Integrated **Marked.js** for client-side Markdown rendering during streaming.
+    - Added dynamic UI state management (loading spinners, auto-created result cards).
 
 **v1.7.0 - 2025-12-03**
 
@@ -715,20 +885,24 @@ Ensure your code is well-documented, follows the project's architectural pattern
 
 **Part V: Documentation Maintenance Guide**
 
-**15. A Guide for the Project Owner**
+**14. A Guide for the Project Owner**
 
-This section serves as the standard operating procedure (SOP) for maintaining this project's documentation. Its purpose is to ensure accuracy, consistency, and longevity, whether updates are performed by you or an AI assistant.
+14.1. The Philosophy of Living Documentation
+14.2. Your Role vs. the AI's Role
+14.3. The Documentation Update Workflow
+14.4. Procedure: How to Review the Codebase for Changes
+14.5. Procedure: Updating the Changelog and Managing Releases
 
-**15.1. The Philosophy of Living Documentation**
+**14.1. The Philosophy of Living Documentation**
 
 Treat this documentation as a core part of the codebase. It should evolve in lockstep with every feature change, bug fix, or architectural adjustment. An undocumented change is an incomplete change. The goal is to ensure that a new developer, or you in six months, can understand the _what_, _how_, and _why_ of the system just by reading this document.
 
-**15.2. Your Role vs. the AI's Role**
+**14.2. Your Role vs. the AI's Role**
 
 - **The AI's Role (Efficiency & Accuracy):** The AI is the primary documentation writer. It excels at systematically analyzing code changes (`git diff`), identifying affected components, and generating accurate, detailed descriptions based on the established structure. It is responsible for the heavy lifting of drafting content.
 - **Your Role (Clarity & Context):** Your role is that of an editor and strategist. You review the AI-generated content for clarity, human readability, and high-level context that the code alone cannot provide. You ensure the "why" behind a change is captured, not just the "what."
 
-**15.3. The Documentation Update Workflow**
+**14.3. The Documentation Update Workflow**
 
 This workflow applies to any code changes committed to the main branch.
 
@@ -748,7 +922,7 @@ This workflow applies to any code changes committed to the main branch.
 4.  **Update Changelog:** Follow the procedure in section **15.5** to add an entry to the Changelog and determine if the version number needs to be updated.
 5.  **Review and Commit:** Read through all changes from the perspective of someone unfamiliar with the update. Is it clear? Is anything missing? Once satisfied, commit the changes.
 
-**15.4. Procedure: How to Review the Codebase for Changes**
+**14.4. Procedure: How to Review the Codebase for Changes**
 
 The most efficient way to find what needs documenting is by analyzing the difference between your feature branch and the main branch using Git.
 
@@ -768,11 +942,11 @@ The most efficient way to find what needs documenting is by analyzing the differ
 | `app/Modules/[ModuleName]/Models/*` or `Entities/*`       | **5. Tutorial**, **6. Feature Guides** (how data is handled for a feature)        |
 | `app/Modules/[ModuleName]/Database/Migrations/*`          | **5. Tutorial**, **6. Feature Guides** (mention new database tables/columns)      |
 | `app/Commands/*` or `app/Modules/[ModuleName]/Commands/*` | **7. Command-Line Interface (CLI)**                                               |
-| `app/Config/Custom/*`                                     | **8. Configuration Reference** (document new custom settings)                     |
+| `app/Modules/[ModuleName]/Config/*`                       | **8. Configuration Reference** (document new settings)                            |
 | `app/Modules/[ModuleName]/Views/*`                        | Usually doesn't require a doc change unless a major new UI feature is introduced. |
 | `composer.json` (new dependencies)                        | **1.4. Technology Stack**, **3.1. Server Requirements**                           |
 
-**15.5. Procedure: Updating the Changelog and Managing Releases**
+**14.5. Procedure: Updating the Changelog and Managing Releases**
 
 This project follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`.
 

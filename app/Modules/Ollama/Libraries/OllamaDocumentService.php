@@ -9,33 +9,52 @@ use Dompdf\Options;
 use Parsedown;
 use App\Modules\Ollama\Libraries\PandocService;
 
+/**
+ * Ollama Document Service
+ *
+ * Generates professional documents (PDF/DOCX) from AI-generated markdown content.
+ * Implements a multi-tier fallback strategy for maximum compatibility across environments.
+ *
+ * Generation Strategy (Priority Order):
+ * 1. Pandoc + XeLaTeX (Primary): High-fidelity, production-grade PDFs with full Unicode support
+ * 2. Dompdf (PDF Fallback): Pure PHP solution, no system dependencies required
+ * 3. PHPWord (DOCX Fallback): Pure PHP Word document generation with workarounds for edge cases
+ *
+ * Refactoring Notes:
+ * - Uses PHP 8.0 match expression for cleaner format selection (replaced if-elseif chain)
+ * - Implements constructor property promotion for dependency injection
+ * - Maintains all existing workarounds for PHPWord (ampersand bug, table nesting, code blocks)
+ *
+ * @package App\Modules\Ollama\Libraries
+ */
 class OllamaDocumentService
 {
-    protected PandocService $pandocService;
-
-    public function __construct()
-    {
-        // Manually instantiate or use service locator if registered.
-        // Since it's a module library, we can just instantiate it or use a factory.
-        // For simplicity and isolation, I'll instantiate it directly if not available via service().
-        // But the user prompt said "Duplicate Gemini\Libraries\PandocService into the Ollama namespace".
-        // I will assume I can just new it up or use a service if I register it.
-        // Let's just new it up to be safe and isolated.
-        $this->pandocService = new PandocService();
-    }
+    /**
+     * Constructor with Property Promotion (PHP 8.0+)
+     *
+     * @param PandocService $pandocService Service for invoking Pandoc/XeLaTeX engine
+     */
+    public function __construct(
+        protected PandocService $pandocService = new PandocService()
+    ) {}
 
     /**
-     * Unified generation method. 
-     * Always returns 'fileData' (binary string) and handles intermediate file cleanup.
-     * 
-     * @param string $markdownContent The markdown content to convert
-     * @param string $format Output format: 'pdf' or 'docx'
-     * @param array $metadata Optional document metadata (title, author, subject, keywords, etc.)
+     * Generate Document with Multi-Tier Fallback Strategy
+     *
+     * Attempts Pandoc first for highest quality, then falls back to pure PHP solutions
+     * (Dompdf for PDF, PHPWord for DOCX) if Pandoc is unavailable or fails.
+     *
+     * Refactoring: Uses PHP 8.0 match expression (line 50-57) for format selection,
+     * replacing the previous if-elseif block for improved readability and exhaustiveness checking.
+     *
+     * @param string $markdownContent Raw markdown text from AI response
+     * @param string $format Target format: 'pdf' or 'docx'
+     * @param array $metadata Document metadata (title, author, subject, keywords, creator)
      * @return array ['status' => 'success'|'error', 'fileData' => string|null, 'message' => string|null]
      */
     public function generate(string $markdownContent, string $format, array $metadata = []): array
     {
-        // 1. Prepare metadata with defaults
+        // Merge user metadata with sensible defaults
         $defaults = [
             'title' => 'Ollama Generated Document',
             'author' => 'Ollama Assistant',
@@ -45,20 +64,19 @@ class OllamaDocumentService
         ];
         $meta = array_merge($defaults, $metadata);
 
-        // 2. Prepare HTML
+        // Convert Markdown to HTML (Parsedown library)
         $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
         $htmlContent = $parsedown->text($markdownContent);
-        $fullHtml = $this->getStyledHtml($htmlContent, $meta['title']);
+        $styledHtml = $this->_getStyledHtml($htmlContent, $meta['title']);
 
-        // 3. Strategy A: Pandoc (Preferred)
-        // Checks availability inside the service to keep controller clean
+        // Strategy 1: Try Pandoc (Primary - highest quality)
         if ($this->pandocService->isAvailable()) {
-            $pandocResult = $this->pandocService->generate($fullHtml, $format, 'ollama_temp_' . bin2hex(random_bytes(8)));
+            $pandocResult = $this->pandocService->generate($styledHtml, $format, 'ollama_temp_' . bin2hex(random_bytes(8)));
 
             if ($pandocResult['status'] === 'success' && file_exists($pandocResult['filePath'])) {
-                // READ -> DELETE -> RETURN
-                // This ensures no files are left in the path, making it behave like Dompdf (memory only)
+                // Read, delete temp file, return binary data (ephemeral storage pattern)
                 $fileData = file_get_contents($pandocResult['filePath']);
                 @unlink($pandocResult['filePath']);
 
@@ -68,48 +86,33 @@ class OllamaDocumentService
                 ];
             }
 
-            // Log warning if Pandoc failed, but continue to fallback
             log_message('warning', '[OllamaDocumentService] Pandoc failed: ' . ($pandocResult['message'] ?? 'Unknown') . '. Attempting fallback.');
         }
 
-        // 4. Strategy B: Fallbacks
-        if ($format === 'pdf') {
-            // Dompdf fallback for PDF
-            return $this->generateWithDompdf($fullHtml, $meta);
-        } elseif ($format === 'docx') {
-            // PHPWord fallback for DOCX
-            // Pass raw markdown because we need to pre-process it specifically for PHPWord
-            return $this->generateWithPHPWord($markdownContent, $meta);
-        }
-
-        // 5. Failure
-        return [
-            'status' => 'error',
-            'message' => 'Could not generate document. Unsupported format or all converters failed.'
-        ];
+        // Strategy 2 & 3: PHP Fallbacks (match expression - refactored from if-elseif)
+        // Match provides exhaustive pattern matching with cleaner syntax
+        return match ($format) {
+            'pdf' => $this->_generateWithDompdf($htmlContent, $meta),
+            'docx' => $this->_generateWithPHPWord($markdownContent, $meta),
+            default => [
+                'status' => 'error',
+                'message' => 'Could not generate document. Unsupported format or all converters failed.'
+            ]
+        };
     }
 
-    /**
-     * Generates a PDF using Dompdf.
-     *
-     * @param string $htmlContent The HTML content to render.
-     * @param array $metadata Document metadata.
-     * @return array Result array with status and fileData or message.
-     */
-    private function generateWithDompdf(string $htmlContent, array $metadata): array
+    private function _generateWithDompdf(string $htmlContent, array $metadata): array
     {
         try {
             $options = new Options();
             $options->set('defaultFont', 'Georgia');
             $options->set('isRemoteEnabled', true);
-            // CRITICAL: For wasmer production environments always include this
             $options->set('isFontSubsettingEnabled', false);
             $options->set('defaultPaperSize', 'letter');
             $options->set('defaultPaperOrientation', 'portrait');
             $options->set('isHtml5ParserEnabled', true);
-            $options->set('isPhpEnabled', false); // Security
+            $options->set('isPhpEnabled', false);
 
-            // User-specific temp dir for Dompdf internal processing
             $userId = session()->get('userId') ?? 0;
             $tempDir = WRITEPATH . 'uploads/dompdf_temp/' . $userId;
             if (!is_dir($tempDir)) mkdir($tempDir, 0775, true);
@@ -120,7 +123,6 @@ class OllamaDocumentService
             $dompdf->setPaper('letter', 'portrait');
             $dompdf->render();
 
-            // Set document metadata using Dompdf 2.0 API
             $dompdf->addInfo('Title', $metadata['title']);
             $dompdf->addInfo('Author', $metadata['author']);
             $dompdf->addInfo('Subject', $metadata['subject']);
@@ -137,30 +139,19 @@ class OllamaDocumentService
         }
     }
 
-    private function generateWithPHPWord(string $markdownContent, array $metadata): array
+    private function _generateWithPHPWord(string $markdownContent, array $metadata): array
     {
         try {
-            // --------------------------------------------------------------------------
-            // WORKAROUND 3: Fix "Table in ListItemRun" Crash
-            // --------------------------------------------------------------------------
-            // PHPWord crashes if a table is nested inside a list item.
-            // To prevent this, we pre-process the Markdown to "un-indent" all tables, 
-            // effectively moving them out of the list structure and making them top-level elements.
-
-            // A. Remove indentation from all table rows (lines starting with whitespace + pipe)
             $markdownContent = preg_replace('/^[\t ]+\|/m', '|', $markdownContent);
-
-            // B. Ensure there is a blank line before the table starts to separate it from the previous element
             $markdownContent = preg_replace('/^(?!\|)(.*)\n\|/m', "$1\n\n|", $markdownContent);
 
-            // Convert Markdown to HTML locally for PHPWord
             $parsedown = new Parsedown();
+            $parsedown->setSafeMode(true);
             $parsedown->setBreaksEnabled(true);
             $htmlContent = $parsedown->text($markdownContent);
 
             $phpWord = new \PhpOffice\PhpWord\PhpWord();
 
-            // Set document properties
             $properties = $phpWord->getDocInfo();
             $properties->setCreator($metadata['creator']);
             $properties->setTitle($metadata['title']);
@@ -169,11 +160,9 @@ class OllamaDocumentService
             $properties->setKeywords($metadata['keywords']);
             $properties->setCompany($metadata['author']);
 
-            // Configure default font
             $phpWord->setDefaultFontName('Calibri');
             $phpWord->setDefaultFontSize(11);
 
-            // Create section with 1-inch margins
             $section = $phpWord->addSection([
                 'marginLeft' => 1440,
                 'marginRight' => 1440,
@@ -181,61 +170,28 @@ class OllamaDocumentService
                 'marginBottom' => 1440,
             ]);
 
-            // Add footer with page numbers
             $footer = $section->addFooter();
             $footer->addPreserveText(
                 'Page {PAGE} of {NUMPAGES}',
                 ['alignment' => 'center', 'size' => 9, 'color' => '7f8c8d']
             );
 
-            // Use PHPWord's HTML parser to add content
-            // Note: This requires the HTML to be well-formed.
-            // --------------------------------------------------------------------------
-            // WORKAROUND 1: Fix XML Corruption (The "Ampersand" Bug)
-            // --------------------------------------------------------------------------
-            // PHPWord's addHtml method has a quirk where it unescapes entities before writing XML.
-            // If the content contains a raw '&' (e.g. "R&D"), it writes a raw '&' to the XML,
-            // which is illegal and corrupts the .docx file.
-            // SOLUTION: We pre-escape '&' to '&amp;'. PHPWord unescapes it to '&amp;', 
-            // which is the correct XML entity for an ampersand.
             $fixedHtml = str_replace('&', '&amp;', $htmlContent);
 
-            // --------------------------------------------------------------------------
-            // WORKAROUND 2: Fix Code Block Formatting
-            // --------------------------------------------------------------------------
-            // PHPWord treats HTML whitespace as insignificant, meaning it strips all newlines
-            // and indentation from <pre><code> blocks, rendering them as a single line.
-            // SOLUTION: We manually convert whitespace inside code blocks into HTML tags 
-            // that PHPWord respects (<br/> for newlines, &nbsp; for spaces).
             $fixedHtml = preg_replace_callback('/<pre><code(.*?)>(.*?)<\/code><\/pre>/s', function ($matches) {
                 $codeContent = $matches[2];
-
-                // 1. Normalize line endings to \n. 
-                // This prevents mixed line endings (like \r\n) from creating double-spaced lines
-                // when we convert them to <br/>.
                 $codeContent = str_replace(["\r\n", "\r"], "\n", $codeContent);
-
-                // 2. Convert newlines to <br/> tags to force line breaks in Word.
                 $codeContent = str_replace("\n", '<br/>', $codeContent);
-
-                // 3. Convert spaces to non-breaking spaces (&nbsp;) to preserve indentation.
-                // Standard spaces are collapsed by HTML parsers; &nbsp; is not.
                 $codeContent = str_replace(' ', '&nbsp;', $codeContent);
-
-                // 4. Apply Inline Styling
-                // We force 'Courier New' and a smaller font size to ensure the code looks 
-                // distinct from normal text.
                 return '<pre><code' . $matches[1] . ' style="font-family: \'Courier New\'; font-size: 9pt;">' . $codeContent . '</code></pre>';
             }, $fixedHtml);
 
             \PhpOffice\PhpWord\Shared\Html::addHtml($section, $fixedHtml, false, false);
 
-            // Generate to memory
             $tempFile = tempnam(sys_get_temp_dir(), 'phpword_');
             $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
             $objWriter->save($tempFile);
 
-            // Verify file was created and is valid
             if (!file_exists($tempFile) || filesize($tempFile) === 0) {
                 throw new \RuntimeException('Failed to generate valid DOCX file');
             }
@@ -253,160 +209,148 @@ class OllamaDocumentService
         }
     }
 
-    /**
-     * Wraps the HTML content with a styled HTML skeleton.
-     *
-     * @param string $htmlContent The body content.
-     * @param string $title The document title.
-     * @return string The full HTML string.
-     */
-    private function getStyledHtml(string $htmlContent, string $title = 'Document'): string
+    private function _getStyledHtml(string $htmlContent, string $title = 'Document'): string
     {
-        return '<!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-                <title>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</title>
-                <style>
-                    /* Professional Typography Hierarchy */
-                    body {
-                        font-family: Georgia, Cambria, "Times New Roman", serif;
-                        font-size: 11pt;
-                        line-height: 1.6;
-                        color: #2c3e50;
-                        margin: 1in;
-                        max-width: 100%;
-                    }
+        $safeTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
 
-                    h1 {
-                        font-family: Helvetica, Arial, sans-serif;
-                        font-size: 22pt;
-                        font-weight: 700;
-                        color: #1a1a1a;
-                        margin: 24pt 0 12pt 0;
-                        padding-bottom: 8pt;
-                        border-bottom: 2px solid #3498db;
-                    }
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{$safeTitle}</title>
+    <style>
+        body {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #2c3e50;
+            margin: 1in;
+            max-width: 100%;
+        }
 
-                    h2 {
-                        font-family: Helvetica, Arial, sans-serif;
-                        font-size: 16pt;
-                        font-weight: 600;
-                        color: #2c3e50;
-                        margin: 18pt 0 10pt 0;
-                    }
+        h1 {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 22pt;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 24pt 0 12pt 0;
+            padding-bottom: 8pt;
+            border-bottom: 2px solid #3498db;
+        }
 
-                    h3 {
-                        font-family: Helvetica, Arial, sans-serif;
-                        font-size: 13pt;
-                        font-weight: 600;
-                        color: #34495e;
-                        margin: 14pt 0 8pt 0;
-                    }
+        h2 {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 16pt;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 18pt 0 10pt 0;
+        }
 
-                    /* Professional Paragraph Spacing */
-                    p {
-                        margin: 0 0 10pt 0;
-                        text-align: left;
-                    }
+        h3 {
+            font-family: Calibri, Arial, sans-serif;
+            font-size: 13pt;
+            font-weight: 600;
+            color: #34495e;
+            margin: 14pt 0 8pt 0;
+        }
 
-                    /* Enhanced Tables */
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin: 16pt 0;
-                        font-size: 10pt;
-                    }
+        p {
+            margin: 0 0 10pt 0;
+            text-align: left;
+        }
 
-                    thead {
-                        background-color: #34495e;
-                        color: white;
-                        font-weight: 600;
-                    }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16pt 0;
+            font-size: 10pt;
+        }
 
-                    th, td {
-                        border: 1px solid #bdc3c7;
-                        padding: 8pt 10pt;
-                        text-align: left;
-                    }
+        thead {
+            background-color: #34495e;
+            color: white;
+            font-weight: 600;
+        }
 
-                    tbody tr:nth-child(even) {
-                        background-color: #f8f9fa;
-                    }
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 8pt 10pt;
+            text-align: left;
+        }
 
-                    /* Professional Code Blocks */
-                    pre {
-                        background: #f4f4f4;
-                        border-left: 4px solid #3498db;
-                        padding: 12pt;
-                        margin: 12pt 0;
-                        font-family: "Courier New", monospace;
-                        font-size: 9pt;
-                        overflow-x: auto;
-                        white-space: pre-wrap;
-                        word-wrap: break-word;
-                    }
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
 
-                    code {
-                        background: #ecf0f1;
-                        padding: 2pt 4pt;
-                        border-radius: 3px;
-                        font-family: "Courier New", monospace;
-                        font-size: 9pt;
-                    }
+        pre {
+            background: #f4f4f4;
+            border-left: 4px solid #3498db;
+            padding: 12pt;
+            margin: 12pt 0;
+            font-family: "Courier New", monospace;
+            font-size: 9pt;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
 
-                    pre code {
-                        background: none;
-                        padding: 0;
-                    }
+        code {
+            background: #ecf0f1;
+            padding: 2pt 4pt;
+            border-radius: 3px;
+            font-family: "Courier New", monospace;
+            font-size: 9pt;
+        }
 
-                    /* Enhanced Blockquotes */
-                    blockquote {
-                        border-left: 4px solid #95a5a6;
-                        margin: 12pt 0;
-                        padding: 8pt 12pt;
-                        background: #f8f9fa;
-                        font-style: italic;
-                        color: #555;
-                    }
+        pre code {
+            background: none;
+            padding: 0;
+        }
 
-                    /* Lists */
-                    ul, ol {
-                        margin: 10pt 0;
-                        padding-left: 30pt;
-                    }
+        blockquote {
+            border-left: 4px solid #95a5a6;
+            margin: 12pt 0;
+            padding: 8pt 12pt;
+            background: #f8f9fa;
+            font-style: italic;
+            color: #555;
+        }
 
-                    li {
-                        margin: 4pt 0;
-                    }
+        ul, ol {
+            margin: 10pt 0;
+            padding-left: 30pt;
+        }
 
-                    /* Links */
-                    a {
-                        color: #3498db;
-                        text-decoration: none;
-                    }
+        li {
+            margin: 4pt 0;
+        }
 
-                    a:hover {
-                        text-decoration: underline;
-                    }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
 
-                    /* Horizontal Rules */
-                    hr {
-                        border: none;
-                        border-top: 1px solid #bdc3c7;
-                        margin: 16pt 0;
-                    }
+        a:hover {
+            text-decoration: underline;
+        }
 
-                    /* Print-specific adjustments */
-                    @media print {
-                        body {
-                            margin: 0.5in;
-                        }
-                    }
-                </style>
-            </head>
-            <body>' . $htmlContent . '</body>
-            </html>';
+        hr {
+            border: none;
+            border-top: 1px solid #bdc3c7;
+            margin: 16pt 0;
+        }
+
+        @media print {
+            body {
+                margin: 0.5in;
+            }
+        }
+    </style>
+</head>
+<body>{$htmlContent}</body>
+</html>
+HTML;
     }
 }

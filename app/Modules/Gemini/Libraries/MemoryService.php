@@ -11,39 +11,93 @@ use App\Modules\Gemini\Entities\AGIEntity;
 use App\Modules\Gemini\Config\AGI;
 use App\Modules\Gemini\Libraries\TokenService;
 use App\Modules\Gemini\Libraries\EmbeddingService;
-
+use CodeIgniter\I18n\Time;
 
 /**
- * Manages the AI's memory, including storage, retrieval, and relevance scoring.
+ * Gemini Memory Service
+ *
+ * Manages AI memory including storage, retrieval, relevance scoring, and contextual prompt construction.
+ * Implements hybrid search (vector + keyword) and temporal decay mechanisms.
+ *
+ * @package App\Modules\Gemini\Libraries
  */
 class MemoryService
 {
-    private int $userId;
-    private InteractionModel $interactionModel;
-    private EntityModel $entityModel;
-    private EmbeddingService $embeddingService;
-    private TokenService $tokenService;
-    private AGI $config;
+    /**
+     * Constructor with Property Promotion (PHP 8.0+)
+     *
+     * Uses nullable parameters to work around PHP's constraint on default values.
+     * Dependencies are initialized with defaults if not provided.
+     *
+     * @param int $userId User ID for memory isolation
+     * @param InteractionModel|null $interactionModel Interaction storage model
+     * @param EntityModel|null $entityModel Entity/keyword graph model
+     * @param EmbeddingService|null $embeddingService Vector embedding service
+     * @param TokenService|null $tokenService Text processing service
+     * @param AGI|null $config Memory configuration
+     * @param mixed $db Database connection
+     */
+    public function __construct(
+        private int $userId,
+        private ?InteractionModel $interactionModel = null,
+        private ?EntityModel $entityModel = null,
+        private ?EmbeddingService $embeddingService = null,
+        private ?TokenService $tokenService = null,
+        private ?AGI $config = null,
+        private $db = null
+    ) {
+        $this->interactionModel = $interactionModel ?? model(InteractionModel::class);
+        $this->entityModel = $entityModel ?? model(EntityModel::class);
+        $this->embeddingService = $embeddingService ?? service('embedding');
+        $this->tokenService = $tokenService ?? service('tokenService');
+        $this->config = $config ?? config(AGI::class);
+        $this->db = $db ?? \Config\Database::connect();
+    }
 
     /**
-     * Constructor.
-     * @param int $userId The ID of the current user to scope the memory.
+     * Builds Contextual Prompt with Memory Integration
+     *
+     * Centralizes duplicated prompt construction logic from Controller and Service.
+     * This method retrieves relevant context, loads the XML template, and performs
+     * placeholder replacements to create a fully contextualized prompt.
+     *
+     * @param string $inputText User's current query
+     * @return array ['finalPrompt' => string, 'memoryService' => $this, 'usedInteractionIds' => array]
      */
-    public function __construct(int $userId)
+    public function buildContextualPrompt(string $inputText): array
     {
-        $this->userId = $userId;
-        $this->interactionModel = model(InteractionModel::class);
-        $this->entityModel = model(EntityModel::class);
-        $this->embeddingService = service('embedding');
-        $this->tokenService = service('tokenService');
-        $this->config = config(AGI::class);
+        if (empty(trim($inputText))) {
+            return [
+                'finalPrompt' => $inputText,
+                'memoryService' => $this,
+                'usedInteractionIds' => []
+            ];
+        }
+
+        // 1. Retrieve relevant context from memory
+        $recalled = $this->getRelevantContext($inputText);
+
+        // 2. Load XML template
+        $template = $this->getTimeAwareSystemPrompt();
+
+        // 3. Perform placeholder replacements
+        $template = str_replace('{{CURRENT_TIME}}', Time::now()->format('Y-m-d H:i:s T'), $template);
+        $template = str_replace('{{CONTEXT_FROM_MEMORY_SERVICE}}', $recalled['context'], $template);
+        $template = str_replace('{{USER_QUERY}}', htmlspecialchars($inputText), $template);
+        $template = str_replace('{{TONE_INSTRUCTION}}', "Maintain default persona: dry, witty, concise.", $template);
+
+        return [
+            'finalPrompt' => $template,
+            'memoryService' => $this,
+            'usedInteractionIds' => $recalled['used_interaction_ids']
+        ];
     }
 
     /**
      * Calculates the cosine similarity between two vectors.
      * @return float A value between -1 and 1. Higher is more similar.
      */
-    private function cosineSimilarity(array $vecA, array $vecB): float
+    private function _cosineSimilarity(array $vecA, array $vecB): float
     {
         $dotProduct = 0.0;
         $magA = 0.0;
@@ -79,7 +133,7 @@ class MemoryService
             $similarities = [];
             foreach ($interactions as $interaction) {
                 if (is_array($interaction->embedding)) {
-                    $similarity = $this->cosineSimilarity($inputVector, $interaction->embedding);
+                    $similarity = $this->_cosineSimilarity($inputVector, $interaction->embedding);
                     $similarities[$interaction->unique_id] = $similarity;
                 }
             }
@@ -88,7 +142,7 @@ class MemoryService
         }
 
         // Keyword Search (Lexical)
-        $inputEntities = $this->extractEntities($userInput);
+        $inputEntities = $this->_extractEntities($userInput);
         $keywordResults = [];
         if (!empty($inputEntities)) {
             $entities = $this->entityModel->where('user_id', $this->userId)->whereIn('entity_key', $inputEntities)->findAll();
@@ -106,13 +160,14 @@ class MemoryService
             arsort($keywordResults);
         }
 
-        // Hybrid Fusion
-        $fusedScores = [];
+        // Hybrid Fusion (streamlined)
         $allIds = array_unique(array_merge(array_keys($semanticResults), array_keys($keywordResults)));
+        $fusedScores = [];
         foreach ($allIds as $id) {
             $semanticScore = $semanticResults[$id] ?? 0.0;
-            $relevanceScore = isset($keywordResults[$id]) ? tanh($keywordResults[$id] / 10) : 0.0;
-            $fusedScores[$id] = ($this->config->hybridSearchAlpha * $semanticScore) + ((1 - $this->config->hybridSearchAlpha) * $relevanceScore);
+            $keywordScore = isset($keywordResults[$id]) ? tanh($keywordResults[$id] / 10) : 0.0;
+            $fusedScores[$id] = ($this->config->hybridSearchAlpha * $semanticScore) +
+                ((1 - $this->config->hybridSearchAlpha) * $keywordScore);
         }
         arsort($fusedScores);
 
@@ -121,7 +176,7 @@ class MemoryService
         $tokenCount = 0;
         $usedInteractionIds = [];
 
-        // --- REFACTOR START: Implement Short-Term Memory (forcedRecentInteractions) ---
+        // Short-Term Memory (Force Recent Interactions)
         if ($this->config->forcedRecentInteractions > 0) {
             $recentInteractions = $this->interactionModel
                 ->where('user_id', $this->userId)
@@ -129,7 +184,6 @@ class MemoryService
                 ->limit($this->config->forcedRecentInteractions)
                 ->findAll();
 
-            // Reverse to maintain chronological order in the context
             $recentInteractions = array_reverse($recentInteractions);
 
             foreach ($recentInteractions as $interaction) {
@@ -143,14 +197,12 @@ class MemoryService
                 }
             }
         }
-        // --- REFACTOR END ---
 
         foreach ($fusedScores as $id => $score) {
-            // --- REFACTOR START: Prevent duplication of already included short-term memories ---
+            // Prevent duplication of already included short-term memories
             if (in_array($id, $usedInteractionIds)) {
                 continue;
             }
-            // --- REFACTOR END ---
 
             $memory = $this->interactionModel->where('unique_id', $id)->where('user_id', $this->userId)->first();
             if (!$memory) continue;
@@ -178,10 +230,11 @@ class MemoryService
      *
      * @param string $userInput The user's input.
      * @param string $aiOutput The AI's response.
+     * @param array|string $aiOutputRaw The raw AI response body (complete response).
      * @param array $usedInteractionIds IDs of interactions used as context.
      * @return string The unique ID of the new interaction.
      */
-    public function updateMemory(string $userInput, string $aiOutput, array $usedInteractionIds): string
+    public function updateMemory(string $userInput, string $aiOutput, array|string $aiOutputRaw, array $usedInteractionIds): string
     {
         // 1. Reward used interactions
         if (!empty($usedInteractionIds)) {
@@ -193,7 +246,7 @@ class MemoryService
                 ->update();
         }
 
-        // --- REFACTOR START: Implement recentTopicDecayModifier ---
+        // Implement recentTopicDecayModifier
         $recentEntities = [];
         if (!empty($usedInteractionIds)) {
             $usedInteractions = $this->interactionModel
@@ -213,7 +266,7 @@ class MemoryService
         if (!empty($recentEntities)) {
             $relatedInteractions = $this->interactionModel
                 ->where('user_id', $this->userId)
-                ->whereIn('JSON_EXTRACT(keywords, "$[*]")', $recentEntities) // Note: This JSON search might be slow on large tables without proper indexing.
+                ->whereIn('JSON_EXTRACT(keywords, "$[*]")', $recentEntities)
                 ->findColumn('unique_id');
             if ($relatedInteractions) {
                 $relatedInteractionIds = $relatedInteractions;
@@ -236,11 +289,10 @@ class MemoryService
             $builder->whereNotIn('unique_id', $relatedInteractionIds);
         }
         $builder->set('relevance_score', "relevance_score - {$this->config->decayScore}", false)->update();
-        // --- REFACTOR END: The original single decay query is now replaced by the two above. ---
 
         // 3. Create new interaction
         $newId = 'int_' . uniqid('', true);
-        $keywords = $this->extractEntities($userInput);
+        $keywords = $this->_extractEntities($userInput);
         $fullText = "User: {$userInput} | AI: {$aiOutput}";
         $embedding = $this->embeddingService->getEmbedding($fullText);
 
@@ -250,6 +302,7 @@ class MemoryService
             'timestamp' => date('Y-m-d H:i:s'),
             'user_input_raw' => $userInput,
             'ai_output' => $aiOutput,
+            'ai_output_raw' => $aiOutputRaw,
             'relevance_score' => $this->config->initialScore,
             'last_accessed' => date('Y-m-d H:i:s'),
             'context_used_ids' => $usedInteractionIds,
@@ -258,8 +311,8 @@ class MemoryService
         ]);
         $this->interactionModel->insert($newInteraction);
 
-        $this->updateEntitiesFromInteraction($keywords, $newId);
-        $this->pruneMemory();
+        $this->_updateEntitiesFromInteraction($keywords, $newId);
+        $this->_pruneMemory();
         return $newId;
     }
 
@@ -269,9 +322,8 @@ class MemoryService
      * @param array $keywords Extracted keywords from the interaction.
      * @param string $interactionId The ID of the current interaction.
      */
-    private function updateEntitiesFromInteraction(array $keywords, string $interactionId): void
+    private function _updateEntitiesFromInteraction(array $keywords, string $interactionId): void
     {
-        // --- REFACTOR START: Implement noveltyBonus and relationshipStrengthIncrement ---
         $isNovel = false;
         foreach ($keywords as $keyword) {
             $entityKey = strtolower($keyword);
@@ -279,12 +331,12 @@ class MemoryService
             $entity = $this->entityModel->findByUserAndKey($this->userId, $entityKey);
 
             if (!$entity) {
-                $isNovel = true; // Flag that a new concept was introduced in this interaction
+                $isNovel = true;
                 $entity = new AGIEntity([
                     'user_id' => $this->userId,
                     'entity_key' => $entityKey,
                     'name' => $keyword,
-                    'relationships' => [], // Ensure relationships is initialized as an array
+                    'relationships' => [],
                 ]);
             }
 
@@ -308,7 +360,6 @@ class MemoryService
         }
 
         if (count($keywords) > 1) {
-            // This logic is database-intensive. It performs reads and writes for each pair.
             foreach ($keywords as $k1) {
                 foreach ($keywords as $k2) {
                     if ($k1 === $k2) continue;
@@ -323,27 +374,41 @@ class MemoryService
                 }
             }
         }
-        // --- REFACTOR END ---
     }
 
     /**
      * Removes old or irrelevant memories to keep the database size manageable.
      */
-    private function pruneMemory(): void
+    private function _pruneMemory(): void
     {
         $count = $this->interactionModel->where('user_id', $this->userId)->countAllResults();
+
         if ($count > $this->config->pruningThreshold) {
-            $limit = $count - $this->config->pruningThreshold;
-            $interactionsToDelete = $this->interactionModel
+            $toDelete = $count - $this->config->pruningThreshold;
+            $this->interactionModel
                 ->where('user_id', $this->userId)
                 ->orderBy('relevance_score', 'ASC')
-                ->limit($limit)
-                ->findColumn('id');
-
-            if (!empty($interactionsToDelete)) {
-                $this->interactionModel->delete($interactionsToDelete);
-            }
+                ->orderBy('last_accessed', 'ASC')
+                ->limit($toDelete)
+                ->delete();
         }
+    }
+
+    /**
+     * Clears all memory (interactions and entities) for the user.
+     *
+     * @return bool True on success, false on failure.
+     */
+    public function clearAll(): bool
+    {
+        $this->db->transStart();
+
+        $this->interactionModel->where('user_id', $this->userId)->delete();
+        $this->entityModel->where('user_id', $this->userId)->delete();
+
+        $this->db->transComplete();
+
+        return $this->db->transStatus();
     }
 
     /**
@@ -381,7 +446,7 @@ class MemoryService
     <example-dialogues>
         <example>
             <user>Tony, how do I build a chatbot with memory?</user>
-            <assistant>Easy. You store past messages like I store enemies' weaknesses. Then use embeddings like I use arc reactors — to power intelligent recall. Just don’t let it become Ultron, okay?</assistant>
+            <assistant>Easy. You store past messages like I store enemies' weaknesses. Then use embeddings like I use arc reactors — to power intelligent recall. Just don't let it become Ultron, okay?</assistant>
         </example>
         <example>
             <user>I need to check my calendar.</user>
@@ -415,7 +480,7 @@ XML;
      * @param string $text The text to analyze.
      * @return array An array of extracted entities.
      */
-    private function extractEntities(string $text): array
+    private function _extractEntities(string $text): array
     {
         return $this->tokenService->processText($text);
     }

@@ -120,8 +120,12 @@ configure_project() {
     # Ensure composer installs dependencies required by your code (dompdf, php-ffmpeg, nlp-tools)
     composer install --no-dev --optimize-autoloader
 
-    echo "Creating .env file..."
-    create_env_file
+    if [ ! -f "${PROJECT_PATH}/.env" ]; then
+        echo "Creating .env file..."
+        create_env_file
+    else
+        echo ".env file already exists. Skipping creation to preserve your keys."
+    fi
 
     echo "Setting up Directory Permissions..."
     # Create specific directories required by your Controllers/Services
@@ -153,6 +157,9 @@ configure_project() {
     # but we will leave that for manual execution or a seeder.
     
     php spark cache:clear
+
+    echo "Optimizing Session Table (Critical Fix)..."
+    mysql -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" -e "ALTER TABLE ci_sessions MODIFY data MEDIUMBLOB;"
 }
 
 create_env_file() {
@@ -207,6 +214,8 @@ email.mailType = 'html'
 #--------------------------------------------------------------------
 GEMINI_API_KEY="" 
 # ^^^ ENTER YOUR GOOGLE GEMINI API KEY ABOVE ^^^
+
+OLLAMA_BASE_URL = "http://localhost:11434"
 
 #--------------------------------------------------------------------
 # OTHER CONFIGS

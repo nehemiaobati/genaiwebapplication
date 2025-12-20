@@ -2,6 +2,6 @@ vendor
 composer.lock
 .env
 .DS_Store
-.clinerules/workflows/
+
 
 

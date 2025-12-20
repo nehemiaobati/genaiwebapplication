@@ -12,6 +12,12 @@ class Ollama extends BaseConfig
      */
     public string $baseUrl = 'http://localhost:11434';
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->baseUrl = env('OLLAMA_BASE_URL', $this->baseUrl);
+    }
+
     /**
      * The default model to use for generation.
      * Default: llama3
@@ -22,7 +28,7 @@ class Ollama extends BaseConfig
      * Request timeout in seconds.
      * Default: 120
      */
-    public int $timeout = 120;
+    public int $timeout = 300;
 
     /**
      * The model to use for embeddings.
@@ -35,7 +41,7 @@ class Ollama extends BaseConfig
     public float $hybridSearchAlpha = 0.5;
     public float $decayScore = 0.05;
     public float $rewardScore = 0.5; // Boost rate
-    public int $forcedRecentInteractions = 0;
+    public int $forcedRecentInteractions = 3;
 
     // --- NLP Configuration ---
     public array $nlpStopWords = [

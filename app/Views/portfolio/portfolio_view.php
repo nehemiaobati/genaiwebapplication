@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <style>
     html {
         scroll-behavior: smooth;
@@ -133,7 +134,7 @@
         position: absolute;
         width: 4px;
         /* MODIFICATION: Use theme-aware variable */
-        background-color: var(--border-color); 
+        background-color: var(--border-color);
         top: 0;
         bottom: 0;
         left: 50%;
@@ -162,7 +163,7 @@
         height: 20px;
         right: -10px;
         background-color: var(--primary-color);
-         /* MODIFICATION: Use theme-aware variable */
+        /* MODIFICATION: Use theme-aware variable */
         border: 4px solid var(--bs-body-bg);
         top: 25px;
         border-radius: 50%;
@@ -480,6 +481,9 @@
                     <div class="form-floating mb-3"><input type="email" class="form-control" id="email" name="email" placeholder="Email" required><label for="email">Email</label></div>
                     <div class="form-floating mb-3"><input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" required><label for="subject">Subject</label></div>
                     <div class="form-floating mb-3"><textarea class="form-control" placeholder="Your Message" id="message" name="message" style="height: 120px" required></textarea><label for="message">Your Message</label></div>
+                    <div class="mb-3">
+                        <div class="g-recaptcha" data-sitekey="<?= service('recaptchaService')->getSiteKey() ?>"></div>
+                    </div>
                     <button type="submit" class="btn btn-primary" id="sendMessageButton">Send Message</button>
                     <?= form_close() ?>
                 </div>

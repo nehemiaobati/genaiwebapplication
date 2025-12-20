@@ -23,19 +23,10 @@ class MediaController extends BaseController
 {
     use ResponseTrait;
 
-    /**
-     * Service for handling media generation logic.
-     * @var MediaGenerationService
-     */
-    protected $mediaService;
-
-    /**
-     * Constructor.
-     * Initializes the MediaGenerationService.
-     */
-    public function __construct()
-    {
-        $this->mediaService = service('mediaGenerationService');
+    public function __construct(
+        protected $mediaService = null
+    ) {
+        $this->mediaService = $mediaService ?? service('mediaGenerationService');
     }
 
     /**
@@ -85,7 +76,7 @@ class MediaController extends BaseController
         }
 
         // Validate that the requested model ID exists in the configuration
-        $configs = $this->mediaService->getMediaConfig();
+        $configs = MediaGenerationService::MEDIA_CONFIGS;
         if (!array_key_exists($modelId, $configs)) {
             return $this->fail('Invalid model ID selected.');
         }
@@ -141,11 +132,7 @@ class MediaController extends BaseController
     }
 
     /**
-     * Serves a generated media file securely.
-     *
-     * Ensures that files are served with the correct MIME type and headers.
-     * Access control is implicitly handled by the path structure (user ID in path),
-     * but additional checks could be added here if strict sharing controls are needed.
+     * Serves a generated media file securely with serverless compliance.
      *
      * @param string $filename The name of the file to serve.
      * @return void Outputs the file content directly.
@@ -154,29 +141,19 @@ class MediaController extends BaseController
     public function serve($filename)
     {
         $userId = (int) session()->get('userId');
+        $path = WRITEPATH . 'uploads/generated/' . $userId . '/' . basename($filename);
 
-        // Sanitize filename to prevent directory traversal
-        $filename = basename($filename);
-        $path = WRITEPATH . 'uploads/generated/' . $userId . '/' . $filename;
+        if (!file_exists($path)) throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
 
-        if (!file_exists($path)) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        $mime = mime_content_type($path);
-        header('Content-Type: ' . $mime);
+        header('Content-Type: ' . mime_content_type($path));
         header('Content-Length: ' . filesize($path));
 
-        // Force download if requested
         if ($this->request->getGet('download') === '1') {
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Content-Disposition: attachment; filename="' . basename($filename) . '"');
         }
 
-        // Use readfile for efficient output buffering
         if (readfile($path) !== false) {
-            // Auto-delete the file after serving (Serverless/Privacy optimization)
-            // This ensures we don't accumulate files in a stateless/ephemeral environment.
-            @unlink($path);
+            @unlink($path); // SERVERLESS COMPLIANCE: Delete immediately
         }
         exit;
     }

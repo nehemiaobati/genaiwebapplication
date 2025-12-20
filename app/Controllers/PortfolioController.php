@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controllers;
 
@@ -32,6 +34,14 @@ class PortfolioController extends BaseController
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
+        // Get reCAPTCHA response from the form submission.
+        $recaptchaResponse = $this->request->getPost('g-recaptcha-response');
+
+        // Verify the reCAPTCHA response.
+        if (! service('recaptchaService')->verify($recaptchaResponse)) {
+            return redirect()->back()->withInput()->with('error', 'Please complete the reCAPTCHA.');
+        }
+
         $name    = $this->request->getPost('name', FILTER_SANITIZE_SPECIAL_CHARS);
         $email   = $this->request->getPost('email', FILTER_SANITIZE_EMAIL);
         $subject = $this->request->getPost('subject', FILTER_SANITIZE_SPECIAL_CHARS);
@@ -39,8 +49,13 @@ class PortfolioController extends BaseController
 
         $emailService = service('email');
 
-        $emailService->setFrom(config('Email')->fromEmail, config('Email')->fromName);
+        // Use config/env values
+        $fromEmail = config('Email')->fromEmail;
+        $fromName  = config('Email')->fromName;
+
+        $emailService->setFrom($fromEmail, $fromName);
         $emailService->setTo('nehemiahobati@gmail.com');
+        $emailService->setReplyTo($email); // User's email
         $emailService->setSubject($subject);
         // --- FIX START: Construct an HTML email body ---
         // We build an HTML string for proper formatting and escape all user input
@@ -64,9 +79,11 @@ class PortfolioController extends BaseController
         if ($emailService->send()) {
             return redirect()->back()->with('success', 'Your message has been sent successfully!');
         }
-        
-        $data = $emailService->printDebugger(['headers']);
-        log_message('error', 'Portfolio email sending failed: ' . print_r($data, true));
+
+        $debuggerData = $emailService->printDebugger(['headers']);
+        log_message('error', '[PortfolioController] Email sending failed: ' . print_r($debuggerData, true));
+        log_message('error', '[PortfolioController] SMTP Host: ' . config('Email')->SMTPHost);
+
         return redirect()->back()->with('error', 'Failed to send your message. Please try again later.');
     }
 }
