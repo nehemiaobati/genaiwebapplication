@@ -11,6 +11,7 @@
 1.2. Core Features & Capabilities
 1.3. Who Is This For?
 1.4. Technology Stack
+1.5. AI-Readiness & Reconstruction Snapshot
 
 **2. Quick Start Guide**
 2.1. Your First 5 Minutes
@@ -73,6 +74,14 @@
 6.8.1. Configuration & Model Selection
 6.8.2. Chat & Assistant Mode
 6.8.3. Multimodal Input
+6.9. Affiliate Module
+6.9.1. Link Management
+6.9.2. Category System
+6.9.3. Click Tracking & Analytics
+6.9.4. Bulk Actions
+6.10. Account Module
+6.11. Portfolio Module
+6.12. Contact Module
 
 ---
 
@@ -114,9 +123,14 @@
 12.2. Code Style (PSR-12)
 12.3. Submitting a Pull Request
 
-**13. Appendices**
-13.1. Glossary of Terms
-13.2. Changelog & Release History
+**13. Environment Variable Directory (.env)**
+13.1. Core Configuration
+13.2. Third-Party API Keys
+13.3. Database & Security
+
+**14. Appendices**
+14.1. Glossary of Terms
+14.2. Changelog & Release History
 
 ---
 
@@ -148,9 +162,11 @@ The GenAI Web Platform is a comprehensive, multi-functional application built on
 - **Advanced Media Generation:** Support for generating high-quality images (Imagen 4.0) and videos (Veo 2.0) directly from text prompts.
 - **Local AI Integration (Ollama):** Support for running local LLMs (like Llama 3, DeepSeek) directly on the server, offering privacy-focused AI interactions with zero external API costs.
 - **Cryptocurrency Data Service:** Real-time balance and transaction history queries for Bitcoin (BTC) and Litecoin (LTC) addresses.
+- **Affiliate Module:** Comprehensive management of Amazon affiliate links with automated code extraction, click tracking, detailed analytics, and category organization.
 - **Blog & Content Management:** A public-facing blog with a full administrative backend for creating, editing, and managing posts.
 - **Administrative Dashboard:** Robust tools for user management, balance adjustments, financial oversight, log viewing, and sending email campaigns to all users.
 - **Self-Hosted Documentation:** The application serves its own documentation, which can be easily updated.
+- **Premium UI/UX:** A visually polished interface utilizing modern design tokens, interactive hover effects, and responsive layouts for a premium user experience.
 - **Secure & Performant:** Built with modern security best practices and optimized for production environments.
 
 **1.3. Who Is This For?**
@@ -173,6 +189,14 @@ This platform is designed for developers, creators, and businesses, particularly
   - **Pandoc & TeX Live (XeTeX):** For high-fidelity PDF/Docx generation.
   - **FFmpeg:** For audio processing.
 - **Development & Deployment:** Composer, PHPUnit, Spark CLI, Git, Bash
+
+**1.5. AI-Readiness & Reconstruction Snapshot**
+
+The GenAI Web Platform is architected for **System Reconstruction Resilience**. This means the codebase, when combined with this documentation and the project's `.clinerules`, contains a sufficient logical "DNA" to be recreated or snapshotted by an AI Agent effectively.
+
+- **Human-Centric Blueprinting:** The documentation provides an absolute technical reference for services, routes, and environment dependencies.
+- **Rule-Based Development:** The `.clinerules` mandate strict adherence to patterns (MVC-S, Skinny Controllers), ensuring that any AI-generated code will natively integrate with the existing system architecture.
+- **Stateless/Serverless Compliance:** The application's "Unlink Pattern" and ephemeral file handling ensure that the system can be redeployed or snapshotted without relying on persistent local file state.
 
 **2. Quick Start Guide**
 
@@ -316,7 +340,7 @@ Standard CodeIgniter 4 lifecycle applies. Routes are defined in `app/Modules/[Mo
 
 **4.3. Service Container & Dependency Injection**
 
-The application uses CodeIgniter's service container to manage class instances. Core services are defined in `app/Config/Services.php`. This allows for easy instantiation and sharing of service objects throughout the application.
+The application uses CodeIgniter's service container to manage class instances. Services are defined in modular `Config/Services.php` files (for feature-specific services) or `app/Config/Services.php` (for core/global services). This allows for automatic discovery, easy instantiation, and sharing of service objects throughout the application.
 
 - **Example:** `$geminiService = service('geminiService');`
 - **Example:** `$ffmpegService = service('ffmpegService');`
@@ -337,6 +361,13 @@ The application uses CodeIgniter's service container to manage class instances. 
   - `Libraries/`: Contains `OllamaService`, `OllamaPayloadService`.
   - `Controllers/`: Contains `OllamaController`.
   - `Config/`: Contains `Ollama.php` configuration.
+- `app/Modules/Affiliate/`:
+  - `Controllers/`: Contains `AffiliateController`.
+  - `Libraries/`: Contains `AffiliateLinkService`.
+  - `Models/`: Contains `AffiliateLinkModel`, `AffiliateClickLogModel`, `AffiliateCategoryModel`.
+- `app/Modules/Account/`: Handles user profile and account-specific settings.
+- `app/Modules/Portfolio/`: Showcases user or project portfolios.
+- `app/Modules/Contact/`: Manages user inquiries and contact forms.
 - `app/Controllers/`: Contains core controllers like `AuthController`, `AdminController`.
 - `app/Libraries/`: Contains shared services like `RecaptchaService`, `WalletService` (Balance Management), `LogViewer` (Secure Log Reading).
 - `writable/nlp/`: Stores trained Naive Bayes models (`classifier.model`).
@@ -347,11 +378,55 @@ The application uses CodeIgniter's service container to manage class instances. 
 - **Public Webroot:** The server's document root is set to the `public/` directory.
 - **Input Sanitization:** `TokenService` strips HTML tags and normalizes text before processing for memory.
 - **Secure File Serving:** Generated MP3s are stored outside the `public` root and served via a controller method (`serveAudio`) that verifies user ownership.
-- **CSRF Protection:** Cross-Site Request Forgery tokens are used on all POST forms.
+- **CSRF Protection:** Cross-Site Request Forgery tokens are used on all POST forms. Fresh tokens are synchronized via JSON payloads and SSE initial packets.
+- **AJAX Cookie Consent:** The cookie banner utilizes an asynchronous fetch mechanism for consent recording, ensuring a seamless user experience without full-page reloads.
 
 **4.6. Frontend Design (The 'Blueprint' Method)**
 
 The project follows a strict frontend workflow called the "Blueprint Method" to ensure UI consistency. New features include `prompt-card` styling and progress bars for file uploads in the AI Studio.
+
+- **Visual Polish**: Interfaces prioritize high-fidelity aesthetics using smooth transitions, curated color palettes, and the `.hover-effect` utility for interactive elements.
+- **Premium Components**: Utilizes Bootstrap 5 utility classes combined with custom CSS for a state-of-the-art, responsive design.
+
+**4.7. Architectural Topology (Parallel vs. Braided)**
+
+The system enforces a **Parallel Architecture** to prevent "Spaghetti Code".
+
+- **Vertical Layering**: Dependencies flow strictly downwards: `Controller` -> `Domain Service` -> `Sub-Service`.
+- **The "Ping Pong" Rule**: Triangular dependencies (where a Controller talks to both a Parent Service and its Child) are **FORBIDDEN**. Use the **Facade Pattern** where the Parent Service wraps the Child service's methods.
+- **Parallel Domains**: Modules (e.g., Gemini, Payments, and Affiliate) run in parallel isolation. They do not cross-depend unless absolutely necessary, ensuring that complex logic in one domain does not break the other.
+
+#### Module Dependency Graph (Standard Parallel Flow)
+
+```mermaid
+graph TD
+    C[GeminiController]
+    AC[AffiliateController]
+    PC[PaymentsController]
+
+    subgraph "Domain Facades"
+        GS[GeminiService]
+        ALS[AffiliateLinkService]
+        PS[PaystackService]
+    end
+
+    subgraph "Infrastructure & Models"
+        MEM[MemoryService]
+        UM[UserModel]
+        ALM[AffiliateLinkModel]
+        PM[PaymentModel]
+    end
+
+    C --> GS
+    AC --> ALS
+    PC --> PS
+
+    GS --> MEM
+    GS --> UM
+    ALS --> ALM
+    PS --> PM
+    PS --> UM
+```
 
 **5. Tutorial: Building Your First Feature**
 
@@ -438,8 +513,9 @@ Create `app/Modules/Notes/Views/index.php`.
   2.  **API Request**: The service sends a request to Paystack, returning a unique authorization URL.
   3.  **User Action**: The user is redirected to the payment page.
   4.  **Verification**: Upon return, `PaymentsController::verify()` uses `PaystackService::verifyTransaction()`.
-  5.  **Completion (Transactional Integrity)**: If successful, the system opens a Database Transaction (`transStart`) to:
+  5.  **Completion (Transactional Integrity)**: If successful, the system opens a Database Transaction (`transStart`) via `PaystackService::verifyAndProcessPayment()` to:
       - Log the transaction in the `payments` table via `PaymentModel`.
+      - Award a **First Deposit Bonus** (KSH 30.00) if applicable.
       - Credit the user's `account_balance` in the `users` table via `UserModel`.
       - Commit the transaction (`transComplete`).
 
@@ -458,8 +534,9 @@ This module (`App\Modules\Gemini`) is the core of the platform.
 
 - **6.3.1. Generative Text & Resilience Strategy**:
   - **Priority Fallback Mechanism**: The `GeminiService` defines a `MODEL_PRIORITIES` constant (a clear list of models, e.g., Pro -> Flash -> Lite). If the primary model fails with a **Quota Error (429)**, the system automatically retries with the next model in the list. This ensures high availability.
-  - **Streaming (SSE)**: For real-time feedback, the `processInteraction` method supports Server-Sent Events. It streams text chunks to the frontend, where **Marked.js** renders Markdown incrementally.
-  - **Service Layer Logic**: `GeminiService::processInteraction()` encapsulates the entire lifecycle. It handles context retrieval, cost estimation, API interaction, and TTS generation.
+  - **Streaming (SSE)**: For real-time feedback, the `processInteraction` method supports Server-Sent Events. The frontend utilizes a **Robust Line-Based Parser** to handle mixed-content chunks, including internal thought processes (`thought` chunks) and final payload closing events.
+  - **Thought Process Compatibility**: The system natively supports and renders "Thinking" blocks from advanced models (e.g., Gemini 2.0 Flash Thinking), providing transparency into the AI's reasoning.
+  - **Service Layer Logic**: `GeminiService::processInteraction()` encapsulates the entire lifecycle. It utilizes the centralized `MemoryService::buildContextualPrompt()` to ensure that complex prompt engineering and context retrieval are isolated from the controller.
   - **Data Integrity**: Balance deduction and memory updates are wrapped in a **Database Transaction** to ensure data consistency.
   - **Payloads**: The `ModelPayloadService` dynamically constructs payloads for specific model architectures.
 - **6.3.2. Hybrid Memory System (Vector + Keyword)**: Managed by `MemoryService.php`.
@@ -467,6 +544,7 @@ This module (`App\Modules\Gemini`) is the core of the platform.
   - **Retrieval:** The system uses `EmbeddingService` to get vector embeddings of the user's query. It performs a cosine similarity search (Semantic) AND a keyword-based search (Lexical).
   - **Fusion:** Results are fused using a weighted algorithm (Alpha 0.5) to provide context that is both conceptually similar and keyword-relevant.
   - **Short-Term Memory:** The system forces the retrieval of the most recent interactions (configurable via `AGI.php`) to maintain immediate conversational flow.
+  - **Memory Pagination (Load More)**: The Memory Stream interface supports cursor-based pagination, allowing users to scroll through and retrieve older conversational history on demand.
 - **6.3.3. Text-to-Speech (TTS) & Audio Processing**:
   - **Generation:** If `voice_output_enabled` is true, `GeminiService` requests audio data from the API.
   - **Conversion:** The API returns raw PCM data. `FfmpegService` converts this raw data into a web-compatible MP3 file using the `ffmpeg` binary installed on the server.
@@ -510,8 +588,27 @@ This module (`App\Modules\Gemini`) is the core of the platform.
 **6.8. Local AI Service (Ollama)**
 
 - **6.8.1. Configuration & Model Selection**: The module connects to a local Ollama instance (default: `http://localhost:11434`). It dynamically fetches available models (e.g., `llama3`, `mistral`) and presents them in the UI for user selection.
-- **6.8.2. Chat & Assistant Mode**: Supports conversational AI with an "Assistant Mode" that maintains context. It reuses the robust memory architecture designed for Gemini.
+- **6.8.2. Chat & Assistant Mode**: Supports conversational AI with an "Assistant Mode" that maintains context. The module follows a "Fat Service, Skinny Controller" pattern, with `OllamaService` orchestrating the interaction lifecycle via modular service registration, including credit deduction and memory synchronization.
 - **6.8.3. Multimodal Input**: Users can upload images for analysis by vision-capable local models (like `llava`), handled via `OllamaPayloadService` which manages base64 encoding.
+
+**6.9. Affiliate Module**
+
+- **6.9.1. Link Management**: Administrators can create, edit, and search for Amazon affiliate links. The system automatically extracts the short code from Amazon `amzn.to` URLs.
+- **6.9.2. Category System**: Links can be organized into categories (e.g., "Electronics", "Books") to facilitate discovery and management.
+- **6.9.3. Click Tracking & Analytics**: Every click on an affiliate link is logged with metadata (IP, User Agent, Referrer). The dashboard provides detailed analytics, including click volume by date and top referrers.
+- **6.9.4. Bulk Actions**: Support for bulk deleting links or updating their status (Active/Inactive) to streamline large-scale link management.
+
+**6.10. Account Module**
+
+- Provides a unified dashboard for users to manage their profile, view transaction history, and monitor AI interaction credits.
+
+**6.11. Portfolio Module**
+
+- A modular component for showcasing projects or user profiles in a visually rich, responsive layout.
+
+**6.12. Contact Module**
+
+- A centralized handling system for user inquiries and support requests, featuring automated email notifications.
 
 ---
 
@@ -650,16 +747,118 @@ The project enforces the PSR-12 coding standard.
 
 Ensure your code is well-documented, follows the project's architectural patterns, and that all tests pass.
 
-**13. Appendices**
+**13. Environment Variable Directory (.env)**
 
-**13.1. Glossary of Terms**
+This section provides an absolute reference for all environment variables required to run the platform.
+
+**13.1. Core Configuration**
+
+| Variable         | Description                      | Example/Notes                               |
+| :--------------- | :------------------------------- | :------------------------------------------ |
+| `CI_ENVIRONMENT` | Application environment.         | `development`, `production`, `testing`      |
+| `app.baseURL`    | The root URL of the application. | `http://localhost:8080` (include `http://`) |
+| `encryption.key` | 32-character random string.      | Used for session and data encryption.       |
+
+**13.2. Third-Party API Keys**
+
+| Variable              | Description                           | Component            |
+| :-------------------- | :------------------------------------ | :------------------- |
+| `GEMINI_API_KEY`      | Google AI Studio Key.                 | Gemini Module (Core) |
+| `PAYSTACK_SECRET_KEY` | Paystack Secret Key (African region). | Payments Module      |
+| `recaptcha_siteKey`   | Google reCAPTCHA v2 Site Key.         | Authentication/Forms |
+| `recaptcha_secretKey` | Google reCAPTCHA v2 Secret Key.       | Authentication/Forms |
+
+**13.3. Database & Security**
+
+| Variable                    | Description        | Notes                      |
+| :-------------------------- | :----------------- | :------------------------- |
+| `database.default.hostname` | DB Server address. | Usually `localhost`        |
+| `database.default.database` | Database name.     | Created during setup.      |
+| `database.default.username` | Database user.     | Must have full privileges. |
+| `database.default.password` | Database password. | Set during installation.   |
+| `database.default.DBDriver` | Database driver.   | `MySQLi`                   |
+
+---
+
+**14. Appendices**
+
+**14.1. Glossary of Terms**
 
 - **Module:** A self-contained directory in `app/Modules/` that encapsulates a single business feature.
 - **Embeddings:** Numerical representations of text used for semantic search.
   - **Hybrid Search:** A search technique combining vector similarity and keyword matching.
 - **PCM:** Pulse-Code Modulation, a raw audio format returned by Gemini API.
 
-**13.2. Changelog & Release History**
+**14.2. Changelog & Release History**
+
+**v1.10.1 - 2026-01-31**
+
+### Changed
+
+- **Database Migration Refactoring & Optimization**:
+  - Consolidated redundant "Update" migrations into base "Create" migrations for a cleaner fresh-install schema across all modules (Admin, Affiliate, Gemini, Ollama).
+  - Migrated all indexing from raw SQL `ALTER TABLE` queries to native CodeIgniter 4 `$this->forge->addKey()` methods for improved maintainability.
+  - Applied comprehensive performance indexing across all tables: `status`, `user_id`, `type`, `category_id`, `prompt_hash`, and timestamps (`created_at`, `published_at`, `timestamp`, `clicked_at`, `quota_hit_at`).
+  - Reorganized Affiliate migrations: moved `category_id` column and index to base `CreateAffiliateLinksTable` migration for atomic schema definition.
+- **Architectural Standards (.clinerules)**:
+  - Added strict database optimization rules mandating native `addKey()` for all indexing.
+  - Defined migration lifecycle directive: continuous migrations for production (default), compression plans required for fresh environments.
+  - Documented mandatory indexing standards for frequently queried columns with composite key patterns.
+
+**v1.10.0 - 2026-01-30**
+
+### Added
+
+- **Affiliate Module Enhancements**:
+  - Implemented a robust category system for organizing affiliate links.
+  - Added detailed click analytics with time-series data and referrer tracking.
+  - Introduced bulk actions (bulk delete, status update) for efficient link management.
+- **Premium Visual Polish**:
+  - Standardized `.hover-effect` transitions across all public-facing pages (Gemini, Crypto, Landing).
+  - Refined typography and spacing for a more premium, enterprise-grade aesthetic.
+- **Module Expansion**: Added infrastructure for `Account`, `Portfolio`, and `Contact` modules.
+
+### Changed
+
+- **Payments Module Refactoring**:
+  - Migrated business logic from `PaymentsController` to `PaystackService` following the "Simple over Easy" standard.
+  - Centralized payment verification and balance adjustment into an atomic database transaction.
+  - Implemented first-deposit bonus logic (KSH 30.00).
+
+**v1.9.2 - 2026-01-10**
+
+### Added
+
+- **Route Throttling (Rate Limiting):**
+  - Implemented a custom `ThrottleFilter` leveraging the native CI4 Throttler service (Token Bucket algorithm).
+  - Protected all sensitive authentication routes (Login 5/min, Register 3/min, Password Reset 2/min).
+  - Rate-limited resource-intensive AI generation routes in Gemini and Ollama modules (10/min) and media generation (5/min).
+  - Applied throttling to Crypto query and Payment initiation routes.
+
+### Changed
+
+- **Improved Throttling UX:** Throttled requests now redirect back with a flash error message for standard forms, while maintaining JSON 429 responses for AJAX/SSE streams.
+- **Architectural Standards (.clinerules):** Mandated throttling for all public POST and expensive 3rd-party API endpoints.
+
+### Fixed
+
+- **Filter Syntax Exception:** Resolved a critical `FilterException` by refactoring route configurations to use array syntax `['filter1', 'filter2']` instead of the pipe `|` separator, which CI4 misinterpreted in certain modular contexts.
+
+**v1.9.1 - 2026-01-10**
+
+### Added
+
+- **Modular Service Decentralization:**
+  - Migrated feature-specific service registrations from the global `app/Config/Services.php` to modular `Config/Services.php` files in Gemini, Ollama, Crypto, Payments, and Blog modules.
+  - Enabled automatic service discovery for all modules, improving encapsulation and framework scalability.
+
+### Changed
+
+- **Codebase Standards (.clinerules):** Updated architectural standards to prioritize modular service registration over global registration.
+
+### Fixed
+
+- **Ollama Architectural Violations:** Resolved 4 ping-pong dependency issues in `OllamaController` by implementing facade patterns in `OllamaService` and eliminating direct service/model instantiations in the controller.
 
 **v1.9.0 - 2025-12-20**
 
@@ -881,28 +1080,25 @@ Ensure your code is well-documented, follows the project's architectural pattern
 
 - Core features implemented: User Authentication, Paystack Payments, Gemini AI Integration, Crypto Data Service, Admin Dashboard.
 
----
-
 **Part V: Documentation Maintenance Guide**
 
-**14. A Guide for the Project Owner**
+**15. A Guide for the Project Owner**
 
-14.1. The Philosophy of Living Documentation
-14.2. Your Role vs. the AI's Role
-14.3. The Documentation Update Workflow
-14.4. Procedure: How to Review the Codebase for Changes
-14.5. Procedure: Updating the Changelog and Managing Releases
+15.1. The Philosophy of Living Documentation
+15.2. Your Role vs. the AI's Role
+15.3. The Documentation Update Workflow
+15.4. Procedure: How to Review the Codebase for Changes
+15.5. Procedure: Updating the Changelog and Managing Releases
 
-**14.1. The Philosophy of Living Documentation**
-
+**15.1. The Philosophy of Living Documentation**
 Treat this documentation as a core part of the codebase. It should evolve in lockstep with every feature change, bug fix, or architectural adjustment. An undocumented change is an incomplete change. The goal is to ensure that a new developer, or you in six months, can understand the _what_, _how_, and _why_ of the system just by reading this document.
 
-**14.2. Your Role vs. the AI's Role**
+**15.2. Your Role vs. the AI's Role**
 
 - **The AI's Role (Efficiency & Accuracy):** The AI is the primary documentation writer. It excels at systematically analyzing code changes (`git diff`), identifying affected components, and generating accurate, detailed descriptions based on the established structure. It is responsible for the heavy lifting of drafting content.
 - **Your Role (Clarity & Context):** Your role is that of an editor and strategist. You review the AI-generated content for clarity, human readability, and high-level context that the code alone cannot provide. You ensure the "why" behind a change is captured, not just the "what."
 
-**14.3. The Documentation Update Workflow**
+**15.3. The Documentation Update Workflow**
 
 This workflow applies to any code changes committed to the main branch.
 
@@ -922,7 +1118,7 @@ This workflow applies to any code changes committed to the main branch.
 4.  **Update Changelog:** Follow the procedure in section **15.5** to add an entry to the Changelog and determine if the version number needs to be updated.
 5.  **Review and Commit:** Read through all changes from the perspective of someone unfamiliar with the update. Is it clear? Is anything missing? Once satisfied, commit the changes.
 
-**14.4. Procedure: How to Review the Codebase for Changes**
+**15.4. Procedure: How to Review the Codebase for Changes**
 
 The most efficient way to find what needs documenting is by analyzing the difference between your feature branch and the main branch using Git.
 
@@ -946,7 +1142,7 @@ The most efficient way to find what needs documenting is by analyzing the differ
 | `app/Modules/[ModuleName]/Views/*`                        | Usually doesn't require a doc change unless a major new UI feature is introduced. |
 | `composer.json` (new dependencies)                        | **1.4. Technology Stack**, **3.1. Server Requirements**                           |
 
-**14.5. Procedure: Updating the Changelog and Managing Releases**
+**15.5. Procedure: Updating the Changelog and Managing Releases**
 
 This project follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`.
 
@@ -978,4 +1174,4 @@ This project follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`.
 
 4.  **Be Concise and User-Focused:** Describe the _impact_ of the change, not just the code that was altered.
     - **Good:** "Added email notifications for successful payments."
-    - **Bad:** "Modified the `PaymentsController` and created a `PaymentNotification` class.""
+    - **Bad:** "Modified the `PaymentsController` and created a `PaymentNotification` class."
