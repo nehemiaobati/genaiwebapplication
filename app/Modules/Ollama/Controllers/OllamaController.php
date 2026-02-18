@@ -7,82 +7,48 @@ namespace App\Modules\Ollama\Controllers;
 use App\Controllers\BaseController;
 use App\Entities\User;
 use App\Modules\Ollama\Libraries\OllamaService;
-use App\Modules\Ollama\Models\OllamaPromptModel;
-use App\Modules\Ollama\Models\OllamaUserSettingsModel;
-use App\Modules\Ollama\Models\OllamaInteractionModel;
-use App\Modules\Ollama\Models\OllamaEntityModel;
 use App\Modules\Ollama\Libraries\OllamaDocumentService;
-use App\Modules\Ollama\Entities\OllamaUserSetting;
 use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
-use CodeIgniter\I18n\Time;
 use Parsedown;
 
 /**
  * Ollama Controller
  *
  * Handles all HTTP interactions for the Ollama module, which provides
- * local LLM inference capabilities via the Ollama server. Supports text generation,
- * multimodal input (images), conversational memory, and document export.
+ * local LLM inference capabilities via the Ollama server.
  *
- * Key Features:
- * - Local AI inference (Llama 3, Mistral, DeepSeek, etc.)
- * - Multimodal support (text + images for vision models)
- * - Hybrid memory system (vector embeddings + keyword search)
- * - Real-time streaming responses (SSE)
- * - Document generation (PDF/DOCX)
+ * Architecture:
+ * - Skinny Controller: Delegates all business logic to OllamaService.
+ * - Handles Request/Response cycle only.
  *
  * @package App\Modules\Ollama\Controllers
  */
 class OllamaController extends BaseController
 {
-    /** @var array List of allowed MIME types for image uploads */
-    private const SUPPORTED_MIME_TYPES = [
-        'image/png',
-        'image/jpeg',
-        'image/jpg',
-        'image/webp',
-        'image/gif',
-    ];
-
-    /** @var int Maximum file size in bytes (10MB) */
-    private const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-    /** @var int Maximum number of files per request */
-    private const MAX_FILES = 3;
-
-    /** @var float Cost in credits per AI request */
-    private const COST_PER_REQUEST = 1.00;
-
     /**
-     * Constructor with Property Promotion (PHP 8.0+)
-     *
-     * Automatically declares and initializes protected properties from constructor parameters.
-     * This eliminates the need for explicit property declarations and assignments in the constructor body.
-     *
-     * @param UserModel $userModel Handles user authentication and balance management
-     * @param OllamaService $ollamaService Core service for Ollama API communication
-     * @param OllamaPromptModel $promptModel Manages saved user prompts
-     * @param OllamaUserSettingsModel $userSettingsModel Handles user preferences (assistant mode, streaming)
+     * Constructor setup
      */
     public function __construct(
-        protected UserModel $userModel = new UserModel(),
-        protected OllamaService $ollamaService = new OllamaService(),
-        protected OllamaPromptModel $promptModel = new OllamaPromptModel(),
-        protected OllamaUserSettingsModel $userSettingsModel = new OllamaUserSettingsModel(),
-        protected $db = null
+        protected ?UserModel $userModel = null,
+        protected ?OllamaService $ollamaService = null
     ) {
-        $this->db = $db ?? \Config\Database::connect();
+        $this->userModel = $userModel ?? new UserModel();
+        $this->ollamaService = $ollamaService ?? service('ollamaService');
     }
+
+    // --- Core Methods ---
 
     public function index(): string
     {
         $userId = (int) session()->get('userId');
-        $prompts = $this->promptModel->where('user_id', $userId)->findAll();
-        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
 
+        // Fetch data via Service
+        $prompts = $this->ollamaService->getUserPrompts($userId);
+        $userSetting = $this->ollamaService->getUserSettings($userId);
         $modelsResponse = $this->ollamaService->getModels();
+
         $availableModels = ($modelsResponse['status'] === 'success' && !empty($modelsResponse['data']))
             ? $modelsResponse['data']
             : ['llama3'];
@@ -96,9 +62,9 @@ class OllamaController extends BaseController
             'prompts'                => $prompts,
             'assistant_mode_enabled' => $userSetting ? $userSetting->assistant_mode_enabled : true,
             'stream_output_enabled'  => $userSetting ? $userSetting->stream_output_enabled : true,
-            'maxFileSize'            => self::MAX_FILE_SIZE,
-            'maxFiles'               => self::MAX_FILES,
-            'supportedMimeTypes'     => json_encode(self::SUPPORTED_MIME_TYPES),
+            'maxFileSize'            => OllamaService::MAX_FILE_SIZE,
+            'maxFiles'               => 3,
+            'supportedMimeTypes'     => json_encode(OllamaService::SUPPORTED_MIME_TYPES),
             'availableModels'        => $availableModels,
             'robotsTag'              => 'noindex, follow'
         ];
@@ -106,29 +72,46 @@ class OllamaController extends BaseController
         return view('App\Modules\Ollama\Views\ollama\query_form', $data);
     }
 
+    public function publicPage(): string
+    {
+        return view('App\Modules\Ollama\Views\ollama\public_page', [
+            'pageTitle'       => 'Private, Local AI Workspace | Ollama',
+            'metaDescription' => 'Run powerful LLMs directly on your server. Private, secure, and always available.',
+            'canonicalUrl'    => url_to('ollama.public'),
+            'robotsTag'       => 'index, follow',
+            'heroTitle'       => 'Private, Local AI Workspace',
+            'heroSubtitle'    => 'Run powerful LLMs directly on your server. Private, secure, and always available.'
+        ]);
+    }
+
+    // --- Media Handling ---
+
     public function uploadMedia(): ResponseInterface
     {
-        $userId = (int) session()->get('userId');
+        $userId =
+
+            (int) session()->get('userId');
         if ($userId <= 0) {
+            // Include CSRF token even on auth errors to allow frontend recovery
             return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.', 'csrf_token' => csrf_hash()]);
         }
 
         if (!$this->validate([
             'file' => [
                 'label' => 'File',
-                'rules' => 'uploaded[file]|max_size[file,' . (self::MAX_FILE_SIZE / 1024) . ']|mime_in[file,' . implode(',', self::SUPPORTED_MIME_TYPES) . ']',
+                'rules' => 'uploaded[file]|max_size[file,' . (OllamaService::MAX_FILE_SIZE / 1024) . ']|mime_in[file,' . implode(',', OllamaService::SUPPORTED_MIME_TYPES) . ']',
             ],
         ])) {
+            // Include CSRF token in validation errors to prevent token desynchronization
             return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => $this->validator->getErrors()['file'], 'csrf_token' => csrf_hash()]);
         }
 
         $file = $this->request->getFile('file');
-
-        // Delegate storage to Service
         $result = $this->ollamaService->storeTempMedia($file, $userId);
 
         if (!$result['status']) {
-            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => $result['error'], 'csrf_token' => csrf_hash()]);
+            // Include CSRF token even on save failures to maintain session continuity
+            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Save failed.', 'csrf_token' => csrf_hash()]);
         }
 
         return $this->response->setJSON([
@@ -142,433 +125,387 @@ class OllamaController extends BaseController
     public function deleteMedia(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'csrf_token' => csrf_hash()]);
+        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required', 'csrf_token' => csrf_hash()]);
 
         $fileId = $this->request->getPost('file_id');
-        if (!$fileId) return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'csrf_token' => csrf_hash()]);
+        if (!$fileId) return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'Invalid ID', 'csrf_token' => csrf_hash()]);
 
-        $filePath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/' . basename($fileId);
+        $this->ollamaService->cleanupTempFiles([$fileId], $userId);
 
-        if (file_exists($filePath) && unlink($filePath)) {
-            return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
-        }
-
-        return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'File not found', 'csrf_token' => csrf_hash()]);
+        return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
     }
 
-    public function generate(): ResponseInterface
+    // --- Generation ---
+
+    public function generate()
     {
         set_time_limit(300);
-
         $userId = (int) session()->get('userId');
-        $user = $this->userModel->find($userId);
 
-        if (!$user) return redirect()->back()->with('error', 'User not found.');
-
-        if (!$this->validate([
-            'prompt' => 'max_length[100000]',
-            'model'  => 'required'
-        ])) {
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON([
-                    'status' => 'error',
-                    'message' => 'Invalid input.',
-                    'csrf_token' => csrf_hash()
-                ]);
-            }
-            return redirect()->back()->withInput()->with('error', 'Invalid input.');
+        // Validation Guard Clause
+        // Validation Guard Clause
+        if (!$this->_validateGenerationRequest()) {
+            return $this->_respondError('Invalid input.');
         }
 
+        // 1. Prepare Inputs
         $inputText = strip_tags((string) $this->request->getPost('prompt'));
         $selectedModel = (string) $this->request->getPost('model');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
 
-        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
-        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
+        $userSetting = $this->ollamaService->getUserSettings($userId);
+        $options = [
+            'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
+        ];
 
-        if (!$this->_hasBalance($user, self::COST_PER_REQUEST)) {
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON([
-                    'status' => 'error',
-                    'message' => 'Insufficient balance.',
-                    'csrf_token' => csrf_hash()
-                ]);
-            }
-            return redirect()->back()->withInput()->with('error', 'Insufficient balance.');
+        // 2. Service Delegation
+        // Offloads entire logic chain (Files -> Balance -> Context -> API) to Service.
+        // Controller remains unaware of specific implementation details (Model prioritization, etc).
+        $result = $this->ollamaService->processInteraction($userId, $inputText, $uploadedFileIds, $selectedModel, $options);
+
+        // Cleanup Assurance
+        // Idempotent cleanup to guarantee no orphaned files remain on disk.
+        $this->ollamaService->cleanupTempFiles($uploadedFileIds, $userId);
+
+        if (isset($result['status']) && $result['status'] === 'error') {
+            return $this->_respondError($result['message']);
         }
 
-        $images = $this->_processUploadedFiles($uploadedFileIds, $userId);
-
-        $response = $isAssistantMode
-            ? (new \App\Modules\Ollama\Libraries\OllamaMemoryService($userId))->processChat($inputText, $selectedModel, $images)
-            : $this->ollamaService->generateChat($selectedModel, $this->_buildMessages($inputText, $images));
-
-        // Handle new standardized return format
-        if (isset($response['status']) && $response['status'] === 'error') {
-            $msg = $response['message'] ?? 'Unknown error';
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON([
-                    'status'     => 'error',
-                    'message'    => $msg,
-                    'csrf_token' => csrf_hash()
-                ]);
-            }
-            return redirect()->back()->withInput()->with('error', $msg);
-        }
-
-        // Legacy error handling for non-standardized responses (e.g., from OllamaMemoryService)
-        if (isset($response['error']) || (isset($response['success']) && !$response['success'])) {
-            $msg = $response['error'] ?? 'Unknown error';
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON([
-                    'status'     => 'error',
-                    'message'    => $msg,
-                    'csrf_token' => csrf_hash()
-                ]);
-            }
-            return redirect()->back()->withInput()->with('error', $msg);
-        }
-
-        // Extract result from new format or legacy format
-        $resultText = $response['data']['result'] ?? $response['result'] ?? $response['response'] ?? '';
-
-        $this->userModel->deductBalance((int)$user->id, (string)self::COST_PER_REQUEST);
-
-        $parsedown = new Parsedown();
-        $parsedown->setBreaksEnabled(true);
-        $parsedown->setSafeMode(true);
-        $finalHtml = $parsedown->text($resultText);
-
-        if ($this->request->isAJAX()) {
-            return $this->response->setJSON([
-                'status'     => 'success',
-                'result'     => $finalHtml,
-                'raw_result' => $resultText,
-                'flash_html' => view('App\Views\partials\flash_messages', ['success' => 'Generated successfully.']),
-                'csrf_token' => csrf_hash()
-            ]);
-        }
-
-        return redirect()->back()->withInput()
-            ->with('result', $finalHtml)
-            ->with('raw_result', $resultText)
-            ->with('success', 'Generated successfully. Cost: ' . self::COST_PER_REQUEST . ' credits.');
+        // Success
+        return $this->_buildGenerationResponse($result);
     }
 
-    /**
-     * Handles streaming text generation via Server-Sent Events (SSE).
-     * Mirrored strictly from GeminiController::stream.
-     *
-     * @return ResponseInterface
-     */
     public function stream(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        $user = $this->userModel->find($userId);
 
-        if (!$user) {
-            return $this->response->setStatusCode(401)->setJSON(['error' => 'User not found']);
+        // SSE Headers
+        $this->_setupSSEHeaders();
+
+        // Validation
+        if (!$this->_validateGenerationRequest()) {
+            $this->_sendSSEError('Invalid input or model.');
+            return $this->response;
         }
 
-        // Setup SSE Headers (Mirrors Gemini _setupSSEHeaders inline or via method if copied)
-        $this->response->setContentType('text/event-stream');
-        $this->response->setHeader('Cache-Control', 'no-cache');
-        $this->response->setHeader('Connection', 'keep-alive');
-        $this->response->setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx
-
-        // Input Validation
         $inputText = (string) $this->request->getPost('prompt');
         $uploadedFileIds = (array) $this->request->getPost('uploaded_media');
         $selectedModel = (string) $this->request->getPost('model');
 
         if (empty(trim($inputText)) && empty($uploadedFileIds)) {
-            $this->response->setBody("data: " . json_encode([
-                'error' => 'Please provide a prompt.',
-                'csrf_token' => csrf_hash()
-            ]) . "\n\n");
+            $this->_sendSSEError('Please provide a prompt.');
             return $this->response;
         }
 
-        // Check Balance
-        if (!$this->_hasBalance($user, self::COST_PER_REQUEST)) {
-            $this->response->setBody("data: " . json_encode([
-                'error' => "Insufficient balance.",
-                'csrf_token' => csrf_hash()
-            ]) . "\n\n");
+        // 1. Prepare Context & Files via Service
+        $userSetting = $this->ollamaService->getUserSettings($userId);
+        $options = [
+            'assistant_mode' => $userSetting ? $userSetting->assistant_mode_enabled : true,
+        ];
+
+        // Handles file prep, context building, and balance check
+        $prep = $this->ollamaService->prepareStreamContext($userId, $inputText, $uploadedFileIds, $options);
+
+        if (isset($prep['error'])) {
+            $this->_sendSSEError($prep['error']);
             return $this->response;
         }
 
-        // 1. Prepare Context & Files
-        $images = $this->_processUploadedFiles($uploadedFileIds, $userId);
-
-        $userSetting = $this->userSettingsModel->where('user_id', $userId)->first();
-        $isAssistantMode = $userSetting ? $userSetting->assistant_mode_enabled : true;
-
-        // Context Construction (Simplified for Ollama compared to Gemini's MemoryService for now, but preserving flow)
-        $messages = $isAssistantMode
-            ? [['role' => 'system', 'content' => 'You are a helpful AI assistant.']]
-            : [];
-
-        $messages[] = $this->_buildUserMessage($inputText, $images);
-
-        // Session Locking Prevention (Crucial mirroring of Gemini)
+        // 2. Session Locking Prevention
         session_write_close();
 
         $this->response->sendHeaders();
         if (ob_get_level() > 0) ob_end_flush();
 
-        // Send CSRF token immediately to ensure client has it even if stream fails later
         echo "data: " . json_encode(['csrf_token' => csrf_hash()]) . "\n\n";
         flush();
 
-        // 3. Call Stream Service
-        // Note: We are adapting OllamaService to match GeminiService's signature: (params, chunkCallback, completeCallback)
+        // 3. Delegate Stream
         $this->ollamaService->generateStream(
             $selectedModel,
-            $messages,
+            $prep['messages'],
             function ($chunk) {
-                if (is_array($chunk) && isset($chunk['error'])) {
-                    echo "data: " . json_encode([
-                        'error' => $chunk['error'],
-                        'csrf_token' => csrf_hash()
-                    ]) . "\n\n";
+                if (is_array($chunk)) {
+                    if (isset($chunk['error'])) {
+                        echo "data: " . json_encode(['error' => $chunk['error'], 'csrf_token' => csrf_hash()]) . "\n\n";
+                    } elseif (isset($chunk['thought'])) {
+                        echo "data: " . json_encode(['thought' => $chunk['thought']]) . "\n\n";
+                    } elseif (isset($chunk['text'])) {
+                        echo "data: " . json_encode(['text' => $chunk['text']]) . "\n\n";
+                    }
                 } else {
                     echo "data: " . json_encode(['text' => $chunk]) . "\n\n";
                 }
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             },
-            function ($fullText, $usageMetadata) use ($userId, $inputText) {
-                // Delegate business logic to Service
-                $result = $this->ollamaService->finalizeStreamInteraction($userId, $inputText, $fullText);
+            function ($fullText, $usage) use ($userId, $inputText, $selectedModel, $prep, $uploadedFileIds) {
+                // Finalize via Service (deduct cost & update memory)
+                // Note: prepareStreamContext returns 'used_interaction_ids' in prep result for consistency
+                $result = $this->ollamaService->finalizeStreamInteraction(
+                    $userId,
+                    $inputText,
+                    $fullText,
+                    $selectedModel,
+                    $prep['used_interaction_ids'] ?? []
+                );
 
-                // 3. Send Final Status Event
+                // Cleanup
+                $this->ollamaService->cleanupTempFiles($uploadedFileIds, $userId);
+
                 $finalPayload = [
-                    'csrf_token' => csrf_hash(),
-                    'cost'       => $result['cost']
+                    'csrf_token'           => csrf_hash(),
+                    'cost'                 => $result['cost'],
+                    'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+                    'new_interaction_id'   => $result['new_interaction_id'] ?? null,
+                    'timestamp'            => $result['timestamp'] ?? null,
+                    'user_input'           => $inputText
                 ];
-
                 echo "event: close\n";
                 echo "data: " . json_encode($finalPayload) . "\n\n";
-
                 if (ob_get_level() > 0) ob_flush();
                 flush();
             }
         );
-
         exit;
     }
+
+    // --- Settings & Prompts ---
 
     public function updateSetting(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
+        if ($userId <= 0) return $this->response->setStatusCode(403);
+
         $key = $this->request->getPost('setting_key');
         $enabled = $this->request->getPost('enabled') === 'true';
 
         if (!in_array($key, ['assistant_mode_enabled', 'stream_output_enabled'])) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid setting', 'csrf_token' => csrf_hash()]);
+            return $this->response->setStatusCode(400);
         }
 
-        $setting = $this->userSettingsModel->where('user_id', $userId)->first();
-        if (!$setting) {
-            $setting = new OllamaUserSetting();
-            $setting->user_id = $userId;
-        }
-
-        $setting->$key = $enabled;
-        $this->userSettingsModel->save($setting);
-
+        $this->ollamaService->updateUserSetting($userId, $key, $enabled);
         return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
-    }
-
-    public function clearMemory(): RedirectResponse
-    {
-        $userId = (int) session()->get('userId');
-
-        $interactionModel = new OllamaInteractionModel();
-        $interactionModel->where('user_id', $userId)->delete();
-
-        $entityModel = new OllamaEntityModel();
-        $entityModel->where('user_id', $userId)->delete();
-
-        return redirect()->back()->with('success', 'Memory cleared.');
-    }
-
-    public function downloadDocument()
-    {
-        $userId = (int) session()->get('userId');
-        if ($userId <= 0) {
-            return $this->response->setStatusCode(403)->setJSON([
-                'message' => 'Auth required.',
-                'csrf_token' => csrf_hash()
-            ]);
-        }
-
-        $content = $this->request->getPost('content');
-        $format  = $this->request->getPost('format');
-
-        if (empty($content) || !in_array($format, ['pdf', 'docx'])) {
-            return $this->response->setStatusCode(400)->setJSON([
-                'message' => 'Invalid content or format.',
-                'csrf_token' => csrf_hash()
-            ]);
-        }
-
-        $docService = new OllamaDocumentService();
-        $result = $docService->generate($content, $format, [
-            'author' => 'Ollama User ' . $userId
-        ]);
-
-        if ($result['status'] !== 'success') {
-            return $this->response->setStatusCode(500)->setJSON([
-                'message' => $result['message'] ?? 'Export failed.',
-                'csrf_token' => csrf_hash()
-            ]);
-        }
-
-        $filename = 'ollama_export_' . date('Ymd_His') . '.' . $format;
-        $contentType = ($format === 'pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
-        return $this->response
-            ->setHeader('Content-Type', $contentType)
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
-            ->setHeader('X-CSRF-TOKEN', csrf_hash())
-            ->setBody($result['fileData']);
     }
 
     public function addPrompt(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        if ($userId <= 0) return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required', 'csrf_token' => csrf_hash()]);
+        if ($userId <= 0) return $this->response->setStatusCode(403);
 
-        $rules = [
-            'title'       => 'required|min_length[3]|max_length[255]',
-            'prompt_text' => 'required',
-        ];
-
-        if (!$this->validate($rules)) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid input', 'csrf_token' => csrf_hash()]);
+        if (!$this->validate(['title' => 'required', 'prompt_text' => 'required'])) {
+            return $this->_respondError('Invalid input');
         }
 
-        $data = [
-            'user_id'     => $userId,
-            'title'       => $this->request->getPost('title'),
-            'prompt_text' => $this->request->getPost('prompt_text'),
-        ];
-
-        $id = $this->promptModel->insert($data);
+        $id = $this->ollamaService->addPrompt($userId, [
+            'title' => $this->request->getPost('title'),
+            'prompt_text' => $this->request->getPost('prompt_text')
+        ]);
 
         if ($id) {
             return $this->response->setJSON([
                 'status' => 'success',
-                'prompt' => array_merge($data, ['id' => $id]),
+                'prompt' => ['id' => $id, 'title' => $this->request->getPost('title'), 'prompt_text' => $this->request->getPost('prompt_text')],
                 'csrf_token' => csrf_hash()
             ]);
         }
-
-        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to save', 'csrf_token' => csrf_hash()]);
+        return $this->_respondError('Failed to save');
     }
 
     public function deletePrompt($id): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        $prompt = $this->promptModel->find($id);
-
-        if (!$prompt || $prompt->user_id !== $userId) {
-            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Unauthorized', 'csrf_token' => csrf_hash()]);
-        }
-
-        if ($this->promptModel->delete($id)) {
+        if ($this->ollamaService->deletePrompt($userId, (int)$id)) {
             return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
+        return $this->_respondError('Failed to delete');
+    }
 
-        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to delete', 'csrf_token' => csrf_hash()]);
+    public function clearMemory(): RedirectResponse
+    {
+        $userId = (int) session()->get('userId');
+        $this->ollamaService->clearUserMemory($userId);
+
+        return redirect()->back()->with('success', 'Memory cleared.');
     }
 
     /**
-     * Process Uploaded Files (Refactored Helper - DRY Principle)
+     * Fetches user interaction history.
      *
-     * Consolidates file processing logic that was previously duplicated in both
-     * generate() and stream() methods. This helper:
-     * 1. Verifies file existence
-     * 2. Reads and base64-encodes file content for Ollama API
-     * 3. Immediately deletes temp files (ephemeral storage pattern)
-     *
-     * @param array $fileIds Array of file IDs (random filenames) from the upload handler
-     * @param int $userId Current user ID for path security/isolation
-     * @return array Array of base64-encoded image strings ready for API submission
+     * @return ResponseInterface
      */
-    private function _processUploadedFiles(array $fileIds, int $userId): array
+    public function fetchHistory()
     {
-        $images = [];
-        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
+        $userId = (int) session()->get('userId');
+        $limit = $this->request->getVar('limit') ?? 20;
+        $offset = $this->request->getVar('offset') ?? 0;
 
-        foreach ($fileIds as $fileId) {
-            $filePath = $userTempPath . basename($fileId);
-            if (file_exists($filePath)) {
-                // Encode for Ollama multimodal API
-                $images[] = base64_encode(file_get_contents($filePath));
-                // Immediate cleanup: files are ephemeral and single-use
-                @unlink($filePath);
-            }
+        $history = $this->ollamaService->getUserHistory($userId, (int)$limit, (int)$offset);
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'history' => $history,
+            'csrf_token' => csrf_hash()
+        ]);
+    }
+
+    /**
+     * Deletes a specific interaction.
+     *
+     * @return ResponseInterface
+     */
+    public function deleteHistory()
+    {
+        $userId = (int) session()->get('userId');
+        $uniqueId = $this->request->getPost('unique_id');
+
+        if (!$uniqueId) {
+            return $this->_respondError('Invalid ID.');
         }
 
-        return $images;
-    }
-
-    /**
-     * Check User Balance Sufficiency (Refactored Helper - DRY Principle)
-     *
-     * Encapsulates balance validation logic that was previously duplicated.
-     * Simple comparison but extracted for:
-     * - Code clarity and readability
-     * - Single source of truth for balance logic
-     * - Easier testing and potential future cost complexity
-     *
-     * @param User $user User entity with balance property
-     * @param float $cost Required cost for the operation
-     * @return bool True if user has sufficient balance, false otherwise
-     */
-    private function _hasBalance(User $user, float $cost): bool
-    {
-        return $user->balance >= $cost;
-    }
-
-    /**
-     * Build Messages Array for Direct API Mode (Refactored Helper)
-     *
-     * Constructs a properly formatted messages array for Ollama API when
-     * NOT using assistant mode (no system prompt). Used in generate() method.
-     *
-     * @param string $inputText User's text prompt
-     * @param array $images Array of base64-encoded images (empty if text-only)
-     * @return array Messages array in Ollama API format
-     */
-    private function _buildMessages(string $inputText, array $images): array
-    {
-        $userMessage = ['role' => 'user', 'content' => $inputText];
-        if (!empty($images)) {
-            $userMessage['images'] = $images;
+        if ($this->ollamaService->deleteUserInteraction($userId, $uniqueId)) {
+            return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
-        return [$userMessage];
+        return $this->_respondError('Failed to delete.');
+    }
+
+    public function downloadDocument()
+    {
+        $userId = (int) session()->get('userId');
+        if ($userId <= 0) return $this->response->setStatusCode(403);
+
+        $content = $this->request->getPost('raw_response');
+        $format  = $this->request->getPost('format');
+
+        $result = $this->ollamaService->generateDocument($content, $format, ['author' => 'Ollama User ' . $userId]);
+
+        if ($result['status'] !== 'success') {
+            return redirect()->back()->with('error', $result['message']);
+        }
+
+        $mime = $format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        $filename = 'ollama_export_' . date('Ymd_His') . '.' . $format;
+
+        return $this->response
+            ->setHeader('Content-Type', $mime)
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setBody($result['fileData']);
+    }
+
+    // --- Helpers ---
+
+    private function _respondSuccess(string $message, array $data = [])
+    {
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(array_merge(['status' => 'success', 'message' => $message, 'csrf_token' => csrf_hash()], $data));
+        }
+        return redirect()->back()->with('success', $message);
+    }
+
+    private function _respondError(string $message)
+    {
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['status' => 'error', 'message' => $message, 'csrf_token' => csrf_hash()]);
+        }
+        return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    private function _setupSSEHeaders(): void
+    {
+        $this->response->setContentType('text/event-stream');
+        $this->response->setHeader('Cache-Control', 'no-cache');
+        $this->response->setHeader('Connection', 'keep-alive');
+        $this->response->setHeader('X-Accel-Buffering', 'no');
+    }
+
+    private function _sendSSEError(string $msg)
+    {
+        $this->response->setBody("data: " . json_encode(['error' => $msg, 'csrf_token' => csrf_hash()]) . "\n\n");
+    }
+
+    private function _validateGenerationRequest(): bool
+    {
+        return $this->validate([
+            'prompt' => 'max_length[100000]',
+            'model'  => 'required'
+        ]);
+    }
+
+    private function _buildGenerationResponse(array $result)
+    {
+        $finalResult = $result['result'];
+        $parsedHtml = $this->_parseMarkdown($finalResult);
+
+        // Prepare raw result with thoughts (for Plain text view consistency)
+        $rawResult = $this->_formatRawResult($result);
+
+        if (!empty($result['thoughts'])) {
+            $parsedHtml = $this->_buildThinkingBlockHtml($result['thoughts']) . "\n\n" . $parsedHtml;
+        }
+
+        if ($this->request->isAJAX()) {
+            return $this->_buildAJAXResponse($result, $parsedHtml, $rawResult);
+        }
+
+        return $this->_buildStandardResponse($parsedHtml, $rawResult);
+    }
+
+    private function _parseMarkdown(string $text): string
+    {
+        $parsedown = new Parsedown();
+        $parsedown->setSafeMode(true);
+        $parsedown->setBreaksEnabled(true);
+        return $parsedown->text($text);
+    }
+
+    private function _formatRawResult(array $result): string
+    {
+        $raw = $result['result'];
+        if (!empty($result['thoughts'])) {
+            return "=== THINKING PROCESS ===\n\n" . $result['thoughts'] . "\n\n=== ANSWER ===\n\n" . $raw;
+        }
+        return $raw;
+    }
+
+    private function _buildAJAXResponse(array $result, string $parsedHtml, string $rawResult): ResponseInterface
+    {
+        $responsePayload = [
+            'status' => 'success',
+            'result' => $parsedHtml,
+            'raw_result' => $rawResult,
+            'flash_html' => view('App\Views\partials\flash_messages'),
+            'used_interaction_ids' => $result['used_interaction_ids'] ?? [],
+            'new_interaction_id' => $result['new_interaction_id'] ?? null,
+            'timestamp' => $result['timestamp'] ?? null,
+            'user_input' => ($this->request->getPost('prompt') ?? ''),
+            'csrf_token' => csrf_hash()
+        ];
+
+        return $this->response->setJSON($responsePayload);
+    }
+
+    private function _buildStandardResponse(string $parsedHtml, string $rawResult): RedirectResponse
+    {
+        return redirect()->back()->withInput()
+            ->with('result', $parsedHtml)
+            ->with('raw_result', $rawResult)
+            ->with('success', 'Generated successfully.');
     }
 
     /**
-     * Build User Message Object (Refactored Helper)
+     * Build HTML for thinking block display
      *
-     * Constructs a single user message object for appending to an existing
-     * messages array (e.g., after system prompt in assistant mode). Used in stream() method.
-     *
-     * @param string $inputText User's text prompt
-     * @param array $images Array of base64-encoded images (empty if text-only)
-     * @return array Single message object in Ollama API format
+     * @param string $thoughts The thinking content to display
+     * @return string HTML string for thinking block
      */
-    private function _buildUserMessage(string $inputText, array $images): array
+    private function _buildThinkingBlockHtml(string $thoughts): string
     {
-        $userMessage = ['role' => 'user', 'content' => $inputText];
-        if (!empty($images)) {
-            $userMessage['images'] = $images;
-        }
-        return $userMessage;
+        return sprintf(
+            '<details class="thinking-block mb-3">' .
+                '<summary class="cursor-pointer text-muted fw-bold small">Thinking Process</summary>' .
+                '<div class="thinking-content fst-italic text-muted p-2 border-start mt-1 small">%s</div>' .
+                '</details>',
+            esc($thoughts)
+        );
     }
 }

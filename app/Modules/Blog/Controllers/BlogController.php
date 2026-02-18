@@ -6,15 +6,23 @@ namespace App\Modules\Blog\Controllers;
 
 use App\Controllers\BaseController;
 use App\Modules\Blog\Models\PostModel;
+use App\Modules\Blog\Libraries\BlogService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
+/**
+ * BlogController
+ * 
+ * Handles public blog viewing and admin management of blog posts.
+ */
 class BlogController extends BaseController
 {
     protected PostModel $postModel;
+    protected BlogService $blogService;
 
     public function __construct()
     {
-        $this->postModel = new PostModel();
+        $this->postModel        = new PostModel();
+        $this->blogService      = new BlogService();
         helper('form');
     }
 
@@ -67,6 +75,7 @@ class BlogController extends BaseController
         $data = [
             'pageTitle'       => esc($post->title) . ' | Afrikenkid Blog',
             'metaDescription' => esc($post->meta_description),
+            'metaImage'       => $post->featured_image_url,
             'canonicalUrl'    => url_to('blog.show', $slug),
             'post'            => $post,
             'robotsTag'       => 'index, follow',
@@ -79,9 +88,6 @@ class BlogController extends BaseController
 
     public function adminIndex()
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
         $data = [
             'pageTitle' => 'Manage Blog Posts | Admin',
             'posts'     => $this->postModel->orderBy('created_at', 'DESC')->paginate(10),
@@ -93,9 +99,6 @@ class BlogController extends BaseController
 
     public function create()
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
         $data = [
             'pageTitle'  => 'Create New Post | Admin',
             'formTitle'  => 'Create New Post',
@@ -108,9 +111,6 @@ class BlogController extends BaseController
 
     public function edit(int $id)
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
         $post = $this->postModel->find($id);
         if (!$post) {
             throw PageNotFoundException::forPageNotFound();
@@ -127,79 +127,22 @@ class BlogController extends BaseController
 
     public function store()
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
+
+        if ($this->blogService->createPost($this->request->getPost())) {
+            return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post created successfully.');
         }
-        return $this->_processPost();
+
+        return redirect()->back()->withInput()->with('errors', $this->blogService->getErrors());
     }
 
     public function update(int $id)
     {
-        if (!session()->get('is_admin')) {
-            return redirect()->to(url_to('home'));
-        }
-        return $this->_processPost($id);
-    }
 
-    private function _processPost(?int $id = null)
-    {
-        $contentBlocks = [];
-
-        // Validation: Ensure we actually have content types to process
-        $contentTypes = $this->request->getPost('content_type');
-
-        if (is_array($contentTypes)) {
-            // Fetch arrays once to avoid repeated calls
-            $contentText = $this->request->getPost('content_text');
-            $contentLang = $this->request->getPost('content_language');
-
-            foreach ($contentTypes as $index => $type) {
-                $block = ['type' => $type];
-                $text = $contentText[$index] ?? null;
-                $language = $contentLang[$index] ?? null;
-
-                // Logic: Only add valid blocks with actual content
-                if ($text !== null && trim($text) !== '') {
-                    switch ($type) {
-                        case 'text':
-                            $block['content'] = $text;
-                            $contentBlocks[] = $block;
-                            break;
-                        case 'image':
-                            $block['url'] = $text;
-                            $contentBlocks[] = $block;
-                            break;
-                        case 'code':
-                            $block['code'] = $text;
-                            $block['language'] = !empty($language) ? $language : 'plaintext';
-                            $contentBlocks[] = $block;
-                            break;
-                    }
-                }
-            }
+        if ($this->blogService->updatePost($id, $this->request->getPost())) {
+            return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post updated successfully.');
         }
 
-        $payload = [
-            'title'              => $this->request->getPost('title'),
-            'excerpt'            => $this->request->getPost('excerpt'),
-            'status'             => $this->request->getPost('status'),
-            'published_at'       => $this->request->getPost('published_at'),
-            'featured_image_url' => $this->request->getPost('featured_image_url'),
-            'category_name'      => $this->request->getPost('category_name'),
-            'author_name'        => $this->request->getPost('author_name'),
-            'meta_description'   => $this->request->getPost('meta_description'),
-            'body_content'       => json_encode($contentBlocks)
-        ];
-
-        if ($id !== null) {
-            $payload['id'] = $id;
-        }
-
-        if ($this->postModel->save($payload)) {
-            return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post ' . ($id ? 'updated' : 'created') . ' successfully.');
-        }
-
-        return redirect()->back()->withInput()->with('errors', $this->postModel->errors());
+        return redirect()->back()->withInput()->with('errors', $this->blogService->getErrors());
     }
 
     public function delete(int $id)
@@ -213,7 +156,7 @@ class BlogController extends BaseController
             throw PageNotFoundException::forPageNotFound('Cannot delete a post that does not exist.');
         }
 
-        if ($this->postModel->delete($id)) {
+        if ($this->blogService->deletePost($id)) {
             return redirect()->to(url_to('admin.blog.index'))->with('success', 'Post deleted successfully.');
         }
 

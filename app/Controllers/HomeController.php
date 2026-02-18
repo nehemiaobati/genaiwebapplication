@@ -46,10 +46,11 @@ class HomeController extends BaseController
     {
         $data = [
             'pageTitle'       => 'Afrikenkid | AI Tools & Crypto Data for Kenya & Africa',
-            'metaDescription' => 'Access powerful Generative AI tools for content, image, and video creation, plus real-time Bitcoin & Litecoin market insights. A pay-as-you-go solution.',
+            'metaDescription' => 'Access powerful Generative AI tools for text, image, and video creation, plus real-time Bitcoin & Litecoin wallet data insights. A pay-as-you-go solution.',
             'heroTitle'       => 'The All-in-One Platform for AI & Crypto Insights',
             'heroSubtitle'    => 'Leverage Google\'s Gemini AI for text, image, and video generation and analyze blockchain trends with simple, pay-as-you-go pricing.',
             'canonicalUrl'    => url_to('landing'),
+            'robotsTag'       => 'index, follow',
         ];
         return view('home/landing_page', $data);
     }
@@ -60,6 +61,7 @@ class HomeController extends BaseController
             'pageTitle' => 'Terms of Service | Afrikenkid',
             'metaDescription' => 'Read the official Terms of Service for using the platform, its AI tools, and cryptocurrency data services.',
             'canonicalUrl' => url_to('terms'),
+            'robotsTag'    => 'index, follow',
         ];
         return view('home/terms', $data);
     }
@@ -70,7 +72,27 @@ class HomeController extends BaseController
             'pageTitle' => 'Privacy Policy | Afrikenkid',
             'metaDescription' => 'Our Privacy Policy outlines how we collect, use, and protect your personal data when you use services.',
             'canonicalUrl' => url_to('privacy'),
+            'robotsTag'    => 'index, follow',
         ];
         return view('home/privacy', $data);
+    }
+
+    public function acceptCookie()
+    {
+        // 1 year expiration
+        $expires = 365 * 24 * 60 * 60;
+
+        $response = service('response');
+        $response->setCookie(
+            'user_cookie_consent',
+            'accepted',
+            $expires
+        );
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'message' => 'Cookie consent accepted',
+            'csrf_token' => csrf_hash()
+        ]);
     }
 }

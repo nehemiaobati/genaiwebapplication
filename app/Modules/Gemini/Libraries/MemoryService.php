@@ -14,12 +14,13 @@ use App\Modules\Gemini\Libraries\EmbeddingService;
 use CodeIgniter\I18n\Time;
 
 /**
- * Gemini Memory Service
+ * Manages conversational state and long-term history recall.
  *
- * Manages AI memory including storage, retrieval, relevance scoring, and contextual prompt construction.
- * Implements hybrid search (vector + keyword) and temporal decay mechanisms.
- *
- * @package App\Modules\Gemini\Libraries
+ * Implements:
+ * - Hybrid search orchestration (Vector semantic + Keyword lexical).
+ * - Temporal decay and relevance scoring for prioritized context.
+ * - XML-based system prompt synthesis with dynamic time awareness.
+ * - Interaction pruning for managed resource lifecycle.
  */
 class MemoryService
 {
@@ -54,15 +55,137 @@ class MemoryService
         $this->db = $db ?? \Config\Database::connect();
     }
 
+    // --- Helper Methods ---
+
     /**
-     * Builds Contextual Prompt with Memory Integration
+     * Calculates semantic proximity between two numerical vectors.
      *
-     * Centralizes duplicated prompt construction logic from Controller and Service.
-     * This method retrieves relevant context, loads the XML template, and performs
-     * placeholder replacements to create a fully contextualized prompt.
+     * @param array $vecA First coordinate vector.
+     * @param array $vecB Second coordinate vector.
+     * @return float Normalised similarity metric (-1.0 to 1.0).
+     */
+    private function _cosineSimilarity(array $vecA, array $vecB): float
+    {
+        $dotProduct = 0.0;
+        $magA = 0.0;
+        $magB = 0.0;
+        $count = count($vecA);
+        if ($count !== count($vecB) || $count === 0) return 0;
+
+        for ($i = 0; $i < $count; $i++) {
+            $dotProduct += $vecA[$i] * $vecB[$i];
+            $magA += $vecA[$i] * $vecA[$i];
+            $magB += $vecB[$i] * $vecB[$i];
+        }
+
+        $magA = sqrt($magA);
+        $magB = sqrt($magB);
+
+        return ($magA == 0 || $magB == 0) ? 0 : $dotProduct / ($magA * $magB);
+    }
+
+    /**
+     * Extracts entities (keywords) from the text using the TokenService.
      *
-     * @param string $inputText User's current query
-     * @return array ['finalPrompt' => string, 'memoryService' => $this, 'usedInteractionIds' => array]
+     * @param string $text The text to analyze.
+     * @return array An array of extracted entities.
+     */
+    private function _extractEntities(string $text): array
+    {
+        return $this->tokenService->processText($text);
+    }
+
+    /**
+     * Updates entity records based on extracted keywords.
+     *
+     * @param array $keywords Extracted keywords from the interaction.
+     * @param string $interactionId The ID of the current interaction.
+     * @return void
+     */
+    private function _updateEntitiesFromInteraction(array $keywords, string $interactionId): void
+    {
+        $isNovel = false;
+        foreach ($keywords as $keyword) {
+            $entityKey = strtolower($keyword);
+            /** @var AGIEntity|null $entity */
+            $entity = $this->entityModel->findByUserAndKey($this->userId, $entityKey);
+
+            if (!$entity) {
+                $isNovel = true;
+                $entity = new AGIEntity([
+                    'user_id' => $this->userId,
+                    'entity_key' => $entityKey,
+                    'name' => $keyword,
+                    'relationships' => [],
+                ]);
+            }
+
+            $entity->access_count = ($entity->access_count ?? 0) + 1;
+            $entity->relevance_score = ($entity->relevance_score ?? $this->config->initialScore) + $this->config->rewardScore;
+
+            $mentioned = $entity->mentioned_in ?? [];
+            if (!in_array($interactionId, $mentioned)) {
+                $mentioned[] = $interactionId;
+            }
+            $entity->mentioned_in = $mentioned;
+
+            $this->entityModel->save($entity);
+        }
+
+        if ($isNovel) {
+            $this->interactionModel
+                ->where('unique_id', $interactionId)
+                ->set('relevance_score', "relevance_score + {$this->config->noveltyBonus}", false)
+                ->update();
+        }
+
+        if (count($keywords) > 1) {
+            foreach ($keywords as $k1) {
+                foreach ($keywords as $k2) {
+                    if ($k1 === $k2) continue;
+
+                    $entity1 = $this->entityModel->findByUserAndKey($this->userId, strtolower($k1));
+                    if ($entity1) {
+                        $relationships = $entity1->relationships ?? [];
+                        $relationships[$k2] = ($relationships[$k2] ?? 0) + $this->config->relationshipStrengthIncrement;
+                        $entity1->relationships = $relationships;
+                        $this->entityModel->save($entity1);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Purges stale interactions to optimize storage utilization.
+     */
+    private function _pruneMemory(): void
+    {
+        $count = $this->interactionModel->where('user_id', $this->userId)->countAllResults();
+
+        if ($count > $this->config->pruningThreshold) {
+            $toDelete = $count - $this->config->pruningThreshold;
+            $this->interactionModel
+                ->where('user_id', $this->userId)
+                ->orderBy('relevance_score', 'ASC')
+                ->orderBy('last_accessed', 'ASC')
+                ->limit($toDelete)
+                ->delete();
+        }
+    }
+
+    // --- Public API ---
+
+    /**
+     * Synthesizes a fully contextualized interaction prompt.
+     *
+     * Workflow:
+     * - Recalls relevant historical context.
+     * - Injects temporal metadata.
+     * - Merges user input into the hierarchical XML template.
+     *
+     * @param string $inputText Current user query.
+     * @return array Contextualized prompt and session metadata.
      */
     public function buildContextualPrompt(string $inputText): array
     {
@@ -94,34 +217,9 @@ class MemoryService
     }
 
     /**
-     * Calculates the cosine similarity between two vectors.
-     * @return float A value between -1 and 1. Higher is more similar.
-     */
-    private function _cosineSimilarity(array $vecA, array $vecB): float
-    {
-        $dotProduct = 0.0;
-        $magA = 0.0;
-        $magB = 0.0;
-        $count = count($vecA);
-        if ($count !== count($vecB) || $count === 0) return 0;
-
-        for ($i = 0; $i < $count; $i++) {
-            $dotProduct += $vecA[$i] * $vecB[$i];
-            $magA += $vecA[$i] * $vecA[$i];
-            $magB += $vecB[$i] * $vecB[$i];
-        }
-
-        $magA = sqrt($magA);
-        $magB = sqrt($magB);
-
-        return ($magA == 0 || $magB == 0) ? 0 : $dotProduct / ($magA * $magB);
-    }
-
-    /**
-     * Retrieves relevant context from memory based on user input.
+     * Orchestrates hybrid context retrieval.
      *
-     * @param string $userInput The user's query.
-     * @return array An array containing the context string and used interaction IDs.
+     * Aggregates Semantic (Vector) and Lexical (Keyword) results with temporal weighting.
      */
     public function getRelevantContext(string $userInput): array
     {
@@ -226,16 +324,18 @@ class MemoryService
     }
 
     /**
-     * Updates the memory with the latest interaction.
+     * Synchronizes memory with the latest interaction lifecycle.
      *
-     * @param string $userInput The user's input.
-     * @param string $aiOutput The AI's response.
-     * @param array|string $aiOutputRaw The raw AI response body (complete response).
-     * @param array $usedInteractionIds IDs of interactions used as context.
-     * @return string The unique ID of the new interaction.
+     * @param string $userInput Current user query text.
+     * @param string $aiOutput Raw text response from the model.
+     * @param array|string $aiOutputRaw Unparsed model response packet.
+     * @param array $usedInteractionIds List of historically relevant IDs injected into context.
+     * @return string Unique identifier for the newly persisted interaction.
      */
     public function updateMemory(string $userInput, string $aiOutput, array|string $aiOutputRaw, array $usedInteractionIds): string
     {
+        $this->interactionModel->db->transStart();
+
         // 1. Reward used interactions
         if (!empty($usedInteractionIds)) {
             $this->interactionModel
@@ -313,85 +413,14 @@ class MemoryService
 
         $this->_updateEntitiesFromInteraction($keywords, $newId);
         $this->_pruneMemory();
+
+        $this->interactionModel->db->transComplete();
+
+        if ($this->interactionModel->db->transStatus() === false) {
+            throw new \RuntimeException('Failed to update memory due to transaction error.');
+        }
+
         return $newId;
-    }
-
-    /**
-     * Updates entity records based on extracted keywords.
-     *
-     * @param array $keywords Extracted keywords from the interaction.
-     * @param string $interactionId The ID of the current interaction.
-     */
-    private function _updateEntitiesFromInteraction(array $keywords, string $interactionId): void
-    {
-        $isNovel = false;
-        foreach ($keywords as $keyword) {
-            $entityKey = strtolower($keyword);
-            /** @var AGIEntity|null $entity */
-            $entity = $this->entityModel->findByUserAndKey($this->userId, $entityKey);
-
-            if (!$entity) {
-                $isNovel = true;
-                $entity = new AGIEntity([
-                    'user_id' => $this->userId,
-                    'entity_key' => $entityKey,
-                    'name' => $keyword,
-                    'relationships' => [],
-                ]);
-            }
-
-            $entity->access_count = ($entity->access_count ?? 0) + 1;
-            $entity->relevance_score = ($entity->relevance_score ?? $this->config->initialScore) + $this->config->rewardScore;
-
-            $mentioned = $entity->mentioned_in ?? [];
-            if (!in_array($interactionId, $mentioned)) {
-                $mentioned[] = $interactionId;
-            }
-            $entity->mentioned_in = $mentioned;
-
-            $this->entityModel->save($entity);
-        }
-
-        if ($isNovel) {
-            $this->interactionModel
-                ->where('unique_id', $interactionId)
-                ->set('relevance_score', "relevance_score + {$this->config->noveltyBonus}", false)
-                ->update();
-        }
-
-        if (count($keywords) > 1) {
-            foreach ($keywords as $k1) {
-                foreach ($keywords as $k2) {
-                    if ($k1 === $k2) continue;
-
-                    $entity1 = $this->entityModel->findByUserAndKey($this->userId, strtolower($k1));
-                    if ($entity1) {
-                        $relationships = $entity1->relationships ?? [];
-                        $relationships[$k2] = ($relationships[$k2] ?? 0) + $this->config->relationshipStrengthIncrement;
-                        $entity1->relationships = $relationships;
-                        $this->entityModel->save($entity1);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Removes old or irrelevant memories to keep the database size manageable.
-     */
-    private function _pruneMemory(): void
-    {
-        $count = $this->interactionModel->where('user_id', $this->userId)->countAllResults();
-
-        if ($count > $this->config->pruningThreshold) {
-            $toDelete = $count - $this->config->pruningThreshold;
-            $this->interactionModel
-                ->where('user_id', $this->userId)
-                ->orderBy('relevance_score', 'ASC')
-                ->orderBy('last_accessed', 'ASC')
-                ->limit($toDelete)
-                ->delete();
-        }
     }
 
     /**
@@ -412,9 +441,9 @@ class MemoryService
     }
 
     /**
-     * Generates the system prompt with dynamic time and context.
+     * Retrieves the structural XML system template.
      *
-     * @return string The formatted system prompt.
+     * @return string Formatted XML payload for system-level instructions.
      */
     public function getTimeAwareSystemPrompt(): string
     {
@@ -475,13 +504,51 @@ XML;
     }
 
     /**
-     * Extracts entities (keywords) from the text using the TokenService.
+     * Retrieves user interaction history.
      *
-     * @param string $text The text to analyze.
-     * @return array An array of extracted entities.
+     * @param int $userId
+     * @param int $limit
+     * @param int $offset
+     * @return array
      */
-    private function _extractEntities(string $text): array
+    public function getUserHistory(int $userId, int $limit = 20, int $offset = 0): array
     {
-        return $this->tokenService->processText($text);
+        $interactions = $this->interactionModel
+            ->asArray()
+            ->select('unique_id, timestamp, user_input_raw, SUBSTRING(ai_output, 1, 100) as ai_output')
+            ->where('user_id', $userId)
+            ->orderBy('timestamp', 'DESC')
+            ->limit($limit, $offset)
+            ->findAll();
+
+        foreach ($interactions as &$interaction) {
+            // Ensure timestamp is standard for frontend consistency
+            if (!empty($interaction['timestamp'])) {
+                $interaction['timestamp'] = date('Y-m-d H:i:s', strtotime((string)$interaction['timestamp']));
+            }
+        }
+
+        return $interactions;
+    }
+
+    /**
+     * Deletes a specific interaction.
+     *
+     * @param int $userId
+     * @param string $uniqueId
+     * @return bool
+     */
+    public function deleteInteraction(int $userId, string $uniqueId): bool
+    {
+        $this->interactionModel->db->transStart();
+
+        // Verify ownership and delete
+        $result = (bool) $this->interactionModel
+            ->where('user_id', $userId)
+            ->where('unique_id', $uniqueId)
+            ->delete();
+
+        $this->interactionModel->db->transComplete();
+        return $this->interactionModel->db->transStatus() !== false && $result;
     }
 }

@@ -1,106 +1,110 @@
 <?= $this->extend('layouts/default') ?>
 
-<?= $this->section('styles') ?>
+<?= $this->section('content') ?>
 <style>
-    /* MODIFICATION: Removed blueprint-card styles. Only page-specific styles remain. */
-    .hero-section {
-        background-color: var(--bs-tertiary-bg);
-        /* Use theme-aware variable */
-        padding: 4rem 0;
-        border-bottom: 1px solid var(--border-color);
+    section[id] {
+        scroll-margin-top: 5rem;
     }
 
-    .feature-icon {
-        font-size: 2.5rem;
-        color: var(--primary-color);
+    .hover-effect {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .hover-effect:hover {
+        transform: translateY(-5px);
     }
 </style>
-<?= $this->endSection() ?>
+<!-- Hero Section -->
+<section class="py-5 bg-body-tertiary">
+    <div class="container py-5 text-center">
+        <span class="badge bg-primary-subtle text-primary mb-3 rounded-pill px-3 py-2 fw-bold">Powered by Gemini</span>
+        <h1 class="display-3 fw-bold mb-4"><?= esc($heroTitle ?? 'Enterprise AI Solutions') ?></h1>
+        <p class="lead mb-5 mx-auto text-muted" style="max-width: 800px;"><?= esc($heroSubtitle ?? 'Unlock the power of generative AI for content, images, and data analysis.') ?></p>
 
-<?= $this->section('content') ?>
-<div class="hero-section text-center">
+        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Start Creating Free</a>
+            <a href="#capabilities" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">View Capabilities</a>
+        </div>
+    </div>
+</section>
+
+<!-- Feature Grid -->
+<section id="capabilities" class="py-5">
     <div class="container">
-        <h1 class="display-4 fw-bold"><?= esc($heroTitle) ?></h1>
-        <p class="lead text-muted col-lg-8 mx-auto"><?= esc($heroSubtitle) ?></p>
-        <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg mt-3">Sign Up to Get Started</a>
-    </div>
-</div>
+        <div class="row g-4">
+            <!-- Text Generation -->
+            <div class="col-12 col-md-6">
+                <div class="card h-100 border-0 shadow-sm hover-effect">
+                    <div class="card-body p-5">
+                        <div class="mb-4">
+                            <span class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle" style="width: 3rem; height: 3rem;">
+                                <i class="bi bi-file-text-fill fs-4"></i>
+                            </span>
+                        </div>
+                        <h3 class="fw-bold mb-3">Draft Strategic Reports</h3>
+                        <p class="text-muted mb-0">Generate comprehensive business reports, technical documentation, and marketing strategies in seconds. Turn raw ideas into executive-ready documents.</p>
+                    </div>
+                </div>
+            </div>
 
-<div class="container my-5">
-    <div class="blueprint-header text-center mb-5">
-        <h2 class="fw-bold">Key Features</h2>
-        <p class="lead text-muted">Unlock powerful capabilities to streamline your workflow.</p>
-    </div>
+            <!-- Image Generation -->
+            <div class="col-12 col-md-6">
+                <div class="card h-100 border-0 shadow-sm hover-effect">
+                    <div class="card-body p-5">
+                        <div class="mb-4">
+                            <span class="d-inline-flex align-items-center justify-content-center bg-success-subtle text-success rounded-circle" style="width: 3rem; height: 3rem;">
+                                <i class="bi bi-images fs-4"></i>
+                            </span>
+                        </div>
+                        <h3 class="fw-bold mb-3">High-Fidelity Image Engine</h3>
+                        <p class="text-muted mb-0">Create photorealistic assets for your brand. From product mockups to social media visuals, generate exactly what you imagine.</p>
+                    </div>
+                </div>
+            </div>
 
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="card blueprint-card h-100">
-                <div class="card-body text-center p-4">
-                    <i class="bi bi-file-earmark-text feature-icon mb-3"></i>
-                    <h5 class="card-title fw-bold">Document Analysis</h5>
-                    <p class="card-text text-muted">Upload PDFs, text files, and more. Ask questions, get summaries, and extract key information in seconds.</p>
+            <!-- Document Ops -->
+            <div class="col-12 col-md-6">
+                <div class="card h-100 border-0 shadow-sm hover-effect">
+                    <div class="card-body p-5">
+                        <div class="mb-4">
+                            <span class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle" style="width: 3rem; height: 3rem;">
+                                <i class="bi bi-file-earmark-check-fill fs-4"></i>
+                            </span>
+                        </div>
+                        <h3 class="fw-bold mb-3">Upload & Audit (PDF/Receipts)</h3>
+                        <p class="text-muted mb-0">Transform "dead" data into actionable insights. Upload invoices, contracts, or tax documents and get instant audits and summaries.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice & Video -->
+            <div class="col-12 col-md-6">
+                <div class="card h-100 border-0 shadow-sm hover-effect">
+                    <div class="card-body p-5">
+                        <div class="mb-4">
+                            <span class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning rounded-circle" style="width: 3rem; height: 3rem;">
+                                <i class="bi bi-camera-reels-fill fs-4"></i>
+                            </span>
+                        </div>
+                        <h3 class="fw-bold mb-3">Video Synthesis</h3>
+                        <p class="text-muted mb-0">Produce video content. Perfect for media storytelling and digital marketing campaigns.</p>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card blueprint-card h-100">
-                <div class="card-body text-center p-4">
-                    <i class="bi bi-pencil-square feature-icon mb-3"></i>
-                    <h5 class="card-title fw-bold">Creative Writing</h5>
-                    <p class="card-text text-muted">Generate marketing copy, blog posts, emails, or even poetry. The AI Studio is your partner in creativity.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card blueprint-card h-100">
-                <div class="card-body text-center p-4">
-                    <i class="bi bi-arrow-repeat feature-icon mb-3"></i>
-                    <h5 class="card-title fw-bold">Conversational Memory</h5>
-                    <p class="card-text text-muted">The AI remembers previous parts of your conversation, allowing for complex, multi-step tasks and follow-up questions.</p>
-                </div>
-            </div>
-        </div>
     </div>
+</section>
 
-    <!-- New Row for Multimedia Features -->
-    <div class="row g-4 mt-2 justify-content-center">
-        <div class="col-md-4">
-            <div class="card blueprint-card h-100">
-                <div class="card-body text-center p-4">
-                    <i class="bi bi-image feature-icon mb-3"></i>
-                    <h5 class="card-title fw-bold">Image Generation</h5>
-                    <p class="card-text text-muted">Turn text into stunning visuals. Create unique artwork, marketing assets, and illustrations instantly.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card blueprint-card h-100">
-                <div class="card-body text-center p-4">
-                    <i class="bi bi-camera-reels feature-icon mb-3"></i>
-                    <h5 class="card-title fw-bold">Video Synthesis</h5>
-                    <p class="card-text text-muted">Create engaging videos from simple prompts. Bring your stories to life with AI-generated motion.</p>
-                </div>
+<!-- Call to Action -->
+<section class="py-5 mb-5">
+    <div class="container">
+        <div class="card bg-primary text-white rounded-4 overflow-hidden shadow-lg border-0 hover-effect" style="background: var(--hero-gradient, linear-gradient(45deg, #0d6efd, #0a58ca)) !important;">
+            <div class="card-body p-5 text-center position-relative">
+                <h2 class="display-5 fw-bold mb-4">Ready to Innovate?</h2>
+                <p class="lead mb-4 opacity-75">Join thousands of creators using our AI platform.</p>
+                <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill">Get Started Now</a>
             </div>
         </div>
     </div>
-
-    <div class="row align-items-center my-5 py-5">
-        <div class="col-md-6">
-            <h3 class="fw-bold">Visualize Your Workflow</h3>
-            <p class="text-muted">The intuitive interface makes it easy to manage your prompts, upload media, and interact with the AI. See your ideas come to life in a clean, organized workspace.</p>
-        </div>
-        <div class="col-md-6">
-            <img src="https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" class="img-fluid rounded shadow-sm" alt="Abstract visualization of an artificial intelligence neural network.">
-        </div>
-    </div>
-
-    <!-- MODIFICATION: Removed 'bg-light' and ensured 'blueprint-card' is used for theme compatibility. -->
-    <div class="card blueprint-card text-center p-4">
-        <div class="card-body">
-            <h4 class="fw-bold">Ready to Get Started?</h4>
-            <p class="text-muted">Sign up today and experience the future of content creation and analysis.</p>
-            <a href="<?= url_to('register') ?>" class="btn btn-primary">Create Your Account</a>
-        </div>
-    </div>
-</div>
+</section>
 <?= $this->endSection() ?>

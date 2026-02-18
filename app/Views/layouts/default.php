@@ -5,12 +5,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 
     <!-- SEO Meta Tags -->
-    <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?></title>
-    <meta name="description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data. Query Bitcoin & Litecoin, and interact with advanced AI. Pay easily with Mobile Money or Credit Card.') ?>">
-    <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, Kenya, M-Pesa, Lipa na Mpesa, Mobile Money Africa, CodeIgniter Development">
+    <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Wallet Balance and Transaction') ?></title>
+    <meta name="description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
+    <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, Kenya, M-Pesa, Lipa na Mpesa, Mobile Money, CodeIgniter Development">
 
     <!-- Geo-targeting -->
     <meta name="geo.region" content="KE">
@@ -21,13 +21,20 @@
     <meta name="robots" content="<?= esc($robotsTag ?? 'index, follow') ?>">
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" type="image/x-icon">
 
-    <!-- Social Media Meta -->
+    <!-- Social Media Meta (Open Graph for Facebook/LinkedIn) -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Data') ?>">
-    <meta property="og:description" content="<?= esc($metaDescription ?? 'Explore generative AI and real-time crypto data with Afrikenkid. Pay easily with Mobile Money or Credit Card.') ?>">
-    <meta property="og:image" content="<?= base_url('assets/images/afrikenkid_og_image.jpg') ?>">
+    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Wallet Balance and Transaction') ?>">
+    <meta property="og:description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
+    <meta property="og:image" content="<?= esc($metaImage ?? base_url('public/assets/images/afrikenkid_og_image.jpg')) ?>">
+
+    <!-- Twitter Card (LinkedIn also uses these) -->
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@afrikenkid">
+    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Wallet Balance and Transaction') ?>">
+    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
+    <meta name="twitter:image" content="<?= esc($metaImage ?? base_url('public/assets/images/afrikenkid_og_image.jpg')) ?>">
+    <meta name="twitter:image:alt" content="AFRIKENKID Platform Preview">
 
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -35,15 +42,35 @@
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
             "name": "AFRIKENKID",
-            "applicationCategory": "DeveloperApplication",
+            "applicationCategory": "MultimediaApplication",
             "operatingSystem": "Web",
-            "description": "<?= esc($metaDescription ?? 'A platform offering generative AI insights and real-time cryptocurrency data queries, with payment options including Mobile Money and Credit Cards for the African market.') ?>",
+            "description": "<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>",
             "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
+            "featureList": [
+                "Gemini AI",
+                "Video Synthesis",
+                "Image Generation (Imagen and Gemini)",
+                "Document Analysis & Auditing",
+                "Real-Time Blockchain Verification (BTC & LTC)",
+                "Secure M-Pesa & Airtel Money Payments"
+            ],
             "offers": {
                 "@type": "Offer",
                 "price": "0",
-                "priceCurrency": "KES"
-            }
+                "priceCurrency": "KES",
+                "description": "Credit-based pricing with secure M-Pesa top-ups."
+            },
+            "brand": {
+                "@type": "Brand",
+                "name": "Afrikenkid",
+                "logo": "<?= base_url('public/assets/images/afrikenkid_og_image.jpg') ?>"
+            },
+            "author": {
+                "@type": "Organization",
+                "name": "Afrikenkid AI Studio",
+                "url": "<?= base_url() ?>"
+            },
+            "keywords": "AI Video Generation Kenya, Gemini AI, M-Pesa Statement Analysis, Blockchain Data Verification, AI Studio Nairobi"
         }
     </script>
 
@@ -57,22 +84,32 @@
     <style>
         /* CSS variables now directly reference Bootstrap's variables for better theme integration. */
         :root {
+            /* Base Colors */
             --primary-color: var(--bs-primary);
             --secondary-color: var(--bs-secondary);
 
+            /* Theme Colors */
             --light-bg: var(--bs-body-bg);
-            --card-bg: var(--bs-card-bg);
+            --card-bg: var(--bs-body-bg);
+            /* Use body bg for cards in default mode for better blend */
             --text-body: var(--bs-body-color);
             --text-heading: var(--bs-heading-color);
             --border-color: var(--bs-border-color);
-            --header-bg: var(--bs-body-bg);
+            --header-bg: rgba(var(--bs-body-bg-rgb), 0.85);
+            /* Glassmorphism base */
 
             /* Landing Page specific */
-            --hero-gradient: linear-gradient(135deg, var(--bs-primary), var(--bs-dark));
+            --hero-gradient: linear-gradient(145deg, var(--bs-primary), 80%, #000);
+            /* Richer gradient */
             --cta-bg: var(--bs-dark);
-            /* Using Bootstrap dark for CTA background */
             --feature-icon-color: var(--bs-white);
-            /* White for feature icons */
+        }
+
+        [data-bs-theme="dark"] {
+            --card-bg: var(--bs-body-bg);
+            /* Ensure dark mode uses body bg */
+            --header-bg: rgba(33, 37, 41, 0.85);
+            /* Dark mode glass base */
         }
 
         body {
@@ -82,30 +119,35 @@
             visibility: hidden;
             /* Prevents FOUC */
             transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+            /* Crisp text */
+        }
+
+        /* Glassmorphic Navbar */
+        .navbar {
+            background-color: var(--header-bg) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(var(--bs-border-color-rgb), 0.1);
+            transition: all 0.3s ease;
         }
 
         .blueprint-card {
             background-color: var(--card-bg);
-            border-radius: 0.75rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
-            border: 1px solid var(--border-color);
-            transition: all 0.2s ease-in-out;
-        }
-
-        html[data-bs-theme="dark"] .blueprint-card {
-            box-shadow: none;
+            border: 1px solid rgba(var(--bs-border-color-rgb), 0.5);
+            border-radius: 1rem;
+            /* Softer corners */
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
         }
 
         .blueprint-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 0.8rem 1.5rem rgba(0, 0, 0, 0.07) !important;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            /* Deep, soft shadow */
+            border-color: var(--bs-primary);
         }
 
-        .navbar {
-            background-color: var(--header-bg) !important;
-            border-bottom: 1px solid var(--border-color);
-            transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease;
-        }
+
 
         .navbar.scrolled {
             box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .075);
@@ -136,6 +178,29 @@
 
         .footer a:hover {
             color: var(--primary-color);
+        }
+
+        /* Theme Toggle & Mobile UI */
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(var(--bs-primary-rgb), 0.1);
+            color: var(--primary-color);
+        }
+
+        /* Mobile Menu Items */
+        .offcanvas-body .nav-link {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
         }
     </style>
     <?= $this->renderSection('styles') ?>
@@ -178,7 +243,7 @@
             <!-- EDIT: Added .fw-bold utility class -->
             <a class="navbar-brand fs-4 fw-bold" href="<?= url_to('landing') ?>"><i class="bi bi-box"></i> AFRIKENKID</a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-controls="mobileNav">
+            <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-controls="mobileNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
@@ -213,7 +278,7 @@
                     <?php endif; ?>
                     <li class="nav-item ms-lg-3">
                         <!-- EDIT: Added .cursor-pointer utility class -->
-                        <span class="nav-link theme-toggle cursor-pointer" id="theme-toggle-desktop" role="button" aria-label="Toggle theme" tabindex="0"></span>
+                        <span class="theme-toggle" id="theme-toggle-desktop" role="button" aria-label="Toggle theme" tabindex="0"></span>
                     </li>
                 </ul>
             </div>
@@ -222,39 +287,41 @@
 
     <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileNav" aria-labelledby="mobileNavLabel">
         <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title" id="mobileNavLabel">Menu</h5>
+            <h5 class="offcanvas-title fw-bold" id="mobileNavLabel">Menu</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-        <div class="offcanvas-body">
-            <ul class="navbar-nav">
+        <div class="offcanvas-body d-flex flex-column">
+            <ul class="navbar-nav flex-grow-1">
 
-                <?php $linksToRender($pageIdentifier ?? '', 'fw-medium'); // EDIT: Passed .fw-medium to the links 
+                <?php $linksToRender($pageIdentifier ?? '', 'fw-bold fs-5'); // Larger text for mobile 
                 ?>
 
                 <li class="nav-item">
-                    <hr class="dropdown-divider">
+                    <hr class="dropdown-divider my-3">
                 </li>
 
                 <?php if (session()->get('isLoggedIn')): ?>
-                    <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('account.index') ?>">My Account</a></li>
+                    <li class="nav-item"><a class="nav-link fw-bold fs-5" href="<?= url_to('account.index') ?>">My Account</a></li>
                     <?php if (session()->get('is_admin')): ?>
-                        <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
+                        <li class="nav-item"><a class="nav-link fw-bold fs-5" href="<?= url_to('admin.index') ?>">Admin Panel</a></li>
                     <?php endif; ?>
-                    <li class="nav-item"><a class="nav-link fw-medium" href="<?= url_to('logout') ?>">Logout</a></li>
+                    <li class="nav-item"><a class="nav-link fw-bold fs-5 text-danger" href="<?= url_to('logout') ?>">Logout</a></li>
                 <?php else: ?>
-                    <li class="nav-item auth-buttons-mobile pt-3 mt-3 border-top">
-                        <div class="d-grid gap-2">
-                            <a class="btn btn-outline-primary" href="<?= url_to('login') ?>">Login</a>
-                            <a class="btn btn-primary" href="<?= url_to('register') ?>">Register</a>
+                    <li class="nav-item mt-2">
+                        <div class="d-grid gap-3">
+                            <a class="btn btn-primary btn-lg fw-bold" href="<?= url_to('register') ?>">Get Started</a>
+                            <a class="btn btn-outline-primary btn-lg fw-bold" href="<?= url_to('login') ?>">Login</a>
                         </div>
                     </li>
                 <?php endif; ?>
-                <li class="nav-item mt-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-medium">Theme</span>
-                    <!-- EDIT: Added .cursor-pointer utility class -->
-                    <span class="theme-toggle cursor-pointer" id="theme-toggle-mobile" role="button" aria-label="Toggle theme" tabindex="0"></span>
-                </li>
             </ul>
+
+            <div class="mt-auto border-top pt-3">
+                <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-body-tertiary">
+                    <span class="fw-medium px-2">Theme Mode</span>
+                    <span class="theme-toggle" id="theme-toggle-mobile" role="button" aria-label="Toggle theme" tabindex="0"></span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -272,7 +339,7 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4">
                     <h5>AFRIKENKID</h5>
-                    <p class="small">Build smarter with a pay-as-you-go platform. Leverage Generative AI, query real-time BTC & LTC wallet data, and securely top up with M-Pesa. Built for creators, businesses, and developers in Kenya and Africa.</p>
+                    <p class="small">Build smarter with a pay-as-you-go platform. <br> Leverage Generative AI and query real-time BTC & LTC wallet data. Securely top up with Mobile Money (M-Pesa, Airtel Money, etc.). Built for creators, businesses, and developers in Kenya, Africa & Beyond.</p>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>

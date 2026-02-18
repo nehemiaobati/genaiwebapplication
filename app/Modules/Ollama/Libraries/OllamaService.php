@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Ollama\Libraries;
 
 use App\Modules\Ollama\Config\Ollama as OllamaConfig;
+use App\Modules\Ollama\Models\OllamaPromptModel;
+use App\Modules\Ollama\Models\OllamaUserSettingsModel;
 use CodeIgniter\HTTP\CURLRequest;
 use Config\Services;
+use App\Models\UserModel;
 
 /**
  * Ollama Service
@@ -19,52 +22,284 @@ use Config\Services;
  * - Uses OllamaPayloadService for request construction (separation of concerns)
  * - Supports both synchronous and streaming (SSE) generation modes
  * - Provides embeddings for hybrid memory retrieval system
+ * - Manages user settings and prompts
  *
  * @package App\Modules\Ollama\Libraries
  */
 class OllamaService
 {
+    public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    public const SUPPORTED_MIME_TYPES = [
+        'image/png',
+        'image/jpeg',
+        'image/jpg',
+        'image/webp',
+        'image/gif',
+    ];
+
     /**
-     * Constructor with Partial Property Promotion (PHP 8.0+)
-     *
-     * Note: We cannot use function calls (new, config(), Services::x()) as default
-     * values in constructor parameters (PHP limitation). Therefore, we:
-     * 1. Accept nullable parameters with null defaults
-     * 2. Use null coalescing operator (??) in the constructor body to instantiate
-     *
-     * This pattern maintains property promotion benefits while working within PHP's constraints.
-     *
-     * @param OllamaConfig|null $config Configuration object (auto-instantiated if null)
-     * @param OllamaPayloadService|null $payloadService Payload builder (auto-instantiated if null)
-     * @param CURLRequest|null $client HTTP client for API requests (auto-instantiated if null)
+     * Constructor with Property Promotion (PHP 8.0+)
      */
     public function __construct(
         protected ?OllamaConfig $config = null,
         protected ?OllamaPayloadService $payloadService = null,
-        protected ?CURLRequest $client = null
+        protected ?CURLRequest $client = null,
+        protected ?UserModel $userModel = null,
+        protected $db = null,
+        protected ?OllamaPromptModel $promptModel = null,
+        protected ?OllamaUserSettingsModel $userSettingsModel = null
     ) {
-        // Initialize dependencies with defaults if not provided (Dependency Injection pattern)
-        $this->config = $config ?? new OllamaConfig();
-        $this->payloadService = $payloadService ?? new OllamaPayloadService();
+        $this->config = $config ?? config(OllamaConfig::class);
+        $this->payloadService = $payloadService ?? service('ollamaPayloadService');
         $this->client = $client ?? Services::curlrequest([
             'timeout' => $this->config->timeout,
             'connect_timeout' => 10,
         ]);
+        $this->userModel = $userModel ?? new UserModel();
+        $this->db = $db ?? \Config\Database::connect();
+        $this->promptModel = $promptModel ?? new OllamaPromptModel();
+        $this->userSettingsModel = $userSettingsModel ?? new OllamaUserSettingsModel();
+    }
+
+    // --- Helper Methods ---
+
+    /**
+     * Executes an API request with exponential backoff.
+     * Mirroring GeminiService's robust request handling.
+     *
+     * @param string $method HTTP method (GET, POST, etc.)
+     * @param string $url Target URL
+     * @param array $options CURLRequest options
+     * @param int $maxRetries Maximum number of retries
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     * @throws \Exception If all retries fail
+     */
+    private function _executeRequest(string $method, string $url, array $options = [], int $maxRetries = 3): \CodeIgniter\HTTP\ResponseInterface
+    {
+        $retryCount = 0;
+        $wait = 1; // Initial wait in seconds
+
+        while (true) {
+            try {
+                $response = $this->client->request($method, $url, $options);
+
+                // Success or non-retryable error
+                if ($response->getStatusCode() < 500 || $retryCount >= $maxRetries) {
+                    return $response;
+                }
+            } catch (\Exception $e) {
+                if ($retryCount >= $maxRetries) {
+                    throw $e;
+                }
+            }
+
+            $retryCount++;
+            sleep($wait);
+            $wait *= 2; // Exponential backoff
+        }
+    }
+
+    /**
+     * Extract Thinking Process from content (e.g., <think>...</think>)
+     */
+    private function _extractThinking(string $content): array
+    {
+        $thoughts = '';
+        $result = $content;
+
+        if (preg_match('/<think>(.*?)<\/think>/s', $content, $matches)) {
+            $thoughts = trim($matches[1]);
+            $result = trim(str_replace($matches[0], '', $content));
+        }
+
+        return [
+            'thoughts' => $thoughts,
+            'result' => $result
+        ];
+    }
+
+    /**
+     * Handles a single decoded JSON object from the Ollama stream.
+     */
+    private function _handleStreamData(array $data, string &$fullText, &$usage, bool &$inThinkingBlock, callable $chunkCallback): void
+    {
+        if (isset($data['message']['content'])) {
+            $text = $data['message']['content'];
+            $fullText .= $text;
+
+            $remainingText = $text;
+            while ($remainingText !== '') {
+                if (!$inThinkingBlock) {
+                    $startPos = strpos($remainingText, '<think>');
+                    if ($startPos !== false) {
+                        $before = substr($remainingText, 0, $startPos);
+                        if ($before !== '') $chunkCallback(['text' => $before]);
+
+                        $inThinkingBlock = true;
+                        $remainingText = substr($remainingText, $startPos + 7);
+                    } else {
+                        $chunkCallback(['text' => $remainingText]);
+                        $remainingText = '';
+                    }
+                } else {
+                    $endPos = strpos($remainingText, '</think>');
+                    if ($endPos !== false) {
+                        $thought = substr($remainingText, 0, $endPos);
+                        if ($thought !== '') $chunkCallback(['thought' => $thought]);
+
+                        $inThinkingBlock = false;
+                        $remainingText = substr($remainingText, $endPos + 8);
+                    } else {
+                        $chunkCallback(['thought' => $remainingText]);
+                        $remainingText = '';
+                    }
+                }
+            }
+        }
+
+        if (isset($data['done']) && $data['done'] === true) {
+            $usage = [
+                'total_duration' => $data['total_duration'] ?? 0,
+                'eval_count' => $data['eval_count'] ?? 0,
+            ];
+        }
+
+        if (isset($data['error'])) {
+            $chunkCallback(['error' => $data['error']]);
+        }
+    }
+
+    // --- Public API ---
+
+    /**
+     * Centralized method to process a full User-AI interaction.
+     * Handles balace checks, context building, file preparation, API call, and transaction persistence.
+     */
+    public function processInteraction(int $userId, string $prompt, array $uploadedFileIds, string $model, array $options = []): array
+    {
+        // 1. File Preparation
+        // Standardizes uploaded media into Base64 for Ollama API consumption.
+        $images = $this->prepareUploadedFiles($uploadedFileIds, $userId);
+
+        // 2. Pre-Flight Balance Check
+        // Enforces payment requirement before any heavy processing or context building.
+        $cost = 1.00; // Fixed cost for now
+        $user = $this->userModel->find($userId);
+        if (!$user || $user->balance < $cost) {
+            $this->cleanupTempFiles($uploadedFileIds, $userId);
+            return ['status' => 'error', 'message' => 'Insufficient balance.'];
+        }
+
+        // 3. Contextual Execution
+        // Determining if we need memory-enhanced chat (Assistant) or raw stateless chat.
+        $isAssistantMode = $options['assistant_mode'] ?? true;
+        $response = [];
+
+        if ($isAssistantMode) {
+            // Invokes MemoryService to retrieve relevant past interactions and build a prompt with history.
+            // Using service locator to decouple and maintain "Parallel" architecture.
+            $memoryService = service('ollamaMemory', $userId);
+            $response = $memoryService->processChat($prompt, $model, $images);
+        } else {
+            // Direct pass-through to Ollama API without memory overhead.
+            $messages = [['role' => 'user', 'content' => $prompt]];
+            if (!empty($images)) {
+                $messages[0]['images'] = $images;
+            }
+            $response = $this->generateChat($model, $messages);
+        }
+
+        // 4. Cleanup & Error Handling
+        // Immediate removal of temp files to maintain stateless server design.
+        $this->cleanupTempFiles($uploadedFileIds, $userId);
+
+        if (isset($response['status']) && $response['status'] === 'error') {
+            return $response;
+        }
+        if (isset($response['success']) && !$response['success']) {
+            return ['status' => 'error', 'message' => $response['error'] ?? 'Unknown error'];
+        }
+
+        // 5. Transaction & Deduct Balance
+        // Wrap strict transaction around balance update
+        $this->db->transStart();
+        $this->userModel->deductBalance($userId, (string)$cost, true);
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            log_message('error', "Transaction failed for Ollama interaction user: $userId");
+            // We return success for generation but log error for billing? Or fail?
+            // Simple: Fail.
+            return ['status' => 'error', 'message' => 'Transaction failed.'];
+        }
+
+        // 6. Return Result
+        return [
+            'status'               => 'success',
+            'result'               => $response['data']['result'] ?? $response['response'] ?? '',
+            'thoughts'             => $response['thoughts'] ?? $response['data']['thoughts'] ?? '',
+            'cost'                 => $cost,
+            'usage'                => $response['data']['usage'] ?? $response['usage'] ?? [],
+            'new_interaction_id'   => $response['new_interaction_id'] ?? null,
+            'timestamp'            => $response['timestamp'] ?? null,
+            'used_interaction_ids' => $response['used_interaction_ids'] ?? []
+        ];
+    }
+
+    /**
+     * Prepares stream context (Consistency with GeminiService)
+     */
+    public function prepareStreamContext(int $userId, string $prompt, array $uploadedFileIds, array $options): array
+    {
+        // 1. Prepare Files
+        $images = $this->prepareUploadedFiles($uploadedFileIds, $userId);
+
+        // 2. Balance Check
+        $cost = 1.00;
+        $user = $this->userModel->find($userId);
+        if (!$user || $user->balance < $cost) {
+            $this->cleanupTempFiles($uploadedFileIds, $userId);
+            return ['error' => 'Insufficient balance.'];
+        }
+
+        // 3. Context & Message Construction
+        $memoryService = service('ollamaMemory', $userId);
+        $messages = [];
+        $usedIds = [];
+
+        if ($options['assistant_mode'] ?? true) {
+            $contextData = $memoryService->buildContextualMessages($prompt);
+            $messages = $contextData['messages'];
+            $usedIds = $contextData['used_interaction_ids'];
+        } else {
+            $messages = [['role' => 'user', 'content' => $prompt]];
+        }
+
+        if (!empty($images)) {
+            $lastIdx = count($messages) - 1;
+            $messages[$lastIdx]['images'] = $images;
+        }
+
+        // We do NOT cleanup here for stream, as stream needs to run first? 
+        // Actually images are base64 encoded into $images array, so we CAN cleanup files now!
+        // This is safer for serverless 'unlink' pattern.
+        $this->cleanupTempFiles($uploadedFileIds, $userId);
+
+        return [
+            'messages' => $messages,
+            'used_interaction_ids' => $usedIds,
+            'cost' => $cost
+        ];
     }
 
     /**
      * Check Ollama Server Connection
-     *
-     * Performs a health check by sending a GET request to the Ollama server base URL.
-     * Used to verify server availability before making API calls.
-     *
-     * @return array Status array with 'status', 'message', and 'data' keys
      */
     public function checkConnection(): array
     {
         try {
             $url = rtrim($this->config->baseUrl, '/') . '/';
-            $response = $this->client->get($url);
+            $response = $this->_executeRequest('GET', $url);
 
             if ($response->getStatusCode() === 200) {
                 return [
@@ -83,7 +318,6 @@ class OllamaService
             log_message('error', 'Ollama Connection Check Failed', [
                 'exception' => $e->getMessage(),
                 'url' => $url ?? $this->config->baseUrl,
-                'trace' => $e->getTraceAsString()
             ]);
             return [
                 'status' => 'error',
@@ -95,24 +329,14 @@ class OllamaService
 
     /**
      * Get Available Models from Ollama Server
-     *
-     * Fetches the list of installed models from the Ollama server.
-     * Returns model names in a standardized response structure.
-     *
-     * @return array Status array with 'status', 'message', and 'data' (array of model names)
      */
     public function getModels(): array
     {
         try {
             $url = rtrim($this->config->baseUrl, '/') . '/api/tags';
-            $response = $this->client->get($url);
+            $response = $this->_executeRequest('GET', $url);
 
             if ($response->getStatusCode() !== 200) {
-                log_message('error', 'Ollama Get Models Failed - Non-200 Status', [
-                    'status_code' => $response->getStatusCode(),
-                    'url' => $url,
-                    'response_body' => $response->getBody()
-                ]);
                 return [
                     'status' => 'error',
                     'message' => 'Failed to retrieve models from server',
@@ -135,11 +359,7 @@ class OllamaService
                 'data' => $models
             ];
         } catch (\Exception $e) {
-            log_message('error', 'Ollama Get Models Failed', [
-                'exception' => $e->getMessage(),
-                'url' => $url ?? 'unknown',
-                'trace' => $e->getTraceAsString()
-            ]);
+            log_message('error', 'Ollama Get Models Failed', ['exception' => $e->getMessage()]);
             return [
                 'status' => 'error',
                 'message' => 'Failed to connect to Ollama server',
@@ -150,39 +370,19 @@ class OllamaService
 
     /**
      * Generate Chat Completion (Synchronous)
-     *
-     * Sends a chat request to Ollama and waits for the complete response.
-     * Supports multimodal input (text + images) for vision-capable models.
-     *
-     * @param string $model Model identifier (e.g., 'llama3', 'mistral')
-     * @param array $messages Array of message objects with 'role' and 'content' keys
-     * @return array Response with 'status', 'message', and 'data' (containing 'result' and 'usage')
      */
     public function generateChat(string $model, array $messages): array
     {
-        // Input validation
-        if (empty($model)) {
-            return [
-                'status' => 'error',
-                'message' => 'Model name cannot be empty',
-                'data' => null
-            ];
-        }
-
-        if (empty($messages)) {
-            return [
-                'status' => 'error',
-                'message' => 'Messages array cannot be empty',
-                'data' => null
-            ];
-        }
+        if (empty($model)) return ['status' => 'error', 'message' => 'Model name cannot be empty'];
+        if (empty($messages)) return ['status' => 'error', 'message' => 'Messages array cannot be empty'];
 
         $config = $this->payloadService->getPayloadConfig($model, $messages, false);
 
         try {
-            $response = $this->client->post($config['url'], [
+            $response = $this->_executeRequest('POST', $config['url'], [
                 'body' => $config['body'],
-                'headers' => ['Content-Type' => 'application/json']
+                'headers' => ['Content-Type' => 'application/json'],
+                'http_errors' => false
             ]);
 
             $statusCode = $response->getStatusCode();
@@ -190,87 +390,65 @@ class OllamaService
 
             if ($statusCode !== 200) {
                 $error = json_decode($body, true)['error'] ?? 'Unknown API error';
-                log_message('error', 'Ollama API Error', [
-                    'status_code' => $statusCode,
-                    'error' => $error,
-                    'model' => $model,
-                    'url' => $config['url']
-                ]);
-                return [
-                    'status' => 'error',
-                    'message' => "Ollama Error: {$error}",
-                    'data' => null
-                ];
+                return ['status' => 'error', 'message' => "Ollama Error: {$error}"];
             }
 
             $data = json_decode($body, true);
 
             if (isset($data['message']['content'])) {
+                $content = $data['message']['content'];
+                $extracted = $this->_extractThinking($content);
+
                 return [
                     'status' => 'success',
                     'message' => 'Chat generated successfully',
                     'data' => [
-                        'result' => $data['message']['content'],
+                        'result' => $extracted['result'],
+                        'thoughts' => $extracted['thoughts'],
                         'usage' => [
                             'total_duration' => $data['total_duration'] ?? 0,
-                            'load_duration' => $data['load_duration'] ?? 0,
-                            'prompt_eval_count' => $data['prompt_eval_count'] ?? 0,
                             'eval_count' => $data['eval_count'] ?? 0,
                         ]
                     ]
                 ];
             }
 
-            log_message('error', 'Ollama Invalid Response Format', [
-                'model' => $model,
-                'response_keys' => array_keys($data)
-            ]);
-            return [
-                'status' => 'error',
-                'message' => 'Invalid response format from Ollama',
-                'data' => null
-            ];
+            return ['status' => 'error', 'message' => 'Invalid response format from Ollama'];
         } catch (\Exception $e) {
-            log_message('error', 'Ollama Generate Failed', [
-                'exception' => $e->getMessage(),
-                'model' => $model,
-                'trace' => $e->getTraceAsString()
-            ]);
-            return [
-                'status' => 'error',
-                'message' => 'Failed to connect to Ollama. Is it running?',
-                'data' => null
-            ];
+            return ['status' => 'error', 'message' => 'Failed to connect to Ollama. Is it running?'];
         }
     }
 
     /**
-     * Generate Chat Completion with Streaming (SSE)
-     *
-     * Streams chat response chunks in real-time using Server-Sent Events.
-     * Each chunk is passed to the callback function as it arrives.
-     *
-     * @param string $model Model identifier (e.g., 'llama3', 'mistral')
-     * @param array $messages Array of message objects with 'role' and 'content' keys
-     * @param callable $callback Function to call for each chunk: function(string $chunk): void
-     * @return array Response with 'status', 'message', and 'data' (containing 'usage' stats)
+     * Finalizes the streaming interaction by handling billing and memory updates.
      */
+    public function finalizeStreamInteraction(int $userId, string $inputText, string $fullText, string $model, array $usedIds): array
+    {
+        $cost = 1.00; // Fixed cost for now
+        $this->db->transStart();
+
+        $this->userModel->deductBalance($userId, (string)$cost, true);
+
+        // Update Memory
+        $memoryService = service('ollamaMemory', $userId);
+        $savedData = $memoryService->saveStreamInteraction($inputText, $fullText, $model, $usedIds);
+
+        $this->db->transComplete();
+
+        return [
+            'cost'                 => $cost,
+            'new_interaction_id'   => $savedData['id'] ?? null,
+            'timestamp'            => $savedData['timestamp'] ?? date('Y-m-d H:i:s'),
+            'used_interaction_ids' => $usedIds
+        ];
+    }
+
     /**
      * Generate Chat Completion with Streaming (SSE)
-     *
-     * Streams chat response chunks in real-time using Server-Sent Events.
-     * Mirrored from GeminiService structure to support controller callbacks.
-     *
-     * @param string $model Model identifier
-     * @param array $messages Array of message objects
-     * @param callable $chunkCallback Function(string|array $chunk): void
-     * @param callable $completeCallback Function(string $fullText, ?array $usage): void
-     * @return void
      */
     public function generateStream(string $model, array $messages, callable $chunkCallback, ?callable $completeCallback = null): void
     {
-        // Default to no-op if completeCallback is missing (backward compatibility protection)
-        $completeCallback = $completeCallback ?? function () {};
+        $completeCallback = $completeCallback ?? function ($fullText, $usage) {};
 
         if (empty($model)) {
             $chunkCallback(['error' => 'Model name cannot be empty']);
@@ -279,9 +457,11 @@ class OllamaService
 
         $config = $this->payloadService->getPayloadConfig($model, $messages, true);
 
+        // Stream State
         $buffer = '';
         $fullText = '';
         $usage = null;
+        $inThinkingBlock = false;
 
         try {
             $ch = curl_init();
@@ -290,10 +470,8 @@ class OllamaService
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $config['body'],
                 CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, $chunkCallback) {
+                CURLOPT_WRITEFUNCTION => function ($ch, $chunk) use (&$buffer, &$fullText, &$usage, &$inThinkingBlock, $chunkCallback) {
                     $buffer .= $chunk;
-                    // Ollama sends JSON objects line by line (ndjson)
-                    // We process the buffer to extract complete lines
                     while (($pos = strpos($buffer, "\n")) !== false) {
                         $line = substr($buffer, 0, $pos);
                         $buffer = substr($buffer, $pos + 1);
@@ -303,22 +481,7 @@ class OllamaService
 
                         $data = json_decode($line, true);
                         if ($data) {
-                            if (isset($data['message']['content'])) {
-                                $text = $data['message']['content'];
-                                $fullText .= $text;
-                                $chunkCallback($text);
-                            }
-                            if (isset($data['done']) && $data['done'] === true) {
-                                $usage = [
-                                    'total_duration' => $data['total_duration'] ?? 0,
-                                    'load_duration' => $data['load_duration'] ?? 0,
-                                    'prompt_eval_count' => $data['prompt_eval_count'] ?? 0,
-                                    'eval_count' => $data['eval_count'] ?? 0,
-                                ];
-                            }
-                            if (isset($data['error'])) {
-                                $chunkCallback(['error' => $data['error']]);
-                            }
+                            $this->_handleStreamData($data, $fullText, $usage, $inThinkingBlock, $chunkCallback);
                         }
                     }
                     return strlen($chunk);
@@ -336,50 +499,25 @@ class OllamaService
             $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($statusCode !== 200) {
-                // If 404/500, the last line in buffer might contain the error if not processed
-                // But usually we've handled errors in the loop if they were proper JSON.
-                // If it's a raw HTML error page, we might need to handle it.
                 $chunkCallback(['error' => "Ollama API returned status {$statusCode}"]);
                 return;
             }
 
-            // Stream finished successfully
             $completeCallback($fullText, $usage);
         } catch (\Throwable $e) {
-            log_message('error', 'Ollama Stream Failed', [
-                'exception' => $e->getMessage(),
-                'model' => $model
-            ]);
             $chunkCallback(['error' => 'Streaming failed: ' . $e->getMessage()]);
         }
     }
 
     /**
      * Chat Wrapper Method (Legacy Compatibility)
-     *
-     * Convenience wrapper around generateChat() with optional model parameter.
-     * Uses the default model from config if not specified.
-     *
-     * @param array $messages Array of message objects with 'role' and 'content' keys
-     * @param string|null $model Optional model identifier (uses default if null)
-     * @return array Response with 'status', 'message', and 'data' (containing 'response', 'model', 'usage')
      */
     public function chat(array $messages, ?string $model = null): array
     {
-        // Input validation
-        if (empty($messages)) {
-            return [
-                'status' => 'error',
-                'message' => 'Messages array cannot be empty',
-                'data' => null
-            ];
-        }
-
         $model = $model ?? $this->config->defaultModel;
         $response = $this->generateChat($model, $messages);
 
-        // generateChat now returns standardized format
-        if ($response['status'] === 'error') {
+        if (isset($response['status']) && $response['status'] === 'error') {
             return $response;
         }
 
@@ -388,6 +526,7 @@ class OllamaService
             'message' => 'Chat completed successfully',
             'data' => [
                 'response' => $response['data']['result'],
+                'thoughts' => $response['data']['thoughts'] ?? '',
                 'model'    => $model,
                 'usage'    => $response['data']['usage'] ?? []
             ]
@@ -395,138 +534,7 @@ class OllamaService
     }
 
     /**
-     * Generate Vector Embeddings
-     *
-     * Converts text input into a dense vector representation using the configured
-     * embedding model. Used for semantic search and memory retrieval.
-     *
-     * @param string $input Text to convert into embedding vector
-     * @return array Response with 'status', 'message', and 'data' (array of floats or empty on error)
-     */
-    public function embed(string $input): array
-    {
-        // Input validation
-        if (empty($input)) {
-            return [
-                'status' => 'error',
-                'message' => 'Input text cannot be empty',
-                'data' => []
-            ];
-        }
-
-        $url = rtrim($this->config->baseUrl, '/') . '/api/embed';
-
-        $payload = [
-            'model'  => $this->config->embeddingModel,
-            'input'  => $input
-        ];
-
-        try {
-            log_message('info', 'Ollama Embed Request', [
-                'model' => $this->config->embeddingModel,
-                'input_length' => strlen($input)
-            ]);
-
-            $response = $this->client->post($url, [
-                'body'        => json_encode($payload),
-                'headers'     => ['Content-Type' => 'application/json'],
-                'http_errors' => false
-            ]);
-
-            if ($response->getStatusCode() !== 200) {
-                log_message('error', 'Ollama Embed Error', [
-                    'status_code' => $response->getStatusCode(),
-                    'response_body' => $response->getBody(),
-                    'model' => $this->config->embeddingModel
-                ]);
-                return [
-                    'status' => 'error',
-                    'message' => 'Failed to generate embeddings',
-                    'data' => []
-                ];
-            }
-
-            $data = json_decode($response->getBody(), true);
-
-            $embedding = [];
-            if (isset($data['embeddings']) && is_array($data['embeddings'])) {
-                $embedding = $data['embeddings'][0] ?? [];
-            } elseif (isset($data['embedding'])) {
-                $embedding = $data['embedding'];
-            }
-
-            if (empty($embedding)) {
-                log_message('error', 'Ollama Embed Empty Response', [
-                    'response_keys' => array_keys($data),
-                    'model' => $this->config->embeddingModel
-                ]);
-                return [
-                    'status' => 'error',
-                    'message' => 'Received empty embedding from server',
-                    'data' => []
-                ];
-            }
-
-            log_message('info', 'Ollama Embed Success', [
-                'vector_size' => count($embedding),
-                'model' => $this->config->embeddingModel
-            ]);
-
-            return [
-                'status' => 'success',
-                'message' => 'Embedding generated successfully',
-                'data' => $embedding
-            ];
-        } catch (\Exception $e) {
-            log_message('error', 'Ollama Embed Failed', [
-                'exception' => $e->getMessage(),
-                'model' => $this->config->embeddingModel,
-                'trace' => $e->getTraceAsString()
-            ]);
-            return [
-                'status' => 'error',
-                'message' => 'Failed to connect to Ollama server',
-                'data' => []
-            ];
-        }
-    }
-    /**
-     * Finalizes the streaming interaction by handling billing and memory updates.
-     * Use this to keep the Controller 'skinny'.
-     */
-    public function finalizeStreamInteraction(int $userId, string $inputText, string $fullText): array
-    {
-        $cost = 1.00; // Fixed cost for now
-
-        $db = \Config\Database::connect();
-        $userModel = new \App\Models\UserModel();
-
-        // Transaction: Billing & Memory
-        $db->transStart();
-
-        // Deduct Cost
-        $userModel->deductBalance($userId, (string)$cost);
-
-        // Update Memory (future implementation if needed here, currently handled strictly by controller flow in some aspects, 
-        // but ideally should be here. For now, we mirror the controller's logic which was just deduction).
-
-        $db->transComplete();
-
-        if ($db->transStatus() === false) {
-            log_message('error', "[OllamaService] Transaction failed for User ID: {$userId}");
-        }
-
-        return [
-            'cost' => $cost
-        ];
-    }
-
-    /**
      * Stores a temporary file for Ollama multimodal context.
-     *
-     * @param \CodeIgniter\HTTP\Files\UploadedFile $file
-     * @param int $userId
-     * @return array [status => bool, filename => string, error => string|null]
      */
     public function storeTempMedia($file, int $userId): array
     {
@@ -544,5 +552,145 @@ class OllamaService
         }
 
         return ['status' => true, 'filename' => $fileName, 'original_name' => $file->getClientName()];
+    }
+
+    /**
+     * Process Uploaded Files - Reads and encodes, then deletes.
+     */
+    public function prepareUploadedFiles(array $fileIds, int $userId): array
+    {
+        $images = [];
+        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
+
+        foreach ($fileIds as $fileId) {
+            $filePath = $userTempPath . basename($fileId);
+            if (file_exists($filePath)) {
+                $rawContent = file_get_contents($filePath);
+                $images[] = base64_encode($rawContent);
+                unset($rawContent);
+                if (!unlink($filePath)) {
+                    log_message('error', "[OllamaService] Failed to delete temporary file during preparation: {$filePath}");
+                }
+            }
+        }
+        return $images;
+    }
+
+    /**
+     * Cleanup (though currently handled in prepareUploadedFiles for single-pass validity, 
+     * this is defined for standardizing interface or bulk cleanup if needed).
+     */
+    public function cleanupTempFiles(array $fileIds, int $userId): void
+    {
+        $userTempPath = WRITEPATH . 'uploads/ollama_temp/' . $userId . '/';
+        foreach ($fileIds as $fileId) {
+            $filePath = $userTempPath . basename($fileId);
+            if (file_exists($filePath)) {
+                if (!unlink($filePath)) {
+                    log_message('error', "[OllamaService] Failed to delete temporary file in cleanup: {$filePath}");
+                }
+            }
+        }
+    }
+
+    // --- User Settings Management ---
+
+    public function getUserSettings(int $userId)
+    {
+        return $this->userSettingsModel->where('user_id', $userId)->first();
+    }
+
+    public function updateUserSetting(int $userId, string $key, bool $value): bool
+    {
+        $setting = $this->getUserSettings($userId);
+        if ($setting) {
+            return $this->userSettingsModel->update($setting->id, [$key => $value]);
+        }
+        return (bool) $this->userSettingsModel->save([
+            'user_id' => $userId,
+            $key      => $value
+        ]);
+    }
+
+    // --- Prompt Management ---
+
+    public function getUserPrompts(int $userId): array
+    {
+        return $this->promptModel->where('user_id', $userId)->findAll();
+    }
+
+    public function addPrompt(int $userId, array $data)
+    {
+        return $this->promptModel->insert([
+            'user_id'     => $userId,
+            'title'       => $data['title'],
+            'prompt_text' => $data['prompt_text']
+        ]);
+    }
+
+    public function deletePrompt(int $userId, int $promptId): bool
+    {
+        $prompt = $this->promptModel->find($promptId);
+        if ($prompt && $prompt->user_id == $userId) {
+            return $this->promptModel->delete($promptId);
+        }
+        return false;
+    }
+
+    /**
+     * Get user interaction history.
+     * Facade method for OllamaMemoryService.
+     *
+     * @param int $userId
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     */
+    public function getUserHistory(int $userId, int $limit = 20, int $offset = 0): array
+    {
+        $memoryService = service('ollamaMemory', $userId);
+        return $memoryService->getUserHistory($userId, $limit, $offset);
+    }
+
+    /**
+     * Delete a specific interaction.
+     * Facade method for OllamaMemoryService.
+     *
+     * @param int $userId
+     * @param string $uniqueId
+     * @return bool
+     */
+    public function deleteUserInteraction(int $userId, string $uniqueId): bool
+    {
+        $memoryService = service('ollamaMemory', $userId);
+        return $memoryService->deleteInteraction($userId, $uniqueId);
+    }
+
+    /**
+     * Clear all user memory.
+     *
+     * @param int $userId
+     * @return bool
+     */
+    public function clearUserMemory(int $userId): bool
+    {
+        (new \App\Modules\Ollama\Models\OllamaInteractionModel())->where('user_id', $userId)->delete();
+        (new \App\Modules\Ollama\Models\OllamaEntityModel())->where('user_id', $userId)->delete();
+        return true;
+    }
+
+    /**
+     * Generates a document from markdown content.
+     * Facade method for DocumentService to maintain parallel architecture.
+     *
+     * @param string $markdownContent
+     * @param string $format 'pdf' or 'docx'
+     * @param array $metadata
+     * @return array
+     */
+    public function generateDocument(string $markdownContent, string $format, array $metadata = []): array
+    {
+        $documentService = service('ollamaDocumentService');
+        return $documentService->generate($markdownContent, $format, $metadata);
     }
 }

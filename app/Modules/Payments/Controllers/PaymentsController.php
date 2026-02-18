@@ -49,14 +49,16 @@ class PaymentsController extends BaseController
         ];
 
         if (! $this->validate($rules)) {
-            return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $email  = $this->request->getPost('email');
         $amount = (int) $this->request->getPost('amount');
         $userId = session()->get('userId');
 
-        $reference = 'PAY-' . Time::now()->getTimestamp() . '-' . bin2hex(random_bytes(5));
+        $reference = $this->paystackService->generateReference();
+
+        $this->paymentModel->db->transStart();
 
         $this->paymentModel->insert([
             'user_id'   => $userId,
@@ -65,6 +67,13 @@ class PaymentsController extends BaseController
             'reference' => $reference,
             'status'    => 'pending',
         ]);
+
+        $this->paymentModel->db->transComplete();
+
+        if ($this->paymentModel->db->transStatus() === false) {
+            log_message('error', "[PaymentsController] Payment record insertion failed for User ID {$userId}. Reference: {$reference}");
+            return redirect()->back()->withInput()->with('error', 'Failed to initiate payment. Please try again.');
+        }
 
         // Updated URL generation to use the route name for the verify action
         $callbackUrl = url_to('payment.verify') . '?app_reference=' . $reference;
@@ -75,6 +84,7 @@ class PaymentsController extends BaseController
             return redirect()->to($response['data']['authorization_url']);
         }
 
+        log_message('error', "[PaymentsController] Payment initiation failed for User ID {$userId}. Reference: {$reference}. Error: " . ($response['message'] ?? 'Unknown Paystack error'));
         return redirect()->back()->with('error', ['paystack' => $response['message']]);
     }
 
@@ -87,57 +97,12 @@ class PaymentsController extends BaseController
             return redirect()->to(url_to('payment.index'))->with('error', ['payment' => 'Payment reference not found.']);
         }
 
-        $payment = $this->paymentModel->where('reference', $appReference)->first();
+        $result = $this->paystackService->verifyAndProcessPayment((string) $appReference, (string) $paystackReference);
 
-        if ($payment === null) {
-            return redirect()->to(url_to('payment.index'))->with('errors', ['payment' => 'Invalid payment reference.']);
+        if ($result['status'] === true) {
+            return redirect()->to(url_to('payment.index'))->with('success', $result['message']);
         }
 
-        if ($payment->status === 'success') {
-            return redirect()->to(url_to('payment.index'))->with('success', 'Payment already verified.');
-        }
-
-        $response = $this->paystackService->verifyTransaction($paystackReference);
-
-        if ($response['status'] === true && isset($response['data']['status']) && $response['data']['status'] === 'success') {
-
-            $db = \Config\Database::connect();
-            $db->transStart();
-
-            $jsonResponse = json_encode($response['data']);
-            if ($jsonResponse === false) {
-                log_message('error', 'Failed to encode Paystack success response for reference: ' . $paystackReference);
-                $jsonResponse = json_encode(['error' => 'JSON encoding failed']);
-            }
-            $this->paymentModel->update($payment->id, [
-                'status'            => 'success',
-                'paystack_response' => $jsonResponse,
-            ]);
-
-            if ($payment->user_id) {
-                $this->userModel->addBalance((int) $payment->user_id, (string) $payment->amount);
-            }
-
-            $db->transComplete();
-
-            if ($db->transStatus() === false) {
-                log_message('critical', 'Payment verification transaction failed for payment ID: ' . $payment->id);
-                return redirect()->to(url_to('payment.index'))->with('error', ['payment' => 'A critical error occurred. Please contact support.']);
-            }
-
-            return redirect()->to(url_to('payment.index'))->with('success', 'Payment successful!');
-        }
-
-        $jsonResponse = json_encode($response['data'] ?? $response);
-        if ($jsonResponse === false) {
-            log_message('error', 'Failed to encode Paystack failure response for reference: ' . $paystackReference);
-            $jsonResponse = json_encode(['error' => 'JSON encoding failed']);
-        }
-        $this->paymentModel->update($payment->id, [
-            'status'            => 'failed',
-            'paystack_response' => $jsonResponse,
-        ]);
-
-        return redirect()->to(url_to('payment.index'))->with('error', ['payment' => $response['message'] ?? 'Payment verification failed.']);
+        return redirect()->to(url_to('payment.index'))->with('error', ['payment' => $result['message']]);
     }
 }

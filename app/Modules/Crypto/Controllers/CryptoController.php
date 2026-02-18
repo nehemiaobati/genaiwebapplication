@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Crypto\Controllers; // Updated namespace
 
 use App\Controllers\BaseController; // Keep BaseController from core
 use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
-use App\Modules\Crypto\Libraries\CryptoService; 
+use App\Modules\Crypto\Libraries\CryptoService;
 
 class CryptoController extends BaseController
 {
@@ -38,9 +40,10 @@ class CryptoController extends BaseController
     public function publicPage(): string
     {
         $data = [
-            'pageTitle'       => 'Crypto Wallet Insights & Analytics | BTC & LTC Tracker',
-            'metaDescription' => 'Track Bitcoin (BTC) and Litecoin (LTC) wallet activities instantly. Audit balances and visualize transaction histories with our professional blockchain analytics solution.',
+            'pageTitle'       => 'Blockchain Audit & Verification Tools | Afrikenkid',
+            'metaDescription' => 'Verify data integrity and audit records with our immutable blockchain ledger tools. 100% anonymous and secure.',
             'canonicalUrl'    => url_to('crypto.public'),
+            'robotsTag'       => 'index, follow',
         ];
 
         // Updated view path to reflect module structure
@@ -80,9 +83,9 @@ class CryptoController extends BaseController
     /**
      * Processes a crypto query, including a balance check and deduction within a transaction.
      *
-     * @return RedirectResponse
+     * @return \CodeIgniter\HTTP\ResponseInterface|\CodeIgniter\HTTP\RedirectResponse
      */
-    public function query(): RedirectResponse
+    public function query()
     {
         $rules = [
             'asset' => 'required|in_list[btc,ltc]',
@@ -92,11 +95,25 @@ class CryptoController extends BaseController
         ];
 
         if (! $this->validate($rules)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => implode(' ', $this->validator->getErrors()),
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
         $userId = (int) session()->get('userId');
         if ($userId <= 0) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'User not logged in.',
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', 'User not logged in or invalid user ID.');
         }
 
@@ -104,13 +121,20 @@ class CryptoController extends BaseController
         $queryType = $this->request->getPost('query_type');
         $address = $this->request->getPost('address');
         $limit = $this->request->getPost('limit');
-        
+
         $result = [];
         $errors = [];
 
         // --- Balance Check ---
         $user = $this->userModel->find($userId);
         if (!$user) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'User not found.',
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', 'User not found.');
         }
 
@@ -119,52 +143,87 @@ class CryptoController extends BaseController
 
         if (bccomp((string) $user->balance, (string) $deductionAmount, 2) < 0) {
             $error = "Insufficient balance. This query costs approx. KSH " . number_format($deductionAmount, 2) .
-                     ", but you only have KSH " . $user->balance . ".";
+                ", but you only have KSH " . $user->balance . ".";
+
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => $error,
+                    'redirect' => url_to('payment.index'),
+                    'csrf_token' => csrf_hash()
+                ])->setStatusCode(403);
+            }
             return redirect()->back()->withInput()->with('error', $error);
         }
-        
+
         try {
             // --- Execute Query ---
             if ($asset === 'btc') {
-                $result = ($queryType === 'balance') 
-                    ? $this->cryptoService->getBtcBalance($address) 
+                $result = ($queryType === 'balance')
+                    ? $this->cryptoService->getBtcBalance($address)
                     : $this->cryptoService->getBtcTransactions($address, $limit);
             } elseif ($asset === 'ltc') {
-                $result = ($queryType === 'balance') 
-                    ? $this->cryptoService->getLtcBalance($address) 
+                $result = ($queryType === 'balance')
+                    ? $this->cryptoService->getLtcBalance($address)
                     : $this->cryptoService->getLtcTransactions($address, $limit);
             }
 
             if (isset($result['error'])) {
                 $errors[] = $result['error'];
             }
-
         } catch (\Exception $e) {
             $errors[] = 'An error occurred while fetching crypto data: ' . $e->getMessage();
             log_message('error', 'Crypto query API error: ' . $e->getMessage());
         }
 
         if (!empty($errors)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => implode(' ', $errors),
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
             return redirect()->back()->withInput()->with('error', $errors);
         }
-        
+
         // --- Deduct Cost within a Transaction ---
         $db = \Config\Database::connect();
         $db->transStart();
 
-        $deductionSuccess = $this->userModel->deductBalance($userId, (string)$deductionAmount);
-        
+        $deductionSuccess = $this->userModel->deductBalance($userId, (string)$deductionAmount, true);
+
         $db->transComplete();
 
         if ($db->transStatus() === false || !$deductionSuccess) {
             log_message('critical', "Transaction failed while deducting crypto query cost for user ID: {$userId}");
-            // The user got the data but we failed to charge them. Log this critical error.
+            $msg = 'Query successful, but a billing error occurred. Please contact support.';
+
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'status' => 'success', // Return data anyway since query worked
+                    'message' => $msg,
+                    'result' => $result,
+                    'csrf_token' => csrf_hash()
+                ]);
+            }
+
             return redirect()->back()->withInput()
                 ->with('result', $result)
-                ->with('error', 'Query successful, but a billing error occurred. Please contact support.');
+                ->with('error', $msg);
         }
 
         $costMessage = "KSH " . number_format($deductionAmount, 2) . " deducted for your query.";
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => $costMessage,
+                'result' => $result,
+                'csrf_token' => csrf_hash()
+            ]);
+        }
+
         return redirect()->back()->withInput()
             ->with('result', $result)
             ->with('success', $costMessage);

@@ -6,12 +6,17 @@ namespace App\Modules\Ollama\Config;
  * @var \CodeIgniter\Router\RouteCollection $routes
  */
 
+// Public Routes
+$routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers'], static function ($routes) {
+    $routes->get('intro', 'OllamaController::publicPage', ['as' => 'ollama.public']);
+});
+
 $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'OllamaController::index', ['as' => 'ollama.index']);
 
     // Core Generation
-    $routes->post('generate', 'OllamaController::generate', ['as' => 'ollama.generate']);
-    $routes->post('stream', 'OllamaController::stream', ['as' => 'ollama.stream']);
+    $routes->post('generate', 'OllamaController::generate', ['as' => 'ollama.generate', 'filter' => ['balance', 'throttle:10,60']]);
+    $routes->post('stream', 'OllamaController::stream', ['as' => 'ollama.stream', 'filter' => ['balance', 'throttle:10,60']]);
 
     // File Uploads (reuse Gemini's logic or implement similar)
     $routes->post('upload-media', 'OllamaController::uploadMedia', ['as' => 'ollama.upload_media']);
@@ -23,4 +28,6 @@ $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filt
     $routes->post('prompts/add', 'OllamaController::addPrompt', ['as' => 'ollama.prompts.add']);
     $routes->post('prompts/delete/(:num)', 'OllamaController::deletePrompt/$1', ['as' => 'ollama.prompts.delete']);
     $routes->post('memory/clear', 'OllamaController::clearMemory', ['as' => 'ollama.memory.clear']);
+    $routes->post('history', 'OllamaController::fetchHistory', ['as' => 'ollama.history']);
+    $routes->post('history/delete', 'OllamaController::deleteHistory', ['as' => 'ollama.history.delete']);
 });

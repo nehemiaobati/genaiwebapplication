@@ -9,6 +9,8 @@ use App\Modules\Ollama\Entities\OllamaEntity;
 use App\Modules\Ollama\Entities\OllamaInteraction;
 use App\Modules\Ollama\Models\OllamaInteractionModel;
 use App\Modules\Ollama\Models\OllamaEntityModel;
+use App\Modules\Ollama\Libraries\OllamaEmbeddingService;
+use App\Modules\Ollama\Libraries\OllamaTokenService;
 
 /**
  * Ollama Memory Service
@@ -39,23 +41,25 @@ class OllamaMemoryService
      * @param Ollama|null $config Configuration object for memory tuning parameters
      * @param OllamaInteractionModel|null $interactionModel Manages chat history storage
      * @param OllamaEntityModel|null $entityModel Manages keyword/entity graph
-     * @param OllamaService|null $api Service for embeddings and chat completions
+     * @param OllamaService|null $ollamaService Service for chat completions
      * @param OllamaTokenService|null $tokenizer Service for text processing and keyword extraction
+     * @param OllamaEmbeddingService|null $embeddingService Service for generating vector embeddings
      */
     public function __construct(
         private int $userId,
         private ?Ollama $config = null,
         private ?OllamaInteractionModel $interactionModel = null,
         private ?OllamaEntityModel $entityModel = null,
-        private ?OllamaService $api = null,
-        private ?OllamaTokenService $tokenizer = null
+        private ?OllamaService $ollamaService = null,
+        private ?OllamaTokenService $tokenizer = null,
+        private ?OllamaEmbeddingService $embeddingService = null
     ) {
-        // Initialize all dependencies with defaults if not injected
         $this->config = $config ?? config(Ollama::class);
         $this->interactionModel = $interactionModel ?? new OllamaInteractionModel();
         $this->entityModel = $entityModel ?? new OllamaEntityModel();
-        $this->api = $api ?? new OllamaService();
-        $this->tokenizer = $tokenizer ?? new OllamaTokenService();
+        $this->ollamaService = $ollamaService ?? service('ollamaService');
+        $this->tokenizer = $tokenizer ?? service('ollamaTokenService');
+        $this->embeddingService = $embeddingService ?? service('ollamaEmbedding');
     }
 
     public function processChat(string $prompt, ?string $model = null, array $images = []): array
@@ -73,7 +77,7 @@ class OllamaMemoryService
             $userMessage
         ];
 
-        $result = $this->api->chat($messages, $model);
+        $result = $this->ollamaService->chat($messages, $model);
 
         // Handle new standardized return format
         if (isset($result['status']) && $result['status'] === 'error') {
@@ -90,23 +94,53 @@ class OllamaMemoryService
 
         // Extract data from new format or legacy format
         $aiResponse = $result['data']['response'] ?? $result['response'] ?? '';
-        $usedModel = $result['data']['model'] ?? $result['model'] ?? $model ?? 'unknown';
+        $thoughts   = $result['data']['thoughts'] ?? '';
+        $usedModel  = $result['data']['model'] ?? $result['model'] ?? $model ?? 'unknown';
 
-        $this->_saveInteraction($prompt, $aiResponse, $usedModel, $contextData['used_interaction_ids']);
+        $savedData = $this->_saveInteraction($prompt, $aiResponse, $usedModel, $contextData['used_interaction_ids']);
 
         // Return in legacy format for backward compatibility with controller
         return [
-            'success' => true,
+            'success'  => true,
             'response' => $aiResponse,
-            'model' => $usedModel,
+            'thoughts' => $thoughts,
+            'model'    => $usedModel,
+            'new_interaction_id'   => $savedData['id'],
+            'timestamp'            => $savedData['timestamp'],
+            'used_interaction_ids' => $contextData['used_interaction_ids'],
             'usage' => $result['data']['usage'] ?? $result['usage'] ?? []
         ];
+    }
+
+    /**
+     * Builds a list of contextual messages for the API call.
+     */
+    public function buildContextualMessages(string $prompt): array
+    {
+        $contextData = $this->_getRelevantContext($prompt);
+        $systemPrompt = $this->_constructSystemPrompt($contextData['context']);
+
+        return [
+            'messages' => [
+                ['role' => 'system', 'content' => $systemPrompt],
+                ['role' => 'user', 'content' => $prompt]
+            ],
+            'used_interaction_ids' => $contextData['used_interaction_ids']
+        ];
+    }
+
+    /**
+     * Saves a streaming interaction (called after stream close)
+     */
+    public function saveStreamInteraction(string $prompt, string $response, string $model, array $usedIds): array
+    {
+        return $this->_saveInteraction($prompt, $response, $model, $usedIds);
     }
 
     private function _getRelevantContext(string $userInput): array
     {
         $semanticResults = [];
-        $embedResponse = $this->api->embed($userInput);
+        $embedResponse = $this->embeddingService->getEmbedding($userInput);
         $inputVector = ($embedResponse['status'] === 'success') ? $embedResponse['data'] : [];
 
         if (!empty($inputVector)) {
@@ -226,13 +260,13 @@ class OllamaMemoryService
             "3. Do not explicitly say 'According to my memory'.";
     }
 
-    private function _saveInteraction(string $input, string $response, string $modelName, array $usedIds): void
+    private function _saveInteraction(string $input, string $response, string $modelName, array $usedIds): array
     {
         $keywords  = $this->tokenizer->processText($input);
 
         $cleanInput = strip_tags($input);
         $cleanResponse = strip_tags($response);
-        $embedResponse = $this->api->embed("User: $cleanInput | AI: $cleanResponse");
+        $embedResponse = $this->embeddingService->getEmbedding("User: $cleanInput | AI: $cleanResponse");
         $embedding = ($embedResponse['status'] === 'success') ? $embedResponse['data'] : [];
 
         if (empty($embedding)) {
@@ -243,6 +277,7 @@ class OllamaMemoryService
             log_message('info', 'Ollama Memory: Embedding generated. Size: ' . count($embedding));
         }
 
+        $timestamp = date('Y-m-d H:i:s');
         $interaction = new OllamaInteraction([
             'user_id'         => $this->userId,
             'prompt_hash'     => hash('sha256', $input),
@@ -251,6 +286,7 @@ class OllamaMemoryService
             'ai_model'        => $modelName,
             'embedding'       => $embedding,
             'keywords'        => $keywords,
+            'created_at'      => $timestamp,
             'relevance_score' => 1.0
         ]);
 
@@ -260,8 +296,16 @@ class OllamaMemoryService
             log_message('info', 'Ollama Memory: Interaction saved. ID: ' . $interactionId);
             $this->_updateKnowledgeGraph($keywords, (int)$interactionId);
             $this->_applyDecay($usedIds);
+            return [
+                'id' => $interactionId,
+                'timestamp' => $timestamp
+            ];
         } else {
             log_message('error', 'Ollama Memory: Failed to save interaction. Errors: ' . json_encode($this->interactionModel->errors()));
+            return [
+                'id' => null,
+                'timestamp' => $timestamp
+            ];
         }
     }
 
@@ -328,5 +372,47 @@ class OllamaMemoryService
         }
 
         return ($magA * $magB) == 0 ? 0.0 : $dot / (sqrt($magA) * sqrt($magB));
+    }
+
+    /**
+     * Retrieves user interaction history.
+     *
+     * @param int $userId
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     */
+    public function getUserHistory(int $userId, int $limit = 20, int $offset = 0): array
+    {
+        $interactions = $this->interactionModel
+            ->asArray()
+            ->select('id as unique_id, created_at as timestamp, user_input as user_input_raw, SUBSTRING(ai_response, 1, 100) as ai_output')
+            ->where('user_id', $userId)
+            ->orderBy('created_at', 'DESC')
+            ->limit($limit, $offset)
+            ->findAll();
+
+        foreach ($interactions as &$interaction) {
+            if (!empty($interaction['timestamp'])) {
+                $interaction['timestamp'] = date('Y-m-d H:i:s', strtotime((string)$interaction['timestamp']));
+            }
+        }
+
+        return $interactions;
+    }
+
+    /**
+     * Deletes a specific interaction.
+     *
+     * @param int $userId
+     * @param string|int $id
+     * @return bool
+     */
+    public function deleteInteraction(int $userId, $id): bool
+    {
+        return $this->interactionModel
+            ->where('user_id', $userId)
+            ->where('id', $id)
+            ->delete();
     }
 }
