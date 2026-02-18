@@ -15,7 +15,9 @@
 
 set -e
 
-# --- Configuration ---
+#==============================================================================
+# Configuration
+#==============================================================================
 readonly GIT_REPO_URL="https://github.com/nehemiaobati/genaiwebapplication.git"
 readonly PROJECT_DIR_NAME="genaiwebapplication"
 readonly PROJECT_PATH="/var/www/${PROJECT_DIR_NAME}"
@@ -33,7 +35,9 @@ log_step() {
     echo "--- [${1}/${STEP_COUNT}] ${2} ---"
 }
 
-# --- Functions ---
+#==============================================================================
+# Functions
+#==============================================================================
 
 update_and_install_essentials() {
     log_step 1 "Updating system and installing dependencies"
@@ -51,22 +55,29 @@ update_and_install_essentials() {
     # ffmpeg: Required by FfmpegService.php
     # pandoc: Required by PandocService.php
     # texlive-xetex: Required by PandocService (--pdf-engine=xelatex)
+    
     echo "Installing Multimedia and PDF engines (this may take a few minutes)..."
     apt-get install -y ffmpeg pandoc 
-    #apt-get texlive-xetex texlive-fonts-recommended lmodern
+    
+    # Optional: Heavy dependencies for PDF generation (XeLaTeX)
+    # To enable: uncomment the line below
+    # apt-get install -y texlive-xetex texlive-fonts-recommended lmodern
 }
 
+#==============================================================================
 generate_secure_credentials() {
     echo "Generating secure credentials..."
     DB_PASSWORD=$(openssl rand -base64 16)
     ENCRYPTION_KEY=$(openssl rand -base64 32)
 }
 
+#==============================================================================
 install_apache() {
     log_step 2 "Installing Apache2"
     apt-get install -y apache2
 }
 
+#==============================================================================
 install_php() {
     log_step 3 "Installing PHP 8.2 and Extensions"
     # Added specific extensions used in your provided code (intl, gd, curl, mbstring)
@@ -75,6 +86,7 @@ install_php() {
                        php8.2-imagick
 }
 
+#==============================================================================
 install_and_configure_mysql() {
     log_step 4 "Installing MySQL"
     apt-get install -y mysql-server
@@ -90,17 +102,20 @@ install_and_configure_mysql() {
     mysql -u root -e "FLUSH PRIVILEGES;"
 }
 
+#==============================================================================
 install_composer() {
     log_step 5 "Installing Composer"
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 }
 
+#==============================================================================
 install_nodejs() {
     log_step 6 "Installing Node.js (for frontend assets)"
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt-get install -y nodejs
 }
 
+#==============================================================================
 clone_project() {
     log_step 7 "Cloning Repository"
     if [ -d "${PROJECT_PATH}" ]; then
@@ -112,6 +127,7 @@ clone_project() {
     fi
 }
 
+#==============================================================================
 configure_project() {
     log_step 8 "Configuring Application"
     cd "${PROJECT_PATH}"
@@ -133,7 +149,9 @@ configure_project() {
     mkdir -p "${PROJECT_PATH}/writable/uploads/ttsaudio_secure"
     mkdir -p "${PROJECT_PATH}/writable/uploads/pandoc_temp"
     mkdir -p "${PROJECT_PATH}/writable/uploads/dompdf_temp"
+    mkdir -p "${PROJECT_PATH}/writable/uploads/generated" # For MediaGenerationService.php
     mkdir -p "${PROJECT_PATH}/writable/nlp" # For TrainingService.php models
+    mkdir -p "${PROJECT_PATH}/writable/backups" # For db:backup command
     mkdir -p "${PROJECT_PATH}/writable/session"
     mkdir -p "${PROJECT_PATH}/writable/cache"
     mkdir -p "${PROJECT_PATH}/writable/logs"
@@ -148,13 +166,23 @@ configure_project() {
     chmod -R 775 "${PROJECT_PATH}/public"
     
     echo "Running Migrations..."
-    # Run migrations as www-data to ensure created files have right permissions, 
-    # OR run as root and fix permissions after. Running as root is easier in setup script.
-    php spark migrate
-    php spark migrate -all
+    #==============================================================================
+    # NOTE: We run migrations as root here for simplicity. 
+    # File permissions are fixed in previous steps, but double-check ownership 
+    # if you run into permission issues later.
+    #==============================================================================
     
-    # If TrainingService needs a seed or initial training, strictly speaking it should be done here,
-    # but we will leave that for manual execution or a seeder.
+    # Run all migrations including modules
+    php spark migrate --all
+    
+    echo "Optimizing for Production..."
+    php spark optimize
+    
+    #==============================================================================
+    # Optional Seeding
+    #==============================================================================
+    # If you wish to seed the database immediately, uncomment the line below:
+    # php spark db:seed AdminUserSeeder
     
     php spark cache:clear
 
@@ -162,6 +190,7 @@ configure_project() {
     mysql -u "${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" -e "ALTER TABLE ci_sessions MODIFY data MEDIUMBLOB;"
 }
 
+#==============================================================================
 create_env_file() {
     # Updated based on the keys found in your provided PHP code
     cat <<EOF > "${PROJECT_PATH}/.env"
@@ -226,6 +255,7 @@ recaptcha_secretKey=""
 EOF
 }
 
+#==============================================================================
 configure_apache() {
     log_step 9 "Configuring Apache vHost"
     local vhost_file="/etc/apache2/sites-available/${PROJECT_DIR_NAME}.conf"
@@ -253,6 +283,7 @@ EOF
     service apache2 restart
 }
 
+#==============================================================================
 final_summary() {
     log_step 10 "Installation Complete"
     echo "============================================================"
@@ -265,12 +296,18 @@ final_summary() {
     echo "!!! IMPORTANT NEXT STEPS !!!"
     echo "1. Edit the .env file and add your GEMINI_API_KEY:"
     echo "   nano ${PROJECT_PATH}/.env"
-    echo "2. If your app uses custom namespaces (e.g. App\Modules), ensure"
+    echo "2. Optional: Install Ollama (for local AI):"
+    echo "   curl -fsSL https://ollama.com/install.sh | sh"
+    echo "3. Optional: Seed the admin account:"
+    echo "   cd ${PROJECT_PATH} && php spark db:seed AdminUserSeeder"
+    echo "4. If your app uses custom namespaces (e.g. App\Modules), ensure"
     echo "   composer.json is configured correctly and run 'composer dump-autoload'."
     echo "============================================================"
 }
 
-# --- Execution ---
+#==============================================================================
+# Execution
+#==============================================================================
 
 if [[ "${EUID}" -ne 0 ]]; then
     echo "ERROR: Run as root (sudo ./setup.sh)"
