@@ -10,7 +10,7 @@ $routes->group('/', ['namespace' => 'App\Modules\Documentation\Controllers'], st
     // Public Documentation Routes
     $routes->group('', static function ($routes) {
         $routes->get('documentation', 'DocumentationController::index', ['as' => 'documentation']);
-        $routes->get('documentation/web', 'DocumentationController::web', ['as' => 'web']);
-        $routes->get('documentation/agi', 'DocumentationController::agi', ['as' => 'agi']);
+        $routes->get('documentation/web', 'DocumentationController::web', ['as' => 'documentation.web']);
+        $routes->get('documentation/agi', 'DocumentationController::agi', ['as' => 'documentation.agi']);
     });
 });
