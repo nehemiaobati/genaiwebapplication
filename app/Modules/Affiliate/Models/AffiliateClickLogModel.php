@@ -52,6 +52,7 @@ class AffiliateClickLogModel extends Model
             $builder->where('clicked_at <=', $endDate . ' 23:59:59');
         }
 
+        /** @var \App\Modules\Affiliate\Entities\AffiliateClickLog[] $logs */
         return $builder->orderBy('clicked_at', 'DESC')->findAll();
     }
 
@@ -65,6 +66,7 @@ class AffiliateClickLogModel extends Model
      */
     public function getClickCountByDateRange(int $linkId, string $startDate, string $endDate): array
     {
+        /** @var \App\Modules\Affiliate\Entities\AffiliateClickLog[] $counts */
         return $this->select('DATE(clicked_at) as date, COUNT(*) as count')
             ->where('affiliate_link_id', $linkId)
             ->where('clicked_at >=', $startDate . ' 00:00:00')
@@ -83,6 +85,7 @@ class AffiliateClickLogModel extends Model
      */
     public function getTopReferrers(int $linkId, int $limit = 10): array
     {
+        /** @var \App\Modules\Affiliate\Entities\AffiliateClickLog[] $referrers */
         return $this->select('referrer, COUNT(*) as count')
             ->where('affiliate_link_id', $linkId)
             ->where('referrer IS NOT NULL')

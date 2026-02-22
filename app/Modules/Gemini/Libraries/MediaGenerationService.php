@@ -453,6 +453,7 @@ class MediaGenerationService
         }
 
         // 1. Balance Check
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->find($userId);
         if (!$user || $user->balance < $requiredBalanceKsh) return ['status' => 'error', 'message' => 'Insufficient credits.'];
 

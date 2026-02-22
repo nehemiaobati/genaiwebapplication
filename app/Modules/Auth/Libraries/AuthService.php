@@ -146,6 +146,7 @@ class AuthService
     {
         $this->userModel->db->transStart();
 
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->where('verification_token', $token)->first();
 
         if ($user) {
@@ -167,6 +168,7 @@ class AuthService
      */
     public function authenticate(string $email, string $password): array
     {
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->where('email', $email)->first();
 
         // 1. Check User & Password
@@ -192,6 +194,7 @@ class AuthService
     {
         $this->userModel->db->transStart();
 
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->where('email', $email)->first();
 
         if ($user) {
@@ -219,6 +222,7 @@ class AuthService
      */
     public function validateResetToken(string $token): bool
     {
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->where('reset_token', $token)->first();
         return $user && Time::parse($user->reset_expires)->isAfter(Time::now());
     }
@@ -234,6 +238,7 @@ class AuthService
     {
         $this->userModel->db->transStart();
 
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->where('reset_token', $token)->first();
 
         if (! $user || Time::parse($user->reset_expires)->isBefore(Time::now())) {

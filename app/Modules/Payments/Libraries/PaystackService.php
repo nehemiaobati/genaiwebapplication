@@ -123,6 +123,7 @@ class PaystackService
         }
 
         $paymentModel = new \App\Modules\Payments\Models\PaymentModel();
+        /** @var \App\Modules\Payments\Entities\Payment|null $payment */
         $payment = $paymentModel->where('reference', $appReference)->first();
 
         if ($payment === null) {

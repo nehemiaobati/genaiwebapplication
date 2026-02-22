@@ -30,6 +30,7 @@ class WalletService
      */
     public function updateBalance(int $userId, float $amount, string $action): array
     {
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->find($userId);
 
         if (!$user) {

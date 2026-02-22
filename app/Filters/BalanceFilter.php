@@ -58,7 +58,9 @@ class BalanceFilter implements FilterInterface
     private function _getUser()
     {
         $userModel = new UserModel();
-        return $userModel->find(session()->get('userId'));
+        /** @var \App\Entities\User|null $user */
+        $user = $userModel->find(session()->get('userId'));
+        return $user;
     }
 
     private function _isBalanceLow($user): bool

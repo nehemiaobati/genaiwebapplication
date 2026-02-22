@@ -197,6 +197,7 @@ class AffiliateLinkService
      */
     public function findByCode(string $code): ?AffiliateLink
     {
+        /** @var \App\Modules\Affiliate\Entities\AffiliateLink|null $link */
         return $this->model->where('code', $code)
             ->where('status', 'active')
             ->first();
@@ -344,6 +345,7 @@ class AffiliateLinkService
      */
     public function getAllCategories(): array
     {
+        /** @var \App\Modules\Affiliate\Entities\AffiliateCategory[] $categories */
         return $this->categoryModel->orderBy('name', 'ASC')->findAll();
     }
 

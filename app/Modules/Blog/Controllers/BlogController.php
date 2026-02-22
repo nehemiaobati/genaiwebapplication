@@ -46,7 +46,7 @@ class BlogController extends BaseController
 
     public function show(string $slug): string
     {
-        // Allow admins to preview drafts, otherwise only find published posts
+        /** @var \App\Modules\Blog\Entities\Post|null $post */
         $post = $this->postModel->where('slug', $slug)->first();
 
         // SEO/UX: If not found, or if it's a draft and user isn't admin, 404
@@ -60,8 +60,8 @@ class BlogController extends BaseController
             "@type"           => "BlogPosting",
             "headline"        => $post->title,
             "image"           => $post->featured_image_url ? [$post->featured_image_url] : [], // Handle missing images gracefully
-            "datePublished"   => $post->published_at ? $post->published_at->toDateTimeString() : null,
-            "dateModified"    => $post->updated_at ? $post->updated_at->toDateTimeString() : null,
+            "datePublished"   => ($post->published_at instanceof \CodeIgniter\I18n\Time) ? $post->published_at->toDateTimeString() : null,
+            "dateModified"    => ($post->updated_at instanceof \CodeIgniter\I18n\Time) ? $post->updated_at->toDateTimeString() : null,
             "author"          => ["@type" => "Person", "name"  => $post->author_name],
             "publisher"       => [
                 "@type" => "Organization",

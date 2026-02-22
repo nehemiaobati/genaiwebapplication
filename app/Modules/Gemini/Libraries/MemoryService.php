@@ -227,11 +227,13 @@ class MemoryService
         $semanticResults = [];
         $inputVector = $this->embeddingService->getEmbedding($userInput);
         if ($inputVector !== null) {
+            /** @var \App\Modules\Gemini\Entities\Interaction[] $interactions */
             $interactions = $this->interactionModel->where('user_id', $this->userId)->where('embedding IS NOT NULL')->findAll();
             $similarities = [];
             foreach ($interactions as $interaction) {
-                if (is_array($interaction->embedding)) {
-                    $similarity = $this->_cosineSimilarity($inputVector, $interaction->embedding);
+                $emb = $interaction->embedding;
+                if (is_array($emb)) {
+                    $similarity = $this->_cosineSimilarity($inputVector, $emb);
                     $similarities[$interaction->unique_id] = $similarity;
                 }
             }

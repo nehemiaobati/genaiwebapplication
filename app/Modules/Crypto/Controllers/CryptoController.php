@@ -126,6 +126,7 @@ class CryptoController extends BaseController
         $errors = [];
 
         // --- Balance Check ---
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->find($userId);
         if (!$user) {
             if ($this->request->isAJAX()) {

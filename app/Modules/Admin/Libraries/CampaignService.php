@@ -295,7 +295,7 @@ class CampaignService
             return ['success' => false, 'message' => 'Campaign is already completed.'];
         }
 
-        // Snapshot the current max user ID
+        /** @var \App\Entities\User|null $maxUser */
         $maxUser = $this->userModel->selectMax('id')->first();
         $maxUserId = $maxUser ? (int)$maxUser->id : 0;
 
@@ -353,6 +353,7 @@ class CampaignService
             ];
         }
 
+        /** @var \App\Entities\User[] $users */
         $users = $this->userModel->where('id >', $campaign->last_processed_id)
             ->where('id <=', (int)$campaign->max_user_id)
             ->orderBy('id', 'ASC')
@@ -440,6 +441,7 @@ class CampaignService
         }
 
         $userids = array_column($failures, 'user_id');
+        /** @var \App\Entities\User[] $users */
         $users = $this->userModel->whereIn('id', $userids)->findAll();
 
         $emailResults = $this->_sendBatch($campaign, $users);

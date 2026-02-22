@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Modules\Blog\Entities;
 
@@ -15,16 +17,16 @@ use CodeIgniter\Entity\Entity;
  * @property ?string $category_name
  * @property ?string $meta_description
  * @property string $status
- * @property ?string $published_at
- * @property string $created_at
- * @property string $updated_at
+ * @property \CodeIgniter\I18n\Time|null $published_at
+ * @property \CodeIgniter\I18n\Time|null $created_at
+ * @property \CodeIgniter\I18n\Time|null $updated_at
  */
 class Post extends Entity
 {
     protected $dates   = ['published_at', 'created_at', 'updated_at'];
     protected $casts   = [
         'id' => 'integer',
-        
+
         // FIX: Changed from 'json-array' to 'json'.
         // 'json' decodes JSON into an array of objects (if the JSON is an array of objects).
         // 'json-array' decodes JSON into an array of associative arrays.

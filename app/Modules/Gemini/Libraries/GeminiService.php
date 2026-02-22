@@ -349,6 +349,7 @@ class GeminiService
 
         // 3. Cost Estimation & Balance Check
         $estimate = $this->estimateCost($allParts);
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->find($userId);
 
         if ($estimate['status'] && $user->balance < $estimate['costKSH']) {
@@ -479,6 +480,7 @@ class GeminiService
 
         // 3. Cost & Balance Check
         $estimate = $this->estimateCost($allParts);
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->find($userId);
 
         if ($estimate['status'] && $user->balance < $estimate['costKSH']) {

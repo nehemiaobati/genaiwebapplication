@@ -16,9 +16,9 @@ use CodeIgniter\Entity\Entity;
  * @property array|null $ai_output_raw
  * @property float $relevance_score
  * @property string $last_accessed
- * @property string|null $context_used_ids
- * @property string|null $embedding
- * @property string|null $keywords
+ * @property array|null $context_used_ids
+ * @property array|null $embedding
+ * @property array|null $keywords
  */
 class Interaction extends Entity
 {

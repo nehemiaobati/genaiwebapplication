@@ -35,6 +35,7 @@ class EntityModel extends Model
      */
     public function findByUserAndKey(int $userId, string $entityKey): ?AGIEntity
     {
+        /** @var \App\Modules\Gemini\Entities\AGIEntity|null $entity */
         return $this->where('user_id', $userId)
             ->where('entity_key', $entityKey)
             ->first();

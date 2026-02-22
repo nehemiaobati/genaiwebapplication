@@ -62,6 +62,7 @@ class AffiliateCategoryModel extends Model
      */
     public function getCategoriesWithCounts(): array
     {
+        /** @var \App\Modules\Affiliate\Entities\AffiliateCategory[] $categories */
         return $this->select('affiliate_categories.*, COUNT(affiliate_links.id) as link_count')
             ->join('affiliate_links', 'affiliate_links.category_id = affiliate_categories.id', 'left')
             ->groupBy('affiliate_categories.id')

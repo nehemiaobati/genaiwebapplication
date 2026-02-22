@@ -73,7 +73,7 @@ class UserModel extends Model
     {
         $this->db->transStart();
 
-        /** @var User|null $user */
+        /** @var \App\Entities\User|null $user */
         $user = $this->find($userId);
 
         if (! $user) {
@@ -116,7 +116,7 @@ class UserModel extends Model
     {
         $this->db->transStart();
 
-        /** @var User|null $user */
+        /** @var \App\Entities\User|null $user */
         $user = $this->find($userId);
 
         if (! $user) {
