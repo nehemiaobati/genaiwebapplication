@@ -20,6 +20,19 @@ use App\Libraries\RecaptchaService;
  */
 class Services extends BaseService
 {
+
+    /*
+     * public static function example($getShared = true)
+     * {
+     *     if ($getShared) {
+     *         return static::getSharedInstance('example');
+     *     }
+     *
+     *     return new \CodeIgniter\Example();
+     * }
+     */
+
+
     /**
      * The Recaptcha service.
      *

@@ -79,6 +79,6 @@ class Modules extends BaseModules
         'routes',
         'services',
         'migrations',
-        
+
     ];
 }

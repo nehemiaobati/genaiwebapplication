@@ -26,14 +26,14 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => '127.0.0.1',
-        'username'     => 'codeigniter',
-        'password'     => '12345678',
-        'database'     => 'server_codeigniter',
+        'hostname'     => 'localhost',
+        'username'     => '',
+        'password'     => '',
+        'database'     => '',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
-        'DBDebug'      => false,
+        'DBDebug'      => true,
         'charset'      => 'utf8mb4',
         'DBCollat'     => 'utf8mb4_general_ci',
         'swapPre'      => '',
@@ -182,6 +182,7 @@ class Database extends Config
         'port'        => 3306,
         'foreignKeys' => true,
         'busyTimeout' => 1000,
+        'synchronous' => null,
         'dateFormat'  => [
             'date'     => 'Y-m-d',
             'datetime' => 'Y-m-d H:i:s',
