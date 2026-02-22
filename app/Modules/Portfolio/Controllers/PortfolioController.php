@@ -46,11 +46,11 @@ class PortfolioController extends BaseController
         return '
         <html>
         <body>
-            <p><strong>Name:</strong> ' . esc($data['name']) . '</p>
-            <p><strong>Email:</strong> ' . esc($data['email']) . '</p>
-            <p><strong>Subject:</strong> ' . esc($data['subject']) . '</p>
+            <p><strong>Name:</strong> ' . (string) esc($data['name']) . '</p>
+            <p><strong>Email:</strong> ' . (string) esc($data['email']) . '</p>
+            <p><strong>Subject:</strong> ' . (string) esc($data['subject']) . '</p>
             <p><strong>Message:</strong></p>
-            <p>' . nl2br(esc($data['message'])) . '</p>
+            <p>' . nl2br((string) esc($data['message'])) . '</p>
         </body>
         </html>';
     }

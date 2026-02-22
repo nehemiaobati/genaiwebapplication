@@ -158,6 +158,7 @@ class CampaignController extends BaseController
         }
 
         $campaignModel = new CampaignModel();
+        /** @var \App\Modules\Admin\Entities\Campaign|null $campaign */
         $campaign = $campaignModel->find($id);
 
         if (!$campaign) {
@@ -188,6 +189,7 @@ class CampaignController extends BaseController
         }
 
         $campaignModel   = new CampaignModel();
+        /** @var \App\Modules\Admin\Entities\Campaign|null $campaign */
         $campaign        = $campaignModel->find($id);
 
         if (!$campaign) {

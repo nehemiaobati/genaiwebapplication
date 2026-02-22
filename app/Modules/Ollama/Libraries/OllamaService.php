@@ -184,6 +184,7 @@ class OllamaService
         // 2. Pre-Flight Balance Check
         // Enforces payment requirement before any heavy processing or context building.
         $cost = 1.00; // Fixed cost for now
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->find($userId);
         if (!$user || $user->balance < $cost) {
             $this->cleanupTempFiles($uploadedFileIds, $userId);
@@ -256,6 +257,7 @@ class OllamaService
 
         // 2. Balance Check
         $cost = 1.00;
+        /** @var \App\Entities\User|null $user */
         $user = $this->userModel->find($userId);
         if (!$user || $user->balance < $cost) {
             $this->cleanupTempFiles($uploadedFileIds, $userId);
@@ -630,6 +632,7 @@ class OllamaService
 
     public function deletePrompt(int $userId, int $promptId): bool
     {
+        /** @var \App\Modules\Ollama\Entities\OllamaPrompt|null $prompt */
         $prompt = $this->promptModel->find($promptId);
         if ($prompt && $prompt->user_id == $userId) {
             return $this->promptModel->delete($promptId);

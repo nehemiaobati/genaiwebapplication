@@ -145,6 +145,7 @@ class CampaignService
      */
     public function getDashboardData(?int $editingId = null): array
     {
+        /** @var \App\Modules\Admin\Entities\Campaign|null $editingCampaign */
         $editingCampaign = $editingId ? $this->campaignModel->find($editingId) : null;
 
         $lastQuotaHit = $this->campaignModel->where('quota_hit_at IS NOT NULL')
@@ -218,7 +219,9 @@ class CampaignService
     {
         $this->db->transStart();
 
-        if (!$this->campaignModel->find($id)) {
+        /** @var \App\Modules\Admin\Entities\Campaign|null $campaign */
+        $campaign = $this->campaignModel->find($id);
+        if (!$campaign) {
             return ['success' => false, 'message' => 'Campaign template not found.'];
         }
 
@@ -281,6 +284,7 @@ class CampaignService
      */
     public function initiateCampaign(int $campaignId): array
     {
+        /** @var \App\Modules\Admin\Entities\Campaign|null $campaign */
         $campaign = $this->campaignModel->find($campaignId);
 
         if (!$campaign) {
@@ -324,6 +328,7 @@ class CampaignService
      */
     public function processBatch(int $campaignId, int $batchSize = 50): array
     {
+        /** @var \App\Modules\Admin\Entities\Campaign|null $campaign */
         $campaign = $this->campaignModel->find($campaignId);
 
         if (!$campaign) {
@@ -406,6 +411,7 @@ class CampaignService
      */
     public function processRetryBatch(int $campaignId, int $batchSize = 50): array
     {
+        /** @var \App\Modules\Admin\Entities\Campaign|null $campaign */
         $campaign = $this->campaignModel->find($campaignId);
 
         if (!$campaign) {
@@ -495,6 +501,7 @@ class CampaignService
      */
     public function resumeCampaign(int $campaignId): array
     {
+        /** @var \App\Modules\Admin\Entities\Campaign|null $campaign */
         $campaign = $this->campaignModel->find($campaignId);
 
         if (!$campaign) {

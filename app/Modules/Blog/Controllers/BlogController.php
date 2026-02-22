@@ -111,6 +111,7 @@ class BlogController extends BaseController
 
     public function edit(int $id)
     {
+        /** @var \App\Modules\Blog\Entities\Post|null $post */
         $post = $this->postModel->find($id);
         if (!$post) {
             throw PageNotFoundException::forPageNotFound();
@@ -151,6 +152,7 @@ class BlogController extends BaseController
             return redirect()->to(url_to('home'));
         }
 
+        /** @var \App\Modules\Blog\Entities\Post|null $post */
         $post = $this->postModel->find($id);
         if (!$post) {
             throw PageNotFoundException::forPageNotFound('Cannot delete a post that does not exist.');

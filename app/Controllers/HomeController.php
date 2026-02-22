@@ -22,6 +22,7 @@ class HomeController extends BaseController
         $balance = '0.00';
 
         if ($userId) {
+            /** @var \App\Entities\User|null $user */
             $user = $this->userModel->find($userId);
             if ($user && isset($user->balance)) {
                 $balance = $user->balance;
@@ -45,7 +46,7 @@ class HomeController extends BaseController
     public function landing(): string
     {
         $data = [
-            'pageTitle'       => 'Afrikenkid | AI Tools & Crypto Data for Kenya & Africa',
+            'pageTitle'       => 'Afrikenkid | AI Tools & Crypto Data',
             'metaDescription' => 'Access powerful Generative AI tools for text, image, and video creation, plus real-time Bitcoin & Litecoin wallet data insights. A pay-as-you-go solution.',
             'heroTitle'       => 'The All-in-One Platform for AI & Crypto Insights',
             'heroSubtitle'    => 'Leverage Google\'s Gemini AI for text, image, and video generation and analyze blockchain trends with simple, pay-as-you-go pricing.',

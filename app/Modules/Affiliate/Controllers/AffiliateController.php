@@ -127,6 +127,7 @@ class AffiliateController extends BaseController
      */
     public function edit(int $id): string
     {
+        /** @var \App\Modules\Affiliate\Entities\AffiliateLink|null $link */
         $link = $this->affiliateModel->find($id);
         if (!$link) {
             throw PageNotFoundException::forPageNotFound('Affiliate link not found.');
@@ -168,6 +169,7 @@ class AffiliateController extends BaseController
      */
     public function delete(int $id): RedirectResponse
     {
+        /** @var \App\Modules\Affiliate\Entities\AffiliateLink|null $link */
         $link = $this->affiliateModel->find($id);
         if (!$link) {
             throw PageNotFoundException::forPageNotFound('Cannot delete a link that does not exist.');
@@ -189,6 +191,7 @@ class AffiliateController extends BaseController
      */
     public function analytics(int $id): string
     {
+        /** @var \App\Modules\Affiliate\Entities\AffiliateLink|null $link */
         $link = $this->affiliateModel->find($id);
         if (!$link) {
             throw PageNotFoundException::forPageNotFound('Affiliate link not found.');

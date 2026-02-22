@@ -89,7 +89,9 @@ class AdminController extends BaseController
     public function show($id)
     {
         $userModel = new UserModel();
-        $data['user'] = $userModel->find($id);
+        /** @var \App\Entities\User|null $user */
+        $user = $userModel->find($id);
+        $data['user'] = $user;
 
         if ($data['user']) {
             $data['pageTitle']       = 'User Details: ' . esc($data['user']->username) . ' | Admin';

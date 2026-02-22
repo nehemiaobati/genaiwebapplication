@@ -229,6 +229,7 @@ class OllamaMemoryService
                 continue;
             }
 
+            /** @var \App\Modules\Ollama\Entities\OllamaInteraction|null $memory */
             $memory = $this->interactionModel->find($id);
             if (!$memory) continue;
 

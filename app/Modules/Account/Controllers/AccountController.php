@@ -31,6 +31,7 @@ class AccountController extends BaseController
         helper('form');
 
         $userId = session()->get('userId'); // Assuming this is now handled by a filter or authentication system
+        /** @var \App\Entities\User|null $user */
         $user = $userModel->find($userId);
 
         // Pass user data to the view.

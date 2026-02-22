@@ -10,7 +10,7 @@
     <!-- SEO Meta Tags -->
     <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Wallet Balance and Transaction') ?></title>
     <meta name="description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
-    <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, Kenya, M-Pesa, Lipa na Mpesa, Mobile Money, CodeIgniter Development">
+    <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, M-Pesa, Lipa na Mpesa, Mobile Money, CodeIgniter Development">
 
     <!-- Geo-targeting -->
     <meta name="geo.region" content="KE">
@@ -70,7 +70,7 @@
                 "name": "Afrikenkid AI Studio",
                 "url": "<?= base_url() ?>"
             },
-            "keywords": "AI Video Generation Kenya, Gemini AI, M-Pesa Statement Analysis, Blockchain Data Verification, AI Studio Nairobi"
+            "keywords": "AI Video Generation, Gemini AI, M-Pesa Statement Analysis, Blockchain Data Verification, AI Studio"
         }
     </script>
 
@@ -339,7 +339,7 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4">
                     <h5>AFRIKENKID</h5>
-                    <p class="small">Build smarter with a pay-as-you-go platform. <br> Leverage Generative AI and query real-time BTC & LTC wallet data. Securely top up with Mobile Money (M-Pesa, Airtel Money, etc.). Built for creators, businesses, and developers in Kenya, Africa & Beyond.</p>
+                    <p class="small">Build smarter with a pay-as-you-go platform. <br> Leverage Generative AI and query real-time BTC & LTC wallet data. Securely top up with Mobile Money (M-Pesa, Airtel Money, etc.). Built for creators, businesses, and developers globally.</p>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>

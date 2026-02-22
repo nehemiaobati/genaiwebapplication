@@ -363,9 +363,11 @@ class AffiliateLinkService
      * @param int $id Category ID
      * @return object|null
      */
-    public function getCategory(int $id): ?object
+    public function getCategory(int $id): ?\App\Modules\Affiliate\Entities\AffiliateCategory
     {
-        return $this->categoryModel->find($id);
+        /** @var \App\Modules\Affiliate\Entities\AffiliateCategory|null $category */
+        $category = $this->categoryModel->find($id);
+        return $category;
     }
 
     /**
