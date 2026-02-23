@@ -112,14 +112,14 @@ class AuthService
 
         // Temporarily bypassing email sending due to production SMTP block.
         // To revert: uncomment the block below and remove '$user->is_verified = true;'
-        $user->is_verified = true;
+        ///$user->is_verified = true;
 
-        /*
+        ////*
         if (! $this->_sendVerificationEmail($user)) {
             $this->userModel->db->transRollback();
             return ['success' => false, 'message' => 'Registration failed. Could not send verification email.'];
         }
-        */
+        ///*/
 
         // 3. Save User
         if (! $this->userModel->save($user)) {
