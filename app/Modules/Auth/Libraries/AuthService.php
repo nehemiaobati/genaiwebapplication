@@ -107,6 +107,10 @@ class AuthService
         $user->password = password_hash($data['password'], PASSWORD_DEFAULT);
         $user->verification_token = bin2hex(random_bytes(50));
 
+        $optIn = !empty($data['marketing']);
+        $user->marketing_opt_in = $optIn ? 1 : 0;
+        $user->unsubscribe_token = $optIn ? bin2hex(random_bytes(32)) : null;
+
         // 2. Send Verification Email
 
 

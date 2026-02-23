@@ -58,9 +58,10 @@ class CampaignService
             $emailService->setSubject($campaign->subject);
 
             $emailData = [
-                'subject'      => $campaign->subject,
-                'body_content' => $campaign->body,
-                'username'     => $user->username,
+                'subject'           => $campaign->subject,
+                'body_content'      => $campaign->body,
+                'username'          => $user->username,
+                'unsubscribe_token' => $user->unsubscribe_token,
             ];
 
             $emailService->setMessage(view('App\Modules\Admin\Views\emails\campaign_email', $emailData));
@@ -152,7 +153,7 @@ class CampaignService
             ->orderBy('quota_hit_at', 'DESC')
             ->first();
 
-        $totalUserCount = $this->userModel->countAllResults();
+        $totalUserCount = $this->userModel->where('marketing_opt_in', 1)->countAllResults();
 
         $drafts = $this->campaignModel->where('status', 'draft')
             ->orderBy('updated_at', 'DESC')
@@ -299,8 +300,10 @@ class CampaignService
         $maxUser = $this->userModel->selectMax('id')->first();
         $maxUserId = $maxUser ? (int)$maxUser->id : 0;
 
-        // Count total recipients up to that snapshot
-        $totalRecipients = $this->userModel->where('id <=', $maxUserId)->countAllResults();
+        // Count total recipients up to that snapshot who have opted in
+        $totalRecipients = $this->userModel->where('id <=', $maxUserId)
+            ->where('marketing_opt_in', 1)
+            ->countAllResults();
 
         // Update campaign status
         $this->campaignModel->update($campaignId, [
@@ -356,6 +359,7 @@ class CampaignService
         /** @var \App\Entities\User[] $users */
         $users = $this->userModel->where('id >', $campaign->last_processed_id)
             ->where('id <=', (int)$campaign->max_user_id)
+            ->where('marketing_opt_in', 1)
             ->orderBy('id', 'ASC')
             ->findAll($actualBatchSize);
 

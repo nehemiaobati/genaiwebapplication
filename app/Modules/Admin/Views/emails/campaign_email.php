@@ -68,7 +68,10 @@
         </div>
         <div class="footer">
             <p>&copy; <?= date('Y') ?> AFRIKENKID. All rights reserved.</p>
-            <p>You are receiving this email because you are a registered user of our service.</p>
+            <p>You are receiving this email because you opted in to marketing communications.</p>
+            <?php if (!empty($unsubscribe_token)): ?>
+                <p><a href="<?= url_to('campaign.unsubscribe', $unsubscribe_token) ?>" style="color: #0d6efd; text-decoration: underline;">Unsubscribe from these emails</a></p>
+            <?php endif; ?>
         </div>
     </div>
 </body>

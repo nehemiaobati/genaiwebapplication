@@ -30,5 +30,8 @@ $routes->group('/', ['namespace' => 'App\Modules\Auth\Controllers'], static func
         // Reset Password
         $routes->get('reset-password/(:segment)', 'AuthController::resetPasswordForm/$1', ['as' => 'auth.reset_password']);
         $routes->post('reset-password', 'AuthController::updatePassword', ['as' => 'auth.update_password', 'filter' => 'throttle:2,60']);
+
+        // Unsubscribe from Marketing
+        $routes->get('unsubscribe/(:segment)', 'UnsubscribeController::index/$1', ['as' => 'campaign.unsubscribe']);
     });
 });

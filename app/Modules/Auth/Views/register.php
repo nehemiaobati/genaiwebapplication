@@ -86,6 +86,10 @@
                                     <label for="confirmpassword">Confirm Password</label>
                                 </div>
                                 <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="marketing" name="marketing" value="1" <?= old('marketing') ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="marketing">I want to receive product updates and marketing campaigns</label>
+                                </div>
+                                <div class="mb-3 form-check">
                                     <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
                                     <label class="form-check-label" for="terms">I agree to the <a href="<?= url_to('terms') ?>" target="_blank">Terms and Conditions</a></label>
                                 </div>

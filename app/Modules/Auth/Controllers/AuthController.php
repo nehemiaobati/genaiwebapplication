@@ -44,6 +44,7 @@ class AuthController extends BaseController
             'password' => 'required|min_length[8]|max_length[255]',
             'confirmpassword' => 'matches[password]',
             'terms' => 'required',
+            'marketing' => 'permit_empty',
         ];
 
         if (! $this->validate($rules)) {
