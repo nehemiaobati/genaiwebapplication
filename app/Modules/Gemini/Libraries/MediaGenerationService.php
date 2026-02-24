@@ -82,7 +82,7 @@ class MediaGenerationService
         'veo-2.0-generate-001' => [
             'type' => 'video',
             'pricing_model' => 'flat',
-            'cost' => 0.18,
+            'cost' => 0.27,
             'name' => 'Veo 2.0'
         ],
         'veo-3.1-generate-preview' => [
@@ -94,19 +94,19 @@ class MediaGenerationService
         'veo-3.1-fast-generate-preview' => [
             'type' => 'video',
             'pricing_model' => 'flat',
-            'cost' => 0.18,
+            'cost' => 0.27,
             'name' => 'Veo 3.1 Fast Preview'
         ],
         'veo-3.0-generate-001' => [
             'type' => 'video',
             'pricing_model' => 'flat',
-            'cost' => 0.216,
+            'cost' => 0.27,
             'name' => 'Veo 3.0'
         ],
         'veo-3.0-fast-generate-001' => [
             'type' => 'video',
             'pricing_model' => 'flat',
-            'cost' => 0.144,
+            'cost' => 0.27,
             'name' => 'Veo 3.0 Fast'
         ]
     ];
