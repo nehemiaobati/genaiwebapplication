@@ -81,7 +81,7 @@ class GeminiService
         $this->payloadService = $payloadService ?? service('modelPayloadService');
         $this->userModel = $userModel ?? new UserModel();
         $this->db = $db ?? \Config\Database::connect();
-        $this->ffmpegService = service('ffmpegService');
+        $this->ffmpegService = $ffmpegService ?? service('ffmpegService');
         $this->promptModel = $promptModel ?? new PromptModel();
         $this->userSettingsModel = $userSettingsModel ?? new UserSettingsModel();
     }
@@ -615,7 +615,8 @@ class GeminiService
             return ['status' => false, 'error' => 'GEMINI_API_KEY not set in .env file.'];
         }
 
-        $currentModel = "gemini-2.0-flash";
+        // Use the primary model — consistent with MODEL_PRIORITIES fallback chain
+        $currentModel = self::MODEL_PRIORITIES[0];
         $countTokensApi = "countTokens";
         $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:{$countTokensApi}?key=" . urlencode($apiKey);
 
@@ -809,8 +810,6 @@ class GeminiService
                 $audioData = $audioResult['audioData'];
             }
         }
-
-        $costData = ['costKSH' => 0];
 
         // 2. Transaction: Billing & Memory
         $this->db->transStart();
