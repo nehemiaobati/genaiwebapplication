@@ -8,7 +8,7 @@
 
 <div class="container">
 
-<p>Comming Soon</p>
+    <p>Coming Soon</p>
 
 </div>
 
