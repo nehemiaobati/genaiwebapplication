@@ -37,7 +37,7 @@
                 <div class="card-body p-4 d-flex flex-column">
                     <div class="fs-1 text-primary mb-3"><i class="bi bi-stars"></i></div>
                     <h4 class="fw-bold text-body-emphasis">AI Studio <span class="badge bg-success-subtle text-success-emphasis fs-6 ms-2">New</span></h4>
-                    <p class="text-body-secondary">Your creative co-pilot for writing, <strong>image generation</strong>, and document analysis. Powered by Google's Gemini.</p>
+                    <p class="text-body-secondary">Your creative co-pilot for writing, <strong>image generation</strong>, <strong>video generation</strong>, and document analysis. Powered by Google's Gemini.</p>
 
                     <!-- Simplified Prompt Suggestion -->
                     <div class="p-3 bg-body-tertiary rounded mb-3 border border-dashed position-relative">

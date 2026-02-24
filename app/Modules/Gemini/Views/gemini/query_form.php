@@ -557,7 +557,7 @@
                 <div class="text-center text-muted mt-5 pt-5" id="empty-state">
                     <div class="display-1 text-body-tertiary mb-3"><i class="bi bi-lightbulb"></i></div>
                     <h5>Start Creating</h5>
-                    <p>Enter your prompt below to generate text, images, or code.</p>
+                    <p>Enter your prompt below to generate text, images, videos, or code.</p>
                 </div>
             <?php endif; ?>
         </div>
@@ -718,7 +718,7 @@
                 </form>
 
                 <div class="mt-4 pt-4 text-center">
-                    <small class="text-muted">AFRIKENKID AI Studio v2</small>
+                    <small class="text-muted">AFRIKENKID AI Studio</small>
                 </div>
             </div>
 
