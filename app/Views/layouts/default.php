@@ -355,8 +355,6 @@
                         <li><a href="<?= url_to('blog.index') ?>">Blog</a></li>
                         <li><a href="<?= url_to('contact.form') ?>">Contact Us</a></li>
                         <li><a href="<?= url_to('documentation') ?>">Documentation</a></li>
-                        <li><a href="<?= url_to('documentation.web') ?>">Web Guide</a></li>
-                        <li><a href="<?= url_to('documentation.agi') ?>">AI Guide</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-3 col-12 mt-4 mt-lg-0">

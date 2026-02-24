@@ -6,11 +6,11 @@
 
     <p>Below are links to the official documentation:</p>
 
-    <a href="<?= url_to('web') ?>"  class="btn btn-primary doc-link mt-4" >
+    <a href="<?= url_to('documentation.web') ?>" class="btn btn-primary doc-link mt-4">
         Web Documentation
     </a>
 
-    <a href="<?= url_to('agi') ?>" class="btn btn-primary doc-link mt-4" >
+    <a href="<?= url_to('documentation.agi') ?>" class="btn btn-primary doc-link mt-4">
         AGI Documentation
     </a>
 </div>
