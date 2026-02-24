@@ -33,11 +33,12 @@ class AGI extends BaseConfig
 
     /**
      * The specialized model used for converting text into numerical vectors (embeddings).
-     * 'text-embedding-004' is optimized for this task and is highly efficient.
+     * 'gemini-embedding-001' is the stable GA replacement for the discontinued 'text-embedding-004'.
+     * It delivers improved performance and higher rate limits.
      *
      * @var string
      */
-    public string $embeddingModel = 'text-embedding-004';
+    public string $embeddingModel = 'gemini-embedding-001';
 
 
     // --- File Paths ---

@@ -394,16 +394,6 @@
         border-bottom-right-radius: calc(var(--bs-border-radius) - 1px);
     }
 
-    /* Code Blocks */
-    pre {
-        background: var(--gemini-code-bg);
-        color: #fff;
-        padding: 1rem;
-        border-radius: 5px;
-        position: relative;
-        margin-top: 1rem;
-    }
-
     .thinking-content {
         white-space: pre-wrap;
         font-family: var(--bs-font-monospace);
@@ -585,12 +575,12 @@
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button type="button" disabled class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image">
+                        <button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="image">
                             <i class="bi bi-image me-2"></i>Image
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button type="button" disabled class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video">
+                        <button type="button" class="nav-link py-2 px-3" data-bs-toggle="tab" data-type="video">
                             <i class="bi bi-camera-video me-2"></i>Video
                         </button>
                     </li>
@@ -601,7 +591,7 @@
                     <!-- Image Models -->
                     <div id="image-models-grid" class="d-flex gap-2 d-none overflow-auto py-2">
                         <?php foreach ($mediaConfigs as $modelId => $config): ?>
-                            <?php if (strpos($config['type'], 'image') !== false): ?>
+                            <?php if (str_contains($config['type'], 'image')): ?>
                                 <div class="model-card card p-2" style="min-width: 120px;" data-model="<?= esc($modelId) ?>" data-type="image">
                                     <div class="text-center small">
                                         <i class="bi bi-image fs-5 text-primary"></i>
@@ -722,7 +712,7 @@
                 <hr>
 
                 <!-- Danger Zone -->
-                <form action="<?= url_to('gemini.memory.clear') ?>" method="post" onsubmit="return confirm('Clear all history?');">
+                <form id="clearHistoryForm" action="<?= url_to('gemini.memory.clear') ?>" method="post">
                     <?= csrf_field() ?>
                     <button type="submit" id="clearHistorySubmit" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-trash me-2"></i> Clear History</button>
                 </form>
@@ -804,7 +794,6 @@
      */
 
     // Configuration Constants
-    // Configuration Constants
     const APP_CONFIG = {
         csrfName: '<?= csrf_token() ?>',
         csrfHash: '<?= csrf_hash() ?>', // Initial hash
@@ -835,7 +824,8 @@
      * ViewTemplates
      * Central repository for HTML strings to keep JS logic clean.
      */
-    const ViewTemplates = {
+    // Internal implementation detail — only ViewRenderer may call this.
+    const _ViewTemplates = {
         resultCard: (title, toolbar, bodyContent, processingClass) => `
             <div class="card blueprint-card shadow-sm border-primary ${processingClass}" id="results-card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -972,18 +962,18 @@
 
         static renderResultCard(isMedia = false, title = 'Studio Output', processing = false) {
             const processingClass = processing ? 'polling-pulse' : '';
-            const bodyContent = isMedia ? ViewTemplates.mediaBody : ViewTemplates.textBody;
-            const toolbar = isMedia ? '' : ViewTemplates.toolbar;
+            const bodyContent = isMedia ? _ViewTemplates.mediaBody : _ViewTemplates.textBody;
+            const toolbar = isMedia ? '' : _ViewTemplates.toolbar;
 
-            return ViewTemplates.resultCard(title, toolbar, bodyContent, processingClass);
+            return _ViewTemplates.resultCard(title, toolbar, bodyContent, processingClass);
         }
 
         static renderAudioPlayer(url) {
-            return ViewTemplates.audioPlayer(url);
+            return _ViewTemplates.audioPlayer(url);
         }
 
         static renderFileChip(file, id) {
-            return ViewTemplates.fileChip(file, id);
+            return _ViewTemplates.fileChip(file, id);
         }
 
         static renderHistoryHeader(date) {
@@ -1023,19 +1013,19 @@
         }
 
         static renderFlashMessage(msg, type = 'danger') {
-            return ViewTemplates.flashMessage(msg, type);
+            return _ViewTemplates.flashMessage(msg, type);
         }
 
         static renderVideoProcessing(elapsed = 0) {
-            return ViewTemplates.videoProcessing(elapsed);
+            return _ViewTemplates.videoProcessing(elapsed);
         }
 
         static renderVideoPlayer(url) {
-            return ViewTemplates.videoPlayer(url);
+            return _ViewTemplates.videoPlayer(url);
         }
 
         static renderImage(url) {
-            return ViewTemplates.image(url);
+            return _ViewTemplates.image(url);
         }
     }
 
@@ -1299,6 +1289,7 @@
             this.enableCodeFeatures();
             this.setupDownloads();
             this.setupMediaClickHandler(); // Security: Event delegation for media
+            this.setupClearHistoryConfirm();
         }
 
         setupResponsiveSidebar() {
@@ -1577,6 +1568,21 @@
             // Rule 5.1: Standardized feedback
             document.getElementById('audio-player-container').innerHTML = ViewRenderer.renderAudioPlayer(url);
         }
+
+        /**
+         * RC-4: UIManager is the sole owner of all flash container writes.
+         * Handles server-rendered HTML fragments (as opposed to showStatus which wraps renderFlashMessage).
+         * @param {string} html - Server-rendered HTML string
+         */
+        showServerFlash(html) {
+            if (this.els.flashContainer) this.els.flashContainer.innerHTML = html;
+        }
+
+        setupClearHistoryConfirm() {
+            document.getElementById('clearHistoryForm')?.addEventListener('submit', (e) => {
+                if (!confirm('Clear all history?')) e.preventDefault();
+            });
+        }
     }
 
     /**
@@ -1589,6 +1595,7 @@
         constructor(app) {
             this.app = app;
             this.activeVideoOp = null;
+            this._polling = false; // RC-1: Guard against poll queue buildup
             this.timers = {
                 poller: null,
                 ticker: null
@@ -1640,6 +1647,10 @@
         }
 
         async _poll(opId) {
+            // RC-1: Skip if a poll is already in-flight (prevents queue buildup when polls take >5s)
+            if (this._polling) return;
+            this._polling = true;
+
             const fd = new FormData();
             fd.append('op_id', opId);
 
@@ -1651,18 +1662,18 @@
                     this.app.ui.setLoading(false);
 
                     // Show cost feedback
-                    if (d.cost_deducted && this.app.ui.els.flashContainer) {
-                        this.app.ui.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage(APP_CONFIG.localization.currency + " " + parseFloat(d.cost_deducted).toFixed(2) + " deducted.", 'success');
+                    if (d.cost_deducted) {
+                        this.app.ui.showStatus(`${APP_CONFIG.localization.currency} ${parseFloat(d.cost_deducted).toFixed(2)} deducted.`, 'success');
                     }
                 } else if (d.status === 'failed' || d.status === 'error') {
                     throw new Error(d.message);
                 }
             } catch (e) {
                 this._stop();
-                if (this.app.ui.els.flashContainer) {
-                    this.app.ui.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage(e.message || 'Video processing failed.', 'danger');
-                }
+                this.app.ui.showStatus(e.message || 'Video processing failed.', 'danger');
                 this.app.ui.setLoading(false);
+            } finally {
+                this._polling = false;
             }
         }
 
@@ -1670,6 +1681,7 @@
             if (this.timers.ticker) clearInterval(this.timers.ticker);
             if (this.timers.poller) clearInterval(this.timers.poller);
             this.activeVideoOp = null;
+            this._polling = false; // RC-1: Reset on explicit stop
         }
     }
 
@@ -1684,6 +1696,7 @@
     class InteractionHandler {
         constructor(app) {
             this.app = app;
+            this.isSubmitting = false; // RC-3: Guard against double-submit (e.g. rapid Enter in TinyMCE)
         }
         init() {
             document.getElementById('geminiForm')?.addEventListener('submit', e => this.handleSubmit(e));
@@ -1691,10 +1704,17 @@
 
         async handleSubmit(e) {
             e.preventDefault();
+            // RC-3: Prevent double-submit (form.requestSubmit() bypasses disabled button state)
+            if (this.isSubmitting) return;
+            this.isSubmitting = true;
+
             const type = this.app.ui.els.genType.value;
             if (typeof tinymce !== 'undefined') tinymce.triggerSave();
             const prompt = this.app.ui.els.prompt.value.trim();
-            if (!prompt && type === 'text') return this.app.ui.showToast('Please enter a prompt.');
+            if (!prompt && type === 'text') {
+                this.isSubmitting = false;
+                return this.app.ui.showToast('Please enter a prompt.');
+            }
 
             this.app.ui.setLoading(true);
             const fd = new FormData(this.app.ui.els.form);
@@ -1745,6 +1765,7 @@
             } finally {
                 // Only set loading to false if not a video generation, as JobManager handles it for video.
                 if (type !== 'video') this.app.ui.setLoading(false);
+                this.isSubmitting = false; // RC-3: Always release guard
             }
         }
 
@@ -1757,9 +1778,7 @@
                     document.getElementById('raw-response').value = d.raw_result;
                     this.app.ui.enableCodeFeatures();
                     this.app.ui.scrollToBottom();
-                    if (d.flash_html && this.app.ui.els.flashContainer) {
-                        this.app.ui.els.flashContainer.innerHTML = d.flash_html;
-                    }
+                    if (d.flash_html) this.app.ui.showServerFlash(d.flash_html); // RC-4
                     this.app.ui.renderAudio(d.audio_url);
 
                     if (d.new_interaction_id) this.app.history.addItem({
@@ -1781,7 +1800,7 @@
         async generateMedia(fd) {
             // Frontend Gatekeeper via JobManager
             if (this.app.jobs.isActive()) {
-                document.getElementById('flash-messages-container').innerHTML = ViewRenderer.renderFlashMessage('You have a pending video generation. Please wait.', 'warning');
+                this.app.ui.showStatus('You have a pending video generation. Please wait.', 'warning');
                 this.app.ui.setLoading(false);
                 return;
             }
@@ -1798,20 +1817,11 @@
                 }
 
                 // Show cost feedback
-                if (d.flash_html && this.app.ui.els.flashContainer) {
-                    this.app.ui.els.flashContainer.innerHTML = d.flash_html;
-                }
+                if (d.flash_html) this.app.ui.showServerFlash(d.flash_html); // RC-4
             } catch (e) {
-                let msg = e.message || 'Media Generation Failed';
-
                 // Standardized Error Handling
-                this.app.ui.setError(msg);
-
-                // Special toast/alert if needed
-                if (e.message && e.message.includes('pending video')) {
-                    this.app.ui.showToast(msg, 'warning');
-                }
-
+                // Note: handleSubmit's finally skips setLoading for video type — must release here.
+                this.app.ui.setError(e.message || 'Media Generation Failed');
                 this.app.ui.setLoading(false);
             }
             this.app.uploader.clear();
@@ -1866,7 +1876,9 @@
                             window.location.href = d.redirect;
                             return;
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.warn('SSE 403: Could not parse redirect body.', e);
+                    }
 
                     this.app.ui.showToast('Session updated or expired. Reloading...', 'warning');
                     setTimeout(() => window.location.reload(), 2000);
@@ -1902,7 +1914,7 @@
                     accum = this.processLines([this.buffer], accum, els);
                 }
 
-                this.currentFullText = accum; // For history
+                // accum holds the final full text; history sync handled inline via d.new_interaction_id events
                 this.app.ui.enableCodeFeatures();
             } catch (e) {
                 this.app.ui.setError('Stream Connection Lost.');
@@ -2058,6 +2070,10 @@
 
             try {
                 const r = await this.app.sendAjax(APP_CONFIG.endpoints.upload, fd);
+                // RC-2: User may have removed the chip while this upload was in-flight.
+                // If cancelled, do not update UI or inject the hidden input for this file.
+                if (job.cancelled) return;
+
                 if (r.status === 'success') {
                     this.updateChipStatus(job.ui, 'success');
                     job.ui.querySelector('.remove-btn').dataset.serverFileId = r.file_id;
@@ -2066,8 +2082,10 @@
                     throw new Error(r.message || 'Upload failed');
                 }
             } catch (e) {
-                this.updateChipStatus(job.ui, 'error');
-                this.app.ui.showStatus(e.message || 'Upload failed', 'danger');
+                if (!job.cancelled) {
+                    this.updateChipStatus(job.ui, 'error');
+                    this.app.ui.showStatus(e.message || 'Upload failed', 'danger');
+                }
             } finally {
                 this.isUploading = false;
                 this.processQueue();
@@ -2094,8 +2112,15 @@
 
         async removeFile(btn) {
             const fid = btn.dataset.serverFileId;
+            const jobId = btn.dataset.id;
             btn.closest('.file-chip').remove();
-            document.getElementById(`input-${btn.dataset.id}`)?.remove();
+            document.getElementById(`input-${jobId}`)?.remove();
+
+            // RC-2: Mark any queued (not-yet-started) job as cancelled so the upload
+            // path won't inject an orphaned hidden input after the chip is gone.
+            const queued = this.queue.find(j => j.id === jobId);
+            if (queued) queued.cancelled = true;
+
             if (fid) {
                 const fd = new FormData();
                 fd.append('file_id', fid);
@@ -2110,10 +2135,6 @@
         }
     }
 
-    /**
-     * 6. Prompt Manager
-     * Handles loading and saving prompts.
-     */
     /**
      * Manages saved prompt template CRUD operations.
      */
@@ -2137,8 +2158,8 @@
             const form = document.querySelector('#savePromptModal form');
             if (form) {
                 document.getElementById('savePromptModal').addEventListener('show.bs.modal', () => {
-                    const val = tinymce.get('prompt') ? tinymce.get('prompt').getContent() : document.getElementById('prompt').value;
-                    document.getElementById('modalPromptText').value = val;
+                    const editor = tinymce.get('prompt');
+                    document.getElementById('modalPromptText').value = editor ? editor.getContent() : document.getElementById('prompt').value;
                 });
                 form.onsubmit = async (e) => {
                     e.preventDefault();
@@ -2183,9 +2204,6 @@
     }
 
     /**
-     * 7. History Manager (Memory Stream)
-     */
-    /**
      * Handles conversational history and temporal grouping.
      * 
      * Functional scope:
@@ -2200,6 +2218,7 @@
             this.listEl = document.getElementById('history-list');
             this.loadingEl = document.getElementById('memory-loading');
             this.isLoaded = false;
+            this.isEmpty = true; // Tracks whether list has real items; avoids fragile DOM class inspection
             this.offset = 0;
             this.limit = HistoryManager.HISTORY_PAGE_SIZE;
             this.hasMore = true;
@@ -2243,6 +2262,7 @@
                 if (d.status === 'success') {
                     this.renderList(d.history, append);
                     this.isLoaded = true;
+                    if (d.history.length > 0) this.isEmpty = false; // Sync flag after fetch
                     this.offset += d.history.length;
                     this.hasMore = d.history.length === this.limit;
                     this.updateLoadMoreButton();
@@ -2338,7 +2358,8 @@
                 document.querySelectorAll('.memory-item[data-id^="pending-"]').forEach(el => el.remove());
             }
 
-            if (this.listEl.querySelector('.text-center.text-muted')) this.listEl.innerHTML = '';
+            // Clear the placeholder stub using the reliable isEmpty flag
+            if (this.isEmpty) this.listEl.innerHTML = '';
             const dateStr = this.formatDate(item.timestamp);
             let header = this.listEl.querySelector('.memory-date-header');
             if (!header || header.textContent !== dateStr) {
@@ -2354,6 +2375,7 @@
             const el = ViewRenderer.renderHistoryItem(newItem);
             if (header.nextSibling) this.listEl.insertBefore(el, header.nextSibling);
             else this.listEl.appendChild(el);
+            this.isEmpty = false; // Mark list as populated
         }
 
         async loadMore() {
