@@ -79,14 +79,14 @@ class BalanceFilter implements FilterInterface
     private function _handleLowBalance(RequestInterface $request)
     {
         $requiredBalance = 1;
-        $message = 'Your balance is too low. You need at least ' . $requiredBalance . ' to continue.';
+        $message = 'Your balance is too low. You need at least Ksh ' . $requiredBalance . ' to continue.';
 
         // Check for AJAX request
         if ($request instanceof \CodeIgniter\HTTP\IncomingRequest && $request->isAJAX()) {
             session()->setFlashdata('alert', $message);
             return response()->setJSON([
                 'status' => 'error',
-                'message' => 'Insufficient balance. You need at least ' . $requiredBalance . ' to continue.',
+                'message' => 'Insufficient balance. You need at least Ksh ' . $requiredBalance . ' to continue.',
                 'redirect' => url_to('payment.index'),
                 'csrf_token' => csrf_hash()
             ])->setStatusCode(403);

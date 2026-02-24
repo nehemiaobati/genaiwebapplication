@@ -72,6 +72,10 @@
             <?php if (!empty($unsubscribe_token)): ?>
                 <p><a href="<?= url_to('campaign.unsubscribe', $unsubscribe_token) ?>" style="color: #0d6efd; text-decoration: underline;">Unsubscribe from these emails</a></p>
             <?php endif; ?>
+            <p style="margin-top: 10px; opacity: 0.8;">
+                Afrikenkid, Inc.<br>
+                Nairobi, Kenya
+            </p>
         </div>
     </div>
 </body>

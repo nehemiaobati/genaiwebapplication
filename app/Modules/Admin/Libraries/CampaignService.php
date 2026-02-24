@@ -57,6 +57,10 @@ class CampaignService
             $emailService->setTo($user->email);
             $emailService->setSubject($campaign->subject);
 
+            // Add List-Unsubscribe header (RFC 2369)
+            $unsubscribeUrl = url_to('campaign.unsubscribe', $user->unsubscribe_token);
+            $emailService->setHeader('List-Unsubscribe', '<' . $unsubscribeUrl . '>');
+
             $emailData = [
                 'subject'           => $campaign->subject,
                 'body_content'      => $campaign->body,
