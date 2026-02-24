@@ -62,15 +62,4 @@ abstract class BaseController extends Controller
         // Preload any models, libraries, etc, here.
         $this->session = service('session');
     }
-
-    public function acceptCookie()
-    {
-        $cookie = [
-            'name'   => 'user_cookie_consent',
-            'value'  => 'accepted',
-            'expire' => 31536000, // 1 year
-        ];
-
-        return redirect()->back()->setCookie($cookie);
-    }
 }

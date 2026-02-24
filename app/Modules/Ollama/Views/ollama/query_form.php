@@ -517,13 +517,13 @@
                 <hr>
 
                 <!-- Danger Zone -->
-                <form action="<?= url_to('ollama.memory.clear') ?>" method="post" onsubmit="return confirm('Clear all history?');">
+                <form action="<?= url_to('ollama.memory.clear') ?>" method="post">
                     <?= csrf_field() ?>
                     <button type="submit" id="clearHistorySubmit" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-trash me-2"></i> Clear History</button>
                 </form>
 
                 <div class="mt-4 pt-4 text-center">
-                    <small class="text-muted">AFRIKENKID AI Studio v2</small>
+                    <small class="text-muted">AFRIKENKID AI Studio</small>
                 </div>
             </div>
 
@@ -609,11 +609,8 @@
         }
     };
 
-    /**
-     * ViewTemplates
-     * Central repository for HTML strings to keep JS logic clean.
-     */
-    const ViewTemplates = {
+    // Internal implementation detail — only ViewRenderer may call this.
+    const _ViewTemplates = {
         resultCard: (title, toolbar, bodyContent, processingClass) => `
             <div class="card blueprint-card shadow-sm border-primary ${processingClass}" id="results-card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -689,13 +686,13 @@
 
         static renderResultCard(isMedia = false, title = 'Studio Output', processing = false) {
             const processingClass = processing ? 'polling-pulse' : '';
-            const bodyContent = ViewTemplates.textBody;
-            const toolbar = ViewTemplates.toolbar;
-            return ViewTemplates.resultCard(title, toolbar, bodyContent, processingClass);
+            const bodyContent = _ViewTemplates.textBody;
+            const toolbar = _ViewTemplates.toolbar;
+            return _ViewTemplates.resultCard(title, toolbar, bodyContent, processingClass);
         }
 
         static renderFileChip(id, name) {
-            return ViewTemplates.fileChip({
+            return _ViewTemplates.fileChip({
                 name: name
             }, id);
         }
@@ -737,7 +734,7 @@
         }
 
         static renderFlashMessage(msg, type = 'danger') {
-            return ViewTemplates.flashMessage(msg, type);
+            return _ViewTemplates.flashMessage(msg, type);
         }
     }
 
@@ -873,19 +870,6 @@
          * @param {FormData|null} data - Payload
          * @returns {Promise<Object>} - Parsed JSON response
          */
-        /**
-         * Unified AJAX Helper
-         * 
-         * Wraps `fetch` to provide:
-         * 1. Auto-appending of CSRF tokens to FormData.
-         * 2. X-Requested-With header for CodeIgniter AJAX detection.
-         * 3. Automatic CSRF token rotation from response headers/body.
-         * 4. Centralized error logging and UI toast notification on failure.
-         * 
-         * @param {string} url - Endpoint URL
-         * @param {FormData|null} data - Payload
-         * @returns {Promise<Object>} - Parsed JSON response
-         */
         async sendAjax(url, data = null) {
             return this.requestQueue.enqueue(async () => {
                 const formData = data instanceof FormData ? data : new FormData();
@@ -982,6 +966,25 @@
             this.setupDownloads();
             this.initTinyMCE();
             this.setupAutoResize();
+            this.setupClearHistoryConfirm();
+        }
+
+        setupClearHistoryConfirm() {
+            // Migrated from inline onsubmit — UIManager owns all event-driven UI concerns.
+            document.getElementById('clearHistorySubmit')?.closest('form')?.addEventListener('submit', (e) => {
+                if (!confirm('Clear all history?')) e.preventDefault();
+            });
+        }
+
+        showStatus(msg, type = 'danger') {
+            const c = document.getElementById('flash-messages-container');
+            if (c) c.innerHTML = ViewRenderer.renderFlashMessage(msg, type);
+        }
+
+        showServerFlash(html) {
+            // Renders server-provided flash HTML. UIManager is the sole owner of flashContainer writes.
+            const c = document.getElementById('flash-messages-container');
+            if (c) c.innerHTML = html;
         }
 
         handleResponsiveSidebar() {
@@ -1046,8 +1049,8 @@
         }
 
         injectFlashError(msg) {
-            const c = document.getElementById('flash-messages-container');
-            if (c) c.innerHTML = `<div class="alert alert-danger alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+            // Alias for backward-compat; prefer showStatus() for new call-sites.
+            this.showStatus(msg, 'danger');
         }
 
         setupSettings() {
@@ -1059,7 +1062,9 @@
                     try {
                         const d = await this.app.sendAjax(APP_CONFIG.endpoints.settings, fd);
                         if (d.status !== 'success') this.showToast('Failed to save setting.');
-                    } catch (e) {}
+                    } catch (e) {
+                        console.warn('[UIManager] Setting save failed:', e.message);
+                    }
                 });
             });
         }
@@ -1167,9 +1172,6 @@
     }
 
     /**
-     * 3. Media Uploader
-     */
-    /**
      * MediaUploader
      * 
      * Manages the file upload workflow with a focus on UX availability options (Drag & Drop + Click).
@@ -1228,13 +1230,21 @@
 
         async uploadFile(file) {
             const id = Math.random().toString(36).substr(2, 9);
+            let cancelled = false; // RC-2: guard against orphaned hidden inputs
             this.renderFileChip(id, file.name);
+
+            // Wire remove button before upload completes
+            document.getElementById(`file-item-${id}`)?.querySelector('.remove-btn')?.addEventListener('click', () => {
+                cancelled = true;
+                this.removeFile(id);
+            });
 
             const fd = new FormData();
             fd.append('file', file);
 
             try {
                 const res = await this.app.sendAjax(APP_CONFIG.endpoints.upload, fd);
+                if (cancelled) return; // RC-2: file was removed mid-upload
                 if (res.status === 'success') {
                     this.files.set(id, res.file_id);
                     this.updateFileChip(id, true);
@@ -1244,8 +1254,10 @@
                     this.app.ui.showToast(res.message || 'Upload failed');
                 }
             } catch (e) {
-                this.removeFile(id);
-                this.app.ui.showToast('Upload error');
+                if (!cancelled) {
+                    this.removeFile(id);
+                    this.app.ui.showToast('Upload error');
+                }
             }
         }
 
@@ -1291,9 +1303,6 @@
     }
 
     /**
-     * 4. Prompt Manager
-     */
-    /**
      * PromptManager
      * 
      * Handles the CRUD operations for saved prompts ("blueprints").
@@ -1330,8 +1339,7 @@
             if (modal) {
                 modal.addEventListener('show.bs.modal', () => {
                     const editor = (typeof tinymce !== 'undefined') ? tinymce.get('prompt') : null;
-                    const val = editor ? editor.getContent() : document.getElementById('prompt').value;
-                    document.getElementById('modalPromptText').value = val;
+                    document.getElementById('modalPromptText').value = editor ? editor.getContent() : document.getElementById('prompt').value;
                 });
             }
 
@@ -1434,6 +1442,7 @@
             this.listEl = document.getElementById('history-list');
             this.loadingEl = document.getElementById('memory-loading');
             this.isLoaded = false;
+            this.isEmpty = true; // Reliable flag; avoids fragile DOM class inspection
             this.offset = 0;
             this.limit = HistoryManager.HISTORY_PAGE_SIZE;
             this.hasMore = true;
@@ -1488,6 +1497,7 @@
                 if (d.status === 'success') {
                     this.renderList(d.history, append);
                     this.isLoaded = true;
+                    if (d.history.length > 0) this.isEmpty = false;
 
                     // Update pagination state
                     this.offset += d.history.length;
@@ -1607,8 +1617,9 @@
 
         addItem(item, aiOutputRaw) {
             // Remove empty state if present
-            if (this.listEl.querySelector('.text-center.text-muted')) {
+            if (this.isEmpty) {
                 this.listEl.innerHTML = '';
+                this.isEmpty = false;
             }
 
             const dateStr = this.formatDate(item.timestamp);
@@ -1679,9 +1690,6 @@
         }
     }
 
-    /**
-     * 6. Stream Handler
-     */
     /**
      * StreamHandler
      * 
@@ -1865,6 +1873,7 @@
     class InteractionHandler {
         constructor(app) {
             this.app = app;
+            this.isSubmitting = false; // RC-3: prevents double-submit from TinyMCE Enter key
         }
 
         init() {
@@ -1873,6 +1882,10 @@
 
         async handleSubmit(e) {
             e.preventDefault();
+
+            // RC-3: Block re-entry from rapid clicks or TinyMCE Enter key
+            if (this.isSubmitting) return;
+
             const form = e.target;
             const prompt = document.getElementById('prompt');
 
@@ -1884,6 +1897,7 @@
                 return;
             }
 
+            this.isSubmitting = true;
             this.app.ui.setLoading(true);
 
             // Tab Switching (Optimized for Assistant Mode)
@@ -1906,8 +1920,10 @@
                 }
             } catch (err) {
                 console.error(err);
-                this.app.ui.injectFlashError(err.message || 'Request failed.');
+                this.app.ui.showStatus(err.message || 'Request failed.');
+            } finally {
                 this.app.ui.setLoading(false);
+                this.isSubmitting = false; // RC-3: Always release guard
             }
         }
 
@@ -1940,12 +1956,11 @@
          * @param {string} rawOutput - The complete generated text (for history injection)
          */
         onInteractionComplete(data, rawOutput) {
-            // 1. Handle Cost & Flash
+            // 1. Handle Cost & Flash — all writes routed through UIManager (RC-4)
             if (data.cost) {
-                const costMsg = `<div class="alert alert-success alert-dismissible fade show">KSH ${parseFloat(data.cost).toFixed(2)} deducted.<button class="btn-close" data-bs-dismiss="alert"></button></div>`;
-                document.getElementById('flash-messages-container').innerHTML = costMsg;
+                this.app.ui.showStatus(`KSH ${parseFloat(data.cost).toFixed(2)} deducted.`, 'success');
             } else if (data.flash_html) {
-                document.getElementById('flash-messages-container').innerHTML = data.flash_html;
+                this.app.ui.showServerFlash(data.flash_html);
             }
 
             // 2. Add to History

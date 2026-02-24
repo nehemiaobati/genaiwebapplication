@@ -83,8 +83,10 @@ class HomeController extends BaseController
         // 1 year expiration
         $expires = 365 * 24 * 60 * 60;
 
-        $response = service('response');
-        $response->setCookie(
+        // Must use $this->response (the controller's own response object) so the
+        // Set-Cookie header is included in the same response that returns the JSON.
+        // Using service('response') returns a different instance and the cookie header is lost.
+        $this->response->setCookie(
             'user_cookie_consent',
             'accepted',
             $expires
