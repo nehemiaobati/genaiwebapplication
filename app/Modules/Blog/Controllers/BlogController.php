@@ -34,7 +34,7 @@ class BlogController extends BaseController
             // SEO: Strong title focusing on value proposition
             'pageTitle'       => 'Tech Insights & Tutorials | Afrikenkid Blog',
             // SEO: Clear description with keywords for the target market
-            'metaDescription' => 'Explore articles on fintech, software development, AI, and consumer tech tailored for the Kenyan and African market.',
+            'metaDescription' => 'Explore expert articles on Generative AI, software development, fintech, and consumer tech tailored for industry professionals.',
             'canonicalUrl'    => url_to('blog.index'),
             'posts'           => $this->postModel->where('status', 'published')->orderBy('published_at', 'DESC')->paginate(6),
             'pager'           => $this->postModel->pager,

@@ -5,7 +5,7 @@
     <div class="text-center mb-5">
         <span class="badge bg-primary-subtle text-primary mb-2 rounded-pill px-3 py-2">Blog</span>
         <h1 class="display-4 fw-bold">Tech Insights & Tutorials</h1>
-        <p class="lead text-body-secondary col-lg-8 mx-auto">Articles on fintech, software development, and consumer tech for Kenya and beyond.</p>
+        <p class="lead text-body-secondary col-lg-8 mx-auto">Expert articles on Generative AI, software development, and fintech.</p>
     </div>
 
     <div class="row g-4">

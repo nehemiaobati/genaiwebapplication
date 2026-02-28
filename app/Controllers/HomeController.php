@@ -46,10 +46,10 @@ class HomeController extends BaseController
     public function landing(): string
     {
         $data = [
-            'pageTitle'       => 'Afrikenkid | AI Tools & Crypto Data',
-            'metaDescription' => 'Access powerful Generative AI tools for text, image, and video creation, plus real-time Bitcoin & Litecoin wallet data insights. A pay-as-you-go solution.',
-            'heroTitle'       => 'The All-in-One Platform for AI & Crypto Insights',
-            'heroSubtitle'    => 'Leverage Google\'s Gemini AI for text, image, and video generation and analyze blockchain trends with simple, pay-as-you-go pricing.',
+            'pageTitle'       => 'Afrikenkid | Advanced Generative AI Solutions & Crypto Analytics',
+            'metaDescription' => 'Transform your workflow with industry-leading Generative AI for video, image, and text creation, plus real-time blockchain analytics. Simple and powerful.',
+            'heroTitle'       => 'Industry-Leading AI & Blockchain Analytics',
+            'heroSubtitle'    => 'Accelerate innovation with state-of-the-art Generative AI and real-time crypto wallet insights. Powerful, direct, and built for scale.',
             'canonicalUrl'    => url_to('landing'),
             'robotsTag'       => 'index, follow',
         ];

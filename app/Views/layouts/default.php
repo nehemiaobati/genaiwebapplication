@@ -8,8 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 
     <!-- SEO Meta Tags -->
-    <title><?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Wallet Balance and Transaction') ?></title>
-    <meta name="description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
+    <title><?= esc($pageTitle ?? 'AFRIKENKID | Industry-Leading Generative AI & Crypto Analytics') ?></title>
+    <meta name="description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools for video, image, and text creation, complemented by real-time blockchain analytics.') ?>">
     <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, M-Pesa, Lipa na Mpesa, Mobile Money, CodeIgniter Development">
 
     <!-- Geo-targeting -->
@@ -24,15 +24,15 @@
     <!-- Social Media Meta (Open Graph for Facebook/LinkedIn) -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Wallet Balance and Transaction') ?>">
-    <meta property="og:description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
+    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Industry-Leading Generative AI & Crypto Analytics') ?>">
+    <meta property="og:description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools for video, image, and text creation, complemented by real-time blockchain analytics.') ?>">
     <meta property="og:image" content="<?= esc($metaImage ?? base_url('assets/images/afrikenkid_og_image.jpg')) ?>">
 
     <!-- Twitter Card (LinkedIn also uses these) -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@afrikenkid">
-    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Generative AI & Crypto Wallet Balance and Transaction') ?>">
-    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>">
+    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Industry-Leading Generative AI & Crypto Analytics') ?>">
+    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools for video, image, and text creation, complemented by real-time blockchain analytics.') ?>">
     <meta name="twitter:image" content="<?= esc($metaImage ?? base_url('assets/images/afrikenkid_og_image.jpg')) ?>">
     <meta name="twitter:image:alt" content="AFRIKENKID Platform Preview">
 
@@ -44,15 +44,14 @@
             "name": "AFRIKENKID",
             "applicationCategory": "MultimediaApplication",
             "operatingSystem": "Web",
-            "description": "<?= esc($metaDescription ?? 'Access powerful Generative AI tools and real-time blockchain analytics. Pay easily via M-Pesa or Credit Card. Your all-in-one platform for AI and Crypto insights.') ?>",
+            "description": "<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools for video, image, and text creation, complemented by real-time blockchain analytics.') ?>",
             "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
             "featureList": [
-                "Gemini AI",
+                "Enterprise Generative AI",
                 "Video Synthesis",
-                "Image Generation (Imagen and Gemini)",
-                "Document Analysis & Auditing",
-                "Real-Time Blockchain Verification (BTC & LTC)",
-                "Secure M-Pesa & Airtel Money Payments"
+                "Image Generation",
+                "Document Analysis",
+                "Real-Time Blockchain Analytics"
             ],
             "offers": {
                 "@type": "Offer",
@@ -339,7 +338,7 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4">
                     <h5>AFRIKENKID</h5>
-                    <p class="small">Build smarter with a pay-as-you-go platform. <br> Leverage Generative AI and query real-time BTC & LTC wallet data. Securely top up with Mobile Money (M-Pesa, Airtel Money, etc.). Built for creators, businesses, and developers globally.</p>
+                    <p class="small">Empowering creators and businesses with industry-leading Generative AI and advanced crypto analytics.</p>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>

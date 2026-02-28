@@ -22,7 +22,7 @@ class DocumentationController extends BaseController
     {
         $data = [
             'pageTitle'       => 'Platform Documentation | User Guides & Resources',
-            'metaDescription' => 'Learn how to use the GenAI Web Platform to generate content, analyze documents, and access crypto market insights without writing code.',
+            'metaDescription' => 'Learn how to leverage our industry-leading GenAI platform to generate content, analyze documents, and access crypto market insights instantly.',
             'canonicalUrl'    => url_to('documentation'), // Ensure route name exists
             'robotsTag'       => 'index, follow', // CHANGED: Allow indexing
         ];

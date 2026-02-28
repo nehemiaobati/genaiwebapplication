@@ -935,7 +935,25 @@
                    class="btn btn-primary">
                     <i class="bi bi-download"></i> Download Video
                 </a>
-            </div>`
+            </div>`,
+
+        textSkeleton: `
+            <div class="p-3 animate__animated animate__fadeIn loading-skeleton">
+                <div class="d-flex align-items-center text-muted mb-3">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    <span class="fst-italic">Gemini is thinking...</span>
+                </div>
+                <div class="placeholder-glow op-50">
+                    <span class="placeholder col-7 rounded"></span>
+                    <span class="placeholder col-4 rounded"></span>
+                    <span class="placeholder col-4 rounded"></span>
+                    <span class="placeholder col-6 rounded"></span>
+                    <span class="placeholder col-8 rounded"></span>
+                </div>
+            </div>`,
+
+        emptyHistory: `<div class="text-center text-muted mt-5 small">No interaction history yet.</div>`,
+        errorHistory: `<div class="text-center text-danger mt-4"><small>Failed to load history.</small></div>`
     };
 
     /**
@@ -1026,6 +1044,18 @@
 
         static renderImage(url) {
             return _ViewTemplates.image(url);
+        }
+
+        static renderTextSkeleton() {
+            return _ViewTemplates.textSkeleton;
+        }
+
+        static renderEmptyHistory() {
+            return _ViewTemplates.emptyHistory;
+        }
+
+        static renderErrorHistory() {
+            return _ViewTemplates.errorHistory;
         }
     }
 
@@ -1636,10 +1666,13 @@
             this.app.ui.renderMediaCard(ViewRenderer.renderVideoProcessing(elapsed), true);
 
             // 1. Ticker (Visual)
+            let cachedContainer = null;
             this.timers.ticker = setInterval(() => {
                 elapsed++;
-                const container = document.querySelector('.media-output-container');
-                if (container) container.innerHTML = ViewRenderer.renderVideoProcessing(elapsed);
+                if (!cachedContainer || !cachedContainer.isConnected) {
+                    cachedContainer = document.querySelector('.media-output-container');
+                }
+                if (cachedContainer) cachedContainer.innerHTML = ViewRenderer.renderVideoProcessing(elapsed);
             }, 1000);
 
             // 2. Poller (Network)
@@ -1726,20 +1759,7 @@
                 // 1. Show Skeleton / Thinking State
                 const bodyEl = document.getElementById('ai-response-body');
                 if (bodyEl) {
-                    bodyEl.innerHTML = `
-                        <div class="p-3 animate__animated animate__fadeIn loading-skeleton">
-                            <div class="d-flex align-items-center text-muted mb-3">
-                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                                <span class="fst-italic">Gemini is thinking...</span>
-                            </div>
-                            <div class="placeholder-glow op-50">
-                                <span class="placeholder col-7 rounded"></span>
-                                <span class="placeholder col-4 rounded"></span>
-                                <span class="placeholder col-4 rounded"></span>
-                                <span class="placeholder col-6 rounded"></span>
-                                <span class="placeholder col-8 rounded"></span>
-                            </div>
-                        </div>`;
+                    bodyEl.innerHTML = ViewRenderer.renderTextSkeleton();
                 }
 
                 // 2. Optimistic History Append
@@ -2268,7 +2288,7 @@
                     this.updateLoadMoreButton();
                 }
             } catch (e) {
-                if (!append) this.listEl.innerHTML = '<div class="text-center text-danger mt-4"><small>Failed to load history.</small></div>';
+                if (!append) this.listEl.innerHTML = ViewRenderer.renderErrorHistory();
             } finally {
                 if (!append) {
                     this.loadingEl.classList.add('d-none');
@@ -2279,7 +2299,7 @@
 
         renderList(items, append = false) {
             if (!items || items.length === 0) {
-                if (!append) this.listEl.innerHTML = '<div class="text-center text-muted mt-5 small">No interaction history yet.</div>';
+                if (!append) this.listEl.innerHTML = ViewRenderer.renderEmptyHistory();
                 return;
             }
             if (!append) {
