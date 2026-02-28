@@ -77,7 +77,7 @@
     <link href="<?= base_url('assets/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/bootstrap-icons/font/bootstrap-icons.css') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -240,9 +240,9 @@
     <nav id="mainNavbar" class="navbar navbar-expand-lg sticky-top py-3">
         <div class="container">
             <!-- EDIT: Added .fw-bold utility class -->
-            <a class="navbar-brand fs-4 fw-bold" href="<?= url_to('landing') ?>"><i class="bi bi-box"></i> AFRIKENKID</a>
+            <a class="navbar-brand fs-4 fw-bold" href="<?= url_to('landing') ?>"><i class="bi bi-box" aria-hidden="true"></i> AFRIKENKID</a>
 
-            <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-controls="mobileNav">
+            <button class="navbar-toggler border-0 p-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-controls="mobileNav" aria-label="Toggle Navigation Menu">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
@@ -381,8 +381,8 @@
         <?= $this->include('partials/cookie_banner') ?>
     <?php endif; ?>
 
-    <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
-    <script>
+    <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>" defer></script>
+    <script defer>
         document.addEventListener("DOMContentLoaded", function() {
             // JavaScript remains unchanged as it is already well-structured.
             const themeManager = {

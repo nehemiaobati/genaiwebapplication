@@ -27,8 +27,8 @@
             <span class="text-muted d-block mt-2 fs-6">Powered by Gemini and real-time blockchain.</span>
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Start Creating Free</a>
-            <a href="<?= url_to('crypto.public') ?>" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">Audit Your Wallet</a>
+            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm" aria-label="Create your free account">Start Creating Free</a>
+            <a href="<?= url_to('crypto.public') ?>" class="btn btn-outline-secondary btn-lg px-5 rounded-pill" aria-label="Audit your crypto wallet">Audit Your Wallet</a>
         </div>
     </div>
 </section>
@@ -63,7 +63,7 @@
                                 <div class="fs-2 text-primary me-4"><i class="bi bi-shield-check"></i></div>
                                 <div>
                                     <h3 class="fs-5 fw-bold mb-1">Data Trust Layer</h3>
-                                    <p class="text-muted small mb-0">Verify data integrity with our immutable Blockchain Audit tools.</p>
+                                    <p class="text-body-secondary small mb-0">Verify data integrity with our immutable Blockchain Audit tools.</p>
                                 </div>
                             </div>
                         </div>
@@ -76,7 +76,7 @@
                                 <div class="fs-2 text-primary me-4"><i class="bi bi-wallet2"></i></div>
                                 <div>
                                     <h3 class="fs-5 fw-bold mb-1">Pay-As-You-Go</h3>
-                                    <p class="text-muted small mb-0">Top up via <span class="text-success fw-bold">M-Pesa</span> or <span class="text-danger fw-bold">Airtel</span>. No subscriptions.</p>
+                                    <p class="text-body-secondary small mb-0">Top up via <span class="text-success fw-bold">M-Pesa</span> or <span class="text-danger fw-bold">Airtel</span>. No subscriptions.</p>
                                 </div>
                             </div>
                         </div>
@@ -112,9 +112,9 @@
                     <div class="col-12 col-md-4">
                         <div class="card h-100 border-0 shadow-sm hover-effect">
                             <div class="card-body p-4">
-                                <div class="mb-3 text-primary fw-bold fs-4">01</div>
-                                <h5 class="fw-bold">Consultation</h5>
-                                <p class="small text-muted mb-0">We listen to your vision and requirements in a free discovery meeting.</p>
+                                <div class="mb-3 text-primary fw-bold fs-4" aria-hidden="true">01</div>
+                                <h3 class="h5 fw-bold">Consultation</h3>
+                                <p class="small text-body-secondary mb-0">We listen to your vision and requirements in a free discovery meeting.</p>
                             </div>
                         </div>
                     </div>
@@ -122,9 +122,9 @@
                     <div class="col-12 col-md-4">
                         <div class="card h-100 border-0 shadow-sm hover-effect">
                             <div class="card-body p-4">
-                                <div class="mb-3 text-primary fw-bold fs-4">02</div>
-                                <h5 class="fw-bold">Planning</h5>
-                                <p class="small text-muted mb-0">You get a detailed roadmap, timeline, and transparent pricing.</p>
+                                <div class="mb-3 text-primary fw-bold fs-4" aria-hidden="true">02</div>
+                                <h3 class="h5 fw-bold">Planning</h3>
+                                <p class="small text-body-secondary mb-0">You get a detailed roadmap, timeline, and transparent pricing.</p>
                             </div>
                         </div>
                     </div>
@@ -132,9 +132,9 @@
                     <div class="col-12 col-md-4">
                         <div class="card h-100 border-0 shadow-sm hover-effect">
                             <div class="card-body p-4">
-                                <div class="mb-3 text-primary fw-bold fs-4">03</div>
-                                <h5 class="fw-bold">Build & Launch</h5>
-                                <p class="small text-muted mb-0">We develop with clean code and deploy to your secure server.</p>
+                                <div class="mb-3 text-primary fw-bold fs-4" aria-hidden="true">03</div>
+                                <h3 class="h5 fw-bold">Build & Launch</h3>
+                                <p class="small text-body-secondary mb-0">We develop with clean code and deploy to your secure server.</p>
                             </div>
                         </div>
                     </div>
@@ -153,7 +153,7 @@
                     <div class="col-lg-8">
                         <h2 class="display-5 fw-bold mb-3">Ready to Start?</h2>
                         <p class="lead mb-4 text-white-50">Join thousands of users building efficiently with AFRIKENKID.</p>
-                        <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill">Create Free Account</a>
+                        <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill" aria-label="Create your free Afrikenkid account">Create Free Account</a>
                     </div>
                 </div>
             </div>
