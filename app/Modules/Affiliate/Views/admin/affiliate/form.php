@@ -20,6 +20,17 @@
             <form action="<?= esc($formAction) ?>" method="post" id="affiliateForm">
                 <?= csrf_field() ?>
 
+                <!-- Validation Errors -->
+                <?php if (session('errors')): ?>
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            <?php foreach (session('errors') as $error): ?>
+                                <li><?= esc($error) ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
                 <!-- Title (Optional) -->
                 <div class="form-floating mb-3">
                     <input type="text"
@@ -45,17 +56,16 @@
                     <div class="form-text">Example: https://amzn.to/3NCQfcG</div>
                 </div>
 
-                <!-- Code (Auto-extracted, Read-only) -->
+                <!-- Code (Auto-extracted, Overrideable) -->
                 <div class="form-floating mb-3">
                     <input type="text"
                         class="form-control"
                         id="code"
                         name="code"
                         placeholder="Code"
-                        value="<?= old('code', $link->code ?? '') ?>"
-                        readonly>
+                        value="<?= old('code', $link->code ?? '') ?>">
                     <label for="code">Extracted Code</label>
-                    <div class="form-text">Auto-extracted from the short URL</div>
+                    <div class="form-text">Auto-extracted from the short URL, but can be manually overridden if needed.</div>
                 </div>
 
                 <!-- Full URL -->
@@ -136,12 +146,19 @@
         const url = e.target.value;
         const codeInput = document.getElementById('code');
 
-        // Match Amazon short URLs like https://amzn.to/3NCQfcG
-        const match = url.match(/amzn\.to\/([a-zA-Z0-9]+)/i);
-
-        if (match) {
-            codeInput.value = match[1];
-        } else {
+        // Extract path portion from URL (domain agnostic)
+        try {
+            const urlObj = new URL(url);
+            const path = urlObj.pathname.replace(/^\/+/, ''); // remove leading slash
+            if (path) {
+                // Split by slash and get the last segment
+                const segments = path.split('/');
+                codeInput.value = segments[segments.length - 1];
+            } else {
+                codeInput.value = '';
+            }
+        } catch (e) {
+            // Invalid URL format
             codeInput.value = '';
         }
     });

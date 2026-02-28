@@ -77,4 +77,25 @@ class HomeController extends BaseController
         ];
         return view('home/privacy', $data);
     }
+
+    public function acceptCookie()
+    {
+        // 1 year expiration
+        $expires = 365 * 24 * 60 * 60;
+
+        // Must use $this->response (the controller's own response object) so the
+        // Set-Cookie header is included in the same response that returns the JSON.
+        // Using service('response') returns a different instance and the cookie header is lost.
+        $this->response->setCookie(
+            'user_cookie_consent',
+            'accepted',
+            $expires
+        );
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'message' => 'Cookie consent accepted',
+            'csrf_token' => csrf_hash()
+        ]);
+    }
 }
