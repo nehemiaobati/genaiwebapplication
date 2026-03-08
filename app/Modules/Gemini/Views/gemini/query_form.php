@@ -18,6 +18,7 @@
         --gemini-z-header: 1020;
         --gemini-z-sidebar: 1050;
         --gemini-z-overlay: 1040;
+        --gemini-timing: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     /* =========================================
@@ -137,6 +138,45 @@
     /* =========================================
        6. Components
        ========================================= */
+
+    /* Custom Toggles */
+    .form-switch .form-check-input {
+        transition: background-color var(--gemini-timing), border-color var(--gemini-timing), transform 0.2s ease-in-out;
+    }
+
+    .form-switch .form-check-input:active {
+        transform: scale(0.9);
+    }
+
+    /* Custom Tabs */
+    .nav-pills.gemini-tabs .nav-link {
+        transition: all var(--gemini-timing);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .nav-pills.gemini-tabs .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        width: 0;
+        height: 2px;
+        background-color: var(--bs-primary);
+        transition: width var(--gemini-timing), left var(--gemini-timing);
+    }
+
+    .nav-pills.gemini-tabs .nav-link.active {
+        background-color: transparent !important;
+        color: var(--bs-primary) !important;
+        font-weight: 600;
+    }
+
+    .nav-pills.gemini-tabs .nav-link.active::after {
+        width: 100%;
+        left: 0;
+    }
+
     /* Textarea */
     .prompt-textarea {
         resize: none;
@@ -294,23 +334,43 @@
     }
 
     .polling-pulse {
-        animation: pulse-border 2s infinite;
+        animation: pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
     @keyframes pulse-border {
-        0% {
+
+        0%,
+        100% {
             border-color: var(--bs-primary);
-            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.5);
         }
 
-        70% {
-            border-color: var(--bs-primary);
-            box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+        50% {
+            border-color: var(--bs-info);
+            box-shadow: 0 0 0 8px rgba(13, 110, 253, 0);
+        }
+    }
+
+    /* Thinking State Skeletons */
+    .thinking-skeleton-pulse {
+        animation: thinking-shimmer 2s infinite linear;
+        background: linear-gradient(90deg,
+                var(--bs-tertiary-bg) 0%,
+                var(--bs-secondary-bg) 50%,
+                var(--bs-tertiary-bg) 100%);
+        background-size: 200% 100%;
+        border-radius: 4px;
+        height: 1.2em;
+        margin-bottom: 0.5rem;
+    }
+
+    @keyframes thinking-shimmer {
+        0% {
+            background-position: -200% 0;
         }
 
         100% {
-            border-color: var(--bs-primary);
-            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+            background-position: 200% 0;
         }
     }
 
@@ -568,7 +628,7 @@
                 <?= csrf_field() ?>
 
                 <!-- Mode Tabs -->
-                <ul class="nav nav-pills nav-sm mb-2" id="generationTabs" role="tablist">
+                <ul class="nav nav-pills gemini-tabs nav-sm mb-2" id="generationTabs" role="tablist">
                     <li class="nav-item">
                         <button type="button" class="nav-link active py-2 px-3" data-bs-toggle="tab" data-type="text" data-model="gemini-2.5-flash">
                             <i class="bi bi-chat-text me-2"></i>Text
@@ -657,7 +717,7 @@
     <aside class="gemini-sidebar collapse collapse-horizontal show" id="geminiSidebar">
         <!-- Header with Tabs -->
         <div class="d-flex align-items-center mb-3">
-            <ul class="nav nav-pills nav-fill flex-grow-1 p-1 bg-body rounded" id="sidebarTabs" role="tablist" style="font-size: 0.9rem;">
+            <ul class="nav nav-pills gemini-tabs nav-fill flex-grow-1 p-1 bg-body rounded" id="sidebarTabs" role="tablist" style="font-size: 0.9rem;">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active py-1" id="config-tab" data-bs-toggle="tab" data-bs-target="#config-pane" type="button" role="tab"><i class="bi bi-sliders me-1"></i> Config</button>
                 </li>
@@ -939,16 +999,14 @@
 
         textSkeleton: `
             <div class="p-3 animate__animated animate__fadeIn loading-skeleton">
-                <div class="d-flex align-items-center text-muted mb-3">
-                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                    <span class="fst-italic">Gemini is thinking...</span>
+                <div class="d-flex align-items-center text-primary mb-3">
+                    <div class="spinner-grow spinner-grow-sm me-2" role="status"></div>
+                    <span class="fst-italic fw-medium">Synthesizing response...</span>
                 </div>
-                <div class="placeholder-glow op-50">
-                    <span class="placeholder col-7 rounded"></span>
-                    <span class="placeholder col-4 rounded"></span>
-                    <span class="placeholder col-4 rounded"></span>
-                    <span class="placeholder col-6 rounded"></span>
-                    <span class="placeholder col-8 rounded"></span>
+                <div class="placeholder-glow">
+                    <div class="thinking-skeleton-pulse w-75"></div>
+                    <div class="thinking-skeleton-pulse w-50"></div>
+                    <div class="thinking-skeleton-pulse w-100"></div>
                 </div>
             </div>`,
 
@@ -1003,8 +1061,18 @@
 
         static renderHistoryItem(item) {
             const el = document.createElement('div');
-            el.className = 'memory-item p-3 mb-2 rounded border shadow-sm position-relative';
+            el.className = 'memory-item p-3 mb-2 rounded border shadow-sm position-relative cursor-pointer';
             el.dataset.id = item.unique_id || item.id;
+
+            let contextBadges = '';
+            if (item.context_files && item.context_files.length > 0) {
+                contextBadges = `<div class="mb-2 mt-1 d-flex flex-wrap gap-1">` + item.context_files.map(file =>
+                    `<span class="badge bg-secondary-subtle border text-secondary text-truncate d-inline-block" style="font-size: 0.7em; max-width: 100%;">
+                        <i class="bi bi-paperclip"></i> <span title="${this.escapeHtml(file)}">${this.escapeHtml(file)}</span>
+                     </span>`
+                ).join('') + `</div>`;
+            }
+
             el.innerHTML = `
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="text-truncate fw-medium" style="max-width: 85%; font-size: 0.85rem;" title="${this.escapeHtml(item.user_input || item.user_input_raw)}">
@@ -1014,6 +1082,7 @@
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
+                ${contextBadges}
                 <div class="text-muted text-truncate small" style="opacity: 0.7;">
                     ${this.escapeHtml(item.ai_output || item.ai_output_raw)}
                 </div>`;
@@ -1749,6 +1818,9 @@
                 return this.app.ui.showToast('Please enter a prompt.');
             }
 
+            // Capture currently attached files for Context Visibility
+            this.currentContextFiles = Array.from(document.querySelectorAll('.file-chip .file-name')).map(el => el.textContent);
+
             this.app.ui.setLoading(true);
             const fd = new FormData(this.app.ui.els.form);
 
@@ -1767,7 +1839,8 @@
                 this.app.history.addItem({
                     id: 'pending-' + Date.now(),
                     timestamp: new Date().toISOString(),
-                    user_input: prompt
+                    user_input: prompt,
+                    context_files: this.currentContextFiles
                 }, ''); // Empty AI output intentionally
 
                 this.app.ui.scrollToBottom();
@@ -1775,20 +1848,28 @@
 
             try {
                 if (type === 'text') {
-                    if (this.app.ui.els.streamCheck?.checked) await this.app.streamer.start(fd);
-                    else await this.generateText(fd);
+                    if (this.app.ui.els.streamCheck?.checked) {
+                        await this.app.streamer.start(fd, this.currentContextFiles);
+                    } else {
+                        await this.generateText(fd);
+                    }
                 } else {
                     await this.generateMedia(fd);
                 }
             } catch (e) {
-                // UI error handled in calls
+                // UI error is shown inside the handlers themselves
             } finally {
-                // Only set loading to false if not a video generation, as JobManager handles it for video.
-                if (type !== 'video') this.app.ui.setLoading(false);
-                this.isSubmitting = false; // RC-3: Always release guard
+                // Video processing handles its own loading state removal (via JobManager polling completion)
+                if (type !== 'video') {
+                    this.app.ui.setLoading(false);
+                }
+                this.isSubmitting = false; // RC-3: Release guard
             }
         }
 
+        /**
+         * Orchestrates standard (non-streaming) text generation.
+         */
         async generateText(fd) {
             this.app.ui.ensureResultCard();
             try {
@@ -1798,13 +1879,14 @@
                     document.getElementById('raw-response').value = d.raw_result;
                     this.app.ui.enableCodeFeatures();
                     this.app.ui.scrollToBottom();
-                    if (d.flash_html) this.app.ui.showServerFlash(d.flash_html); // RC-4
+                    if (d.flash_html) this.app.ui.showServerFlash(d.flash_html);
                     this.app.ui.renderAudio(d.audio_url);
 
                     if (d.new_interaction_id) this.app.history.addItem({
                         id: d.new_interaction_id,
                         timestamp: d.timestamp,
-                        user_input: d.user_input
+                        user_input: d.user_input,
+                        context_files: this.currentContextFiles
                     }, d.raw_result);
 
                     if (d.used_interaction_ids) this.app.history.highlightContext(d.used_interaction_ids);
@@ -1817,8 +1899,10 @@
             this.app.uploader.clear();
         }
 
+        /**
+         * Orchestrates media (Image/Video) generation.
+         */
         async generateMedia(fd) {
-            // Frontend Gatekeeper via JobManager
             if (this.app.jobs.isActive()) {
                 this.app.ui.showStatus('You have a pending video generation. Please wait.', 'warning');
                 this.app.ui.setLoading(false);
@@ -1832,15 +1916,11 @@
                 if (d.type === 'image') {
                     this.app.ui.renderMediaCard(ViewRenderer.renderImage(d.url));
                 } else if (d.type === 'video') {
-                    // Hand off to JobManager
                     this.app.jobs.startPolling(d.op_id);
                 }
 
-                // Show cost feedback
-                if (d.flash_html) this.app.ui.showServerFlash(d.flash_html); // RC-4
+                if (d.flash_html) this.app.ui.showServerFlash(d.flash_html);
             } catch (e) {
-                // Standardized Error Handling
-                // Note: handleSubmit's finally skips setLoading for video type — must release here.
                 this.app.ui.setError(e.message || 'Media Generation Failed');
                 this.app.ui.setLoading(false);
             }
@@ -1865,9 +1945,11 @@
             this.app = app;
             this.buffer = '';
             this.firstChunk = true;
+            this.contextFiles = [];
         }
 
-        async start(formData) {
+        async start(formData, contextFiles = []) {
+            this.contextFiles = contextFiles;
             this.app.ui.ensureResultCard();
             const els = {
                 body: document.getElementById('ai-response-body'),
@@ -1908,7 +1990,6 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let accum = '';
-                this.currentFullText = '';
 
                 while (true) {
                     const {
@@ -1944,48 +2025,73 @@
 
         processLines(lines, accum, els) {
             lines.forEach(line => {
-                if (line.startsWith('data: ')) {
-                    try {
-                        const d = JSON.parse(line.substring(6));
+                if (!line.startsWith('data: ')) return;
 
-                        // Remove skeleton if present
-                        if (this.firstChunk && (d.thought || d.text)) {
-                            els.body.querySelector('.loading-skeleton')?.remove();
-                            this.firstChunk = false;
-                        }
+                try {
+                    const d = JSON.parse(line.substring(6));
 
-                        if (d.thought) {
-                            this._ensureThinkingBlock(els.body);
-                            this._appendToThinkingBlock(els.body, d.thought);
-                            if (!els.raw.value.includes('=== THINKING PROCESS ===')) els.raw.value = '=== THINKING PROCESS ===\n\n' + els.raw.value;
-                            els.raw.value += d.thought;
-                        } else if (d.text) {
-                            accum += d.text;
-                            if (els.raw.value.includes('=== THINKING PROCESS ===') && !els.raw.value.includes('=== ANSWER ===')) els.raw.value += '\n\n=== ANSWER ===\n\n';
-                            this._preserveThinkingBlockWhileUpdating(els.body, () => {
-                                els.body.innerHTML = marked.parse(accum);
-                                els.raw.value += d.text;
-                            });
-                        }
-                        if (d.error) this.app.ui.setError(d.error);
-                        if (d.cost) this.app.ui.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage(`${APP_CONFIG.localization.currency} ${parseFloat(d.cost).toFixed(2)} deducted.`, 'success');
-                        if (d.audio_url) this.app.ui.renderAudio(d.audio_url);
-                        if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
-
-                        // History sync handled here if needed, or at end
-                        if (d.new_interaction_id) {
-                            this.app.history.addItem({
-                                id: d.new_interaction_id,
-                                timestamp: d.timestamp,
-                                user_input: d.user_input
-                            }, accum); // Use current accumulated text
-                        }
-                        if (d.used_interaction_ids) this.app.history.highlightContext(d.used_interaction_ids);
-                    } catch (e) {
-                        console.error("Parse error", e);
+                    // First data chunk removes the skeleton
+                    if (this.firstChunk && (d.thought || d.text)) {
+                        els.body.querySelector('.loading-skeleton')?.remove();
+                        this.firstChunk = false;
                     }
+
+                    if (d.thought) {
+                        this._handleThoughtChunk(els, d.thought);
+                    } else if (d.text) {
+                        accum = this._handleTextChunk(els, accum, d.text);
+                    }
+
+                    if (d.error) this.app.ui.setError(d.error);
+                    if (d.cost) this.app.ui.els.flashContainer.innerHTML = ViewRenderer.renderFlashMessage(`${APP_CONFIG.localization.currency} ${parseFloat(d.cost).toFixed(2)} deducted.`, 'success');
+                    if (d.audio_url) this.app.ui.renderAudio(d.audio_url);
+                    if (d.csrf_token) this.app.refreshCsrf(d.csrf_token);
+
+                    if (d.new_interaction_id) {
+                        this.app.history.addItem({
+                            id: d.new_interaction_id,
+                            timestamp: d.timestamp,
+                            user_input: d.user_input,
+                            context_files: this.contextFiles
+                        }, accum);
+                    }
+                    if (d.used_interaction_ids) {
+                        this.app.history.highlightContext(d.used_interaction_ids);
+                    }
+                } catch (e) {
+                    console.error("Stream parse error", e, line);
                 }
             });
+            return accum;
+        }
+
+        _handleThoughtChunk(els, thoughtText) {
+            this._ensureThinkingBlock(els.body);
+            const content = els.body.querySelector('.thinking-block .thinking-content');
+            if (content) content.textContent += thoughtText;
+
+            if (!els.raw.value.includes('=== THINKING PROCESS ===')) {
+                els.raw.value = '=== THINKING PROCESS ===\n\n' + els.raw.value;
+            }
+            els.raw.value += thoughtText;
+        }
+
+        _handleTextChunk(els, accum, textChunk) {
+            accum += textChunk;
+            if (els.raw.value.includes('=== THINKING PROCESS ===') && !els.raw.value.includes('=== ANSWER ===')) {
+                els.raw.value += '\n\n=== ANSWER ===\n\n';
+            }
+
+            const block = els.body.querySelector('.thinking-block');
+            const wasOpen = block ? block.open : false;
+
+            els.body.innerHTML = marked.parse(accum);
+            els.raw.value += textChunk;
+
+            if (block) {
+                block.open = wasOpen;
+                els.body.insertBefore(block, els.body.firstChild);
+            }
             return accum;
         }
 
@@ -1996,22 +2102,8 @@
             details.innerHTML = '<summary class="cursor-pointer text-muted fw-bold small">Thinking Process</summary><div class="thinking-content fst-italic text-muted p-2 border-start mt-1 small"></div>';
             bodyEl.insertBefore(details, bodyEl.firstChild);
         }
-
-        _appendToThinkingBlock(bodyEl, text) {
-            const content = bodyEl.querySelector('.thinking-block .thinking-content');
-            if (content) content.textContent += text;
-        }
-
-        _preserveThinkingBlockWhileUpdating(bodyEl, updateFn) {
-            const block = bodyEl.querySelector('.thinking-block');
-            const wasOpen = block ? block.open : false; // Preserve open state
-            updateFn();
-            if (block) {
-                block.open = wasOpen; // Restore open state
-                bodyEl.insertBefore(block, bodyEl.firstChild);
-            }
-        }
     }
+
     /**
      * Manages multimodal resource uploads.
      * 
@@ -2260,6 +2352,25 @@
                 if (loadBtn) {
                     e.preventDefault();
                     this.loadMore();
+                    return;
+                }
+
+                // Allow tap to full display of content
+                const item = e.target.closest('.memory-item');
+                if (item) {
+                    const truncates = item.querySelectorAll('.text-truncate');
+                    if (truncates.length > 0) {
+                        truncates.forEach(el => {
+                            el.classList.remove('text-truncate');
+                            el.style.whiteSpace = 'normal';
+                        });
+                    } else {
+                        const expanded = item.querySelectorAll('[style*="white-space: normal"]');
+                        expanded.forEach(el => {
+                            el.classList.add('text-truncate');
+                            el.style.whiteSpace = '';
+                        });
+                    }
                 }
             });
         }
@@ -2390,7 +2501,8 @@
             const newItem = {
                 unique_id: item.id,
                 user_input: item.user_input,
-                ai_output: aiRaw
+                ai_output: aiRaw,
+                context_files: item.context_files
             };
             const el = ViewRenderer.renderHistoryItem(newItem);
             if (header.nextSibling) this.listEl.insertBefore(el, header.nextSibling);
