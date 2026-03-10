@@ -27,6 +27,7 @@ class Autoload extends AutoloadConfig
         'App\Modules\Documentation' => APPPATH . 'Modules/Documentation',
         'App\Modules\Contact' => APPPATH . 'Modules/Contact',
         'App\Modules\OpenRouter' => APPPATH . 'Modules/OpenRouter',
+        'App\Modules\Barakaartcentre' => APPPATH . 'Modules/Barakaartcentre',
         ];
 
     /**

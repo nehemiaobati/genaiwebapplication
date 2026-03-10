@@ -127,7 +127,8 @@ class OllamaService
     private function _handleStreamData(array $data, string &$fullText, &$usage, bool &$inThinkingBlock, callable $chunkCallback): void
     {
         // Handle official reasoning content (added in newer Ollama versions for DeepSeek R1 etc.)
-        $reasoningData = $data['message']['reasoning_content'] ?? ($data['message']['reasoning'] ?? null);
+        // Checked fields: reasoning_content, reasoning, or thinking (documented for DeepSeek R1)
+        $reasoningData = $data['message']['reasoning_content'] ?? ($data['message']['reasoning'] ?? ($data['message']['thinking'] ?? null));
         if ($reasoningData !== null && $reasoningData !== '') {
             $chunkCallback(['thought' => $reasoningData]);
         }
@@ -431,7 +432,7 @@ class OllamaService
 
             if (isset($data['message']['content'])) {
                 $content = $data['message']['content'];
-                $nativeReasoning = $data['message']['reasoning_content'] ?? ($data['message']['reasoning'] ?? null);
+                $nativeReasoning = $data['message']['reasoning_content'] ?? ($data['message']['reasoning'] ?? ($data['message']['thinking'] ?? null));
                 
                 $extracted = $this->_extractThinking($content, $nativeReasoning);
 
