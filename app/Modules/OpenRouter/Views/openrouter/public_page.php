@@ -27,7 +27,7 @@
     <!-- Hero -->
     <section class="py-5 bg-body-tertiary">
         <div class="container py-5 text-center px-4">
-            <span class="badge or-badge text-white mb-3 rounded-pill px-3 py-2 fw-bold text-wrap shadow-sm" style="max-width: 100%;"><i class="bi bi-stars"></i> Includes Free High-Speed Models. Zero Friction to Start.</span>
+            <span class="badge or-badge text-white mb-3 rounded-pill px-3 py-2 fw-bold text-wrap shadow-sm" style="max-width: 100%;"><i class="bi bi-stars"></i> Includes Free High-Speed Models.</span>
             <h1 class="display-3 fw-bold mb-4"><?= esc($heroTitle ?? 'Multi-Model AI, Unified.') ?></h1>
             <p class="lead mb-5 mx-auto text-muted font-monospace" style="max-width: 760px; font-size: 1.1rem;">
                 <?= esc($heroSubtitle ?? 'Access the world\'s best open-source and proprietary AI models through one seamless interface. Intelligent conversations, fast responses, zero friction.') ?>
