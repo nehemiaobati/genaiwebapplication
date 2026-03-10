@@ -8,9 +8,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 
     <!-- SEO Meta Tags -->
-    <title><?= esc($pageTitle ?? 'AFRIKENKID | Industry-Leading Generative AI & Crypto Analytics') ?></title>
-    <meta name="description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools for video, image, and text creation, complemented by real-time blockchain analytics.') ?>">
-    <meta name="keywords" content="Generative AI, Google Gemini, Crypto Data, Bitcoin Wallet, Litecoin Wallet, Blockchain Query, AI Tools, M-Pesa, Lipa na Mpesa, Mobile Money, CodeIgniter Development">
+    <title><?= esc($pageTitle ?? 'AFRIKENKID | The Ultimate Generative AI Studio') ?></title>
+    <meta name="description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools. Generate text, images, videos, and reports instantly. Multi-model support via Gemini, OpenRouter, and local LLMs.') ?>">
+    <meta name="keywords" content="Generative AI, Google Gemini, OpenRouter, Ollama, Local LLM, AI Video Generation, AI Image Generation, CodeIgniter Development, Crypto Data">
 
     <!-- Geo-targeting -->
     <meta name="geo.region" content="KE">
@@ -24,15 +24,15 @@
     <!-- Social Media Meta (Open Graph for Facebook/LinkedIn) -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Industry-Leading Generative AI & Crypto Analytics') ?>">
-    <meta property="og:description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools for video, image, and text creation, complemented by real-time blockchain analytics.') ?>">
+    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | The Ultimate Generative AI Studio') ?>">
+    <meta property="og:description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools. Generate text, images, videos, and reports instantly. Multi-model support via Gemini, OpenRouter, and local LLMs.') ?>">
     <meta property="og:image" content="<?= esc($metaImage ?? base_url('assets/images/afrikenkid_og_image.jpg')) ?>">
 
     <!-- Twitter Card (LinkedIn also uses these) -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@afrikenkid">
-    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | Industry-Leading Generative AI & Crypto Analytics') ?>">
-    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools for video, image, and text creation, complemented by real-time blockchain analytics.') ?>">
+    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID | The Ultimate Generative AI Studio') ?>">
+    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools. Generate text, images, videos, and reports instantly. Multi-model support via Gemini, OpenRouter, and local LLMs.') ?>">
     <meta name="twitter:image" content="<?= esc($metaImage ?? base_url('assets/images/afrikenkid_og_image.jpg')) ?>">
     <meta name="twitter:image:alt" content="AFRIKENKID Platform Preview">
 
@@ -44,20 +44,21 @@
             "name": "AFRIKENKID",
             "applicationCategory": "MultimediaApplication",
             "operatingSystem": "Web",
-            "description": "<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools for video, image, and text creation, complemented by real-time blockchain analytics.') ?>",
+            "description": "<?= esc($metaDescription ?? 'Unlock enterprise-grade Generative AI tools. Generate text, images, videos, and reports instantly. Multi-model support via Gemini, OpenRouter, and local LLMs.') ?>",
             "url": "<?= esc($canonicalUrl ?? current_url()) ?>",
             "featureList": [
                 "Enterprise Generative AI",
+                "Text Generation",
                 "Video Synthesis",
                 "Image Generation",
                 "Document Analysis",
-                "Real-Time Blockchain Analytics"
+                "Local LLM Inference"
             ],
             "offers": {
                 "@type": "Offer",
                 "price": "0",
                 "priceCurrency": "KES",
-                "description": "Credit-based pricing with secure M-Pesa top-ups."
+                "description": "Freemium and credit-based pricing with secure top-ups."
             },
             "brand": {
                 "@type": "Brand",
@@ -69,7 +70,7 @@
                 "name": "Afrikenkid AI Studio",
                 "url": "<?= base_url() ?>"
             },
-            "keywords": "AI Video Generation, Gemini AI, M-Pesa Statement Analysis, Blockchain Data Verification, AI Studio"
+            "keywords": "AI Video Generation, AI Image Generation, Gemini AI, OpenRouter, Ollama, Multi-Model LLM, AI Studio"
         }
     </script>
 
@@ -213,13 +214,17 @@
     $navLinks = [
         'loggedIn' => [
             ['id' => 'dashboard', 'url' => url_to('home'), 'title' => 'Dashboard'],
-            ['id' => 'ai-studio', 'url' => url_to('gemini.index'), 'title' => 'AI Studio'],
+            ['id' => 'ai-studio', 'url' => url_to('gemini.index'), 'title' => 'Gemini AI'],
+            ['id' => 'open-router', 'url' => url_to('openrouter.index'), 'title' => 'OpenRouter'],
+            ['id' => 'ollama', 'url' => url_to('ollama.index'), 'title' => 'Ollama'],
             ['id' => 'crypto-query', 'url' => url_to('crypto.index'), 'title' => 'Crypto Query'],
             ['id' => 'top-up', 'url' => url_to('payment.index'), 'title' => 'Top Up'],
         ],
         'loggedOut' => [
             ['id' => 'home', 'url' => url_to('landing'), 'title' => 'Home'],
-            ['id' => 'ai-studio', 'url' => url_to('gemini.public'), 'title' => 'AI Studio'],
+            ['id' => 'ai-studio', 'url' => url_to('gemini.public'), 'title' => 'Gemini AI'],
+            ['id' => 'open-router', 'url' => url_to('openrouter.public'), 'title' => 'OpenRouter'],
+            ['id' => 'ollama', 'url' => url_to('ollama.public'), 'title' => 'Ollama'],
             ['id' => 'crypto-query', 'url' => url_to('crypto.public'), 'title' => 'Crypto Query'],
         ]
     ];
@@ -338,12 +343,13 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4">
                     <h5>AFRIKENKID</h5>
-                    <p class="small">Empowering creators and businesses with industry-leading Generative AI and advanced crypto analytics.</p>
+                    <p class="small">The ultimate Generative AI Studio. Build with Gemini, OpenRouter, and Ollama for all your text, image, and video generation needs.</p>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>
                     <ul class="list-unstyled">
                         <li><a href="<?= url_to('gemini.index') ?>">Gemini AI</a></li>
+                        <li><a href="<?= url_to('openrouter.index') ?>">OpenRouter</a></li>
                         <li><a href="<?= url_to('ollama.index') ?>">Ollama AI</a></li>
                         <li><a href="<?= url_to('crypto.index') ?>">Crypto Data</a></li>
                     </ul>

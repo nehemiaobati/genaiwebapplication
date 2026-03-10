@@ -17,12 +17,12 @@
 <!-- Hero Section -->
 <section class="py-5 bg-body-tertiary">
     <div class="container py-5 text-center">
-        <span class="badge bg-primary-subtle text-primary mb-3 rounded-pill px-3 py-2 fw-bold">Powered by Ollama (Local AI)</span>
-        <h1 class="display-3 fw-bold mb-4"><?= esc($heroTitle ?? 'Private, Local AI Workspace') ?></h1>
-        <p class="lead mb-5 mx-auto text-muted" style="max-width: 800px;"><?= esc($heroSubtitle ?? 'Run powerful LLMs directly on your server. Private, secure, and always available.') ?></p>
+        <span class="badge bg-primary-subtle text-primary mb-3 rounded-pill px-3 py-2 fw-bold"><i class="bi bi-shield-lock-fill"></i> Powered by Ollama (Local AI)</span>
+        <h1 class="display-3 fw-bold mb-4"><?= esc($heroTitle ?? 'Ownership of Intelligence.') ?></h1>
+        <p class="lead mb-5 mx-auto text-muted" style="max-width: 800px;"><?= esc($heroSubtitle ?? 'Run powerful open-source LLMs directly on your own hardware. Absolute privacy, self-hosted intelligence, and zero latency.') ?></p>
 
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Get Started</a>
+            <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Build Your Private AI</a>
             <a href="#capabilities" class="btn btn-outline-secondary btn-lg px-5 rounded-pill">View Capabilities</a>
         </div>
     </div>

@@ -334,9 +334,27 @@ class OllamaService
      */
     public function getModels(): array
     {
+        $cache = Services::cache();
+        $cacheKey = 'ollama_models_list';
+
+        if ($cached = $cache->get($cacheKey)) {
+            return [
+                'status'  => 'success',
+                'message' => 'Models retrieved from cache',
+                'data'    => $cached
+            ];
+        }
+
         try {
             $url = rtrim($this->config->baseUrl, '/') . '/api/tags';
-            $response = $this->_executeRequest('GET', $url);
+            
+            // Optimization: For metadata/listing, use 0 retries and a short timeout.
+            // This prevents the 7-second delay (3 retries * exponential backoff) when server is down.
+            $response = $this->_executeRequest('GET', $url, [
+                'timeout' => 2,
+                'connect_timeout' => 2,
+                'http_errors' => false
+            ], 0);
 
             if ($response->getStatusCode() !== 200) {
                 return [
@@ -353,6 +371,11 @@ class OllamaService
                 foreach ($data['models'] as $model) {
                     $models[] = $model['name'];
                 }
+            }
+
+            // Cache for 10 minutes to ensure snappy UI loads
+            if (!empty($models)) {
+                $cache->save($cacheKey, $models, 600);
             }
 
             return [

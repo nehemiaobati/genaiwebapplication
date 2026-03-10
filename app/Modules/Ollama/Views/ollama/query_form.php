@@ -18,6 +18,7 @@
         --ollama-z-header: 1020;
         --ollama-z-sidebar: 1050;
         --ollama-z-overlay: 1040;
+        --ollama-timing: 0.3s;
     }
 
     /* =========================================
@@ -274,8 +275,8 @@
     .memory-item {
         font-size: 0.9rem;
         border-left: 3px solid transparent;
-        transition: all 0.2s;
-        cursor: default;
+        transition: all var(--ollama-timing);
+        cursor: pointer;
         background-color: var(--bs-body-bg);
     }
 
@@ -347,6 +348,68 @@
         100% {
             box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
         }
+    }
+
+    /* Pulsating Skeleton */
+    .thinking-skeleton-pulse {
+        height: 12px;
+        margin-bottom: 10px;
+        background: linear-gradient(90deg, var(--bs-border-color) 25%, var(--bs-secondary-bg) 50%, var(--bs-border-color) 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1.5s infinite linear;
+        border-radius: 4px;
+        opacity: 0.6;
+    }
+
+    @keyframes skeleton-shimmer {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    /* Tabs Underline Animation */
+    .ollama-tabs {
+        position: relative;
+    }
+
+    .ollama-tabs .nav-link {
+        position: relative;
+        z-index: 1;
+        transition: color var(--ollama-timing);
+    }
+
+    .ollama-tabs .nav-link.active::after {
+        content: "";
+        position: absolute;
+        bottom: -2px;
+        left: 10%;
+        width: 80%;
+        height: 2px;
+        background: var(--bs-primary);
+        border-radius: 2px;
+        animation: tab-slide var(--ollama-timing) ease-out;
+    }
+
+    @keyframes tab-slide {
+        from {
+            transform: scaleX(0);
+            opacity: 0;
+        }
+
+        to {
+            transform: scaleX(1);
+            opacity: 1;
+        }
+    }
+
+    /* Settings Switch Micro-animations */
+    .form-check-input:active {
+        transform: scale(0.9);
+        transition: transform 0.1s;
     }
 </style>
 <?= $this->endSection() ?>
@@ -456,7 +519,7 @@
     <div class="ollama-sidebar collapse collapse-horizontal show" id="ollamaSidebar">
         <!-- Header with Tabs -->
         <div class="d-flex align-items-center mb-3">
-            <ul class="nav nav-pills nav-fill flex-grow-1 p-1 bg-body rounded" id="sidebarTabs" role="tablist" style="font-size: 0.9rem;">
+            <ul class="nav nav-pills nav-fill flex-grow-1 p-1 bg-body rounded ollama-tabs" id="sidebarTabs" role="tablist" style="font-size: 0.9rem;">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active py-1" id="config-tab" data-bs-toggle="tab" data-bs-target="#config-pane" type="button" role="tab"><i class="bi bi-sliders me-1"></i> Config</button>
                 </li>
@@ -659,7 +722,23 @@
                   '<i class="bi bi-info-circle-fill me-2"></i>'}
                 ${msg}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>`
+            </div>`,
+
+        textSkeleton: `
+            <div class="p-3 animate__animated animate__fadeIn loading-skeleton">
+                <div class="d-flex align-items-center text-primary mb-3">
+                    <div class="spinner-grow spinner-grow-sm me-2" role="status"></div>
+                    <span class="fst-italic fw-medium">Synthesizing response...</span>
+                </div>
+                <div class="placeholder-glow">
+                    <div class="thinking-skeleton-pulse w-75"></div>
+                    <div class="thinking-skeleton-pulse w-50"></div>
+                    <div class="thinking-skeleton-pulse w-100"></div>
+                </div>
+            </div>`,
+
+        emptyHistory: `<div class="text-center text-muted mt-5 small">No interaction history yet.</div>`,
+        errorHistory: `<div class="text-center text-danger mt-4"><small>Failed to load history.</small></div>`
     };
 
     /**
@@ -691,6 +770,18 @@
             return _ViewTemplates.resultCard(title, toolbar, bodyContent, processingClass);
         }
 
+        static renderTextSkeleton() {
+            return _ViewTemplates.textSkeleton;
+        }
+
+        static renderEmptyHistory() {
+            return _ViewTemplates.emptyHistory;
+        }
+
+        static renderErrorHistory() {
+            return _ViewTemplates.errorHistory;
+        }
+
         static renderFileChip(id, name) {
             return _ViewTemplates.fileChip({
                 name: name
@@ -706,8 +797,18 @@
 
         static renderHistoryItem(item) {
             const el = document.createElement('div');
-            el.className = 'memory-item p-3 mb-2 rounded border shadow-sm position-relative';
+            el.className = 'memory-item p-3 mb-2 rounded border shadow-sm position-relative cursor-pointer';
             el.dataset.id = item.unique_id || item.id;
+
+            let contextBadges = '';
+            if (item.context_files && item.context_files.length > 0) {
+                contextBadges = `<div class="mb-2 mt-1 d-flex flex-wrap gap-1">` + item.context_files.map(file =>
+                    `<span class="badge bg-secondary-subtle border text-secondary text-truncate d-inline-block" style="font-size: 0.7em; max-width: 100%;">
+                        <i class="bi bi-paperclip"></i> <span title="${this.escapeHtml(file)}">${this.escapeHtml(file)}</span>
+                     </span>`
+                ).join('') + `</div>`;
+            }
+
             el.innerHTML = `
                  <div class="d-flex justify-content-between align-items-start">
                      <div class="text-truncate fw-medium" style="max-width: 85%; font-size: 0.85rem;" title="${this.escapeHtml(item.user_input || item.user_input_raw)}">
@@ -717,6 +818,7 @@
                          <i class="bi bi-trash"></i>
                      </button>
                  </div>
+                 ${contextBadges}
                  <div class="text-muted text-truncate small" style="opacity: 0.7;">
                      ${this.escapeHtml(item.ai_output || item.ai_output_raw)}
                  </div>`;
@@ -1471,6 +1573,25 @@
                 if (loadMoreBtn) {
                     e.preventDefault();
                     this.loadMore();
+                    return;
+                }
+
+                // Allow tap to full display of content
+                const item = e.target.closest('.memory-item');
+                if (item) {
+                    const truncates = item.querySelectorAll('.text-truncate');
+                    if (truncates.length > 0) {
+                        truncates.forEach(el => {
+                            el.classList.remove('text-truncate');
+                            el.style.whiteSpace = 'normal';
+                        });
+                    } else {
+                        const expanded = item.querySelectorAll('[style*="white-space: normal"]');
+                        expanded.forEach(el => {
+                            el.classList.add('text-truncate');
+                            el.style.whiteSpace = '';
+                        });
+                    }
                 }
             });
         }
@@ -1615,51 +1736,30 @@
                 .replace(/'/g, "&#039;");
         }
 
-        addItem(item, aiOutputRaw) {
-            // Remove empty state if present
-            if (this.isEmpty) {
-                this.listEl.innerHTML = '';
-                this.isEmpty = false;
+        addItem(item, aiRaw) {
+            // Purge pending items upon successful persistence
+            if (item.id && !item.id.toString().startsWith('pending-')) {
+                document.querySelectorAll('.memory-item[data-id^="pending-"]').forEach(el => el.remove());
             }
 
+            // Clear the placeholder stub using the reliable isEmpty flag
+            if (this.isEmpty) this.listEl.innerHTML = '';
             const dateStr = this.formatDate(item.timestamp);
             let header = Array.from(this.listEl.querySelectorAll('.memory-date-header')).find(h => h.textContent.trim() === dateStr);
-
             if (!header) {
-                header = document.createElement('div');
-                header.className = 'memory-date-header mt-3 mb-2 px-2 py-1 rounded shadow-sm';
-                header.textContent = dateStr;
+                header = ViewRenderer.renderHistoryHeader(dateStr);
                 this.listEl.prepend(header);
             }
-
-            const el = document.createElement('div');
-            el.className = 'memory-item p-3 mb-2 rounded border shadow-sm position-relative';
-            el.dataset.id = item.unique_id;
-
-            const aiOutput = (aiOutputRaw || '').substring(0, 100) + ((aiOutputRaw || '').length > 100 ? '...' : '');
-
-            el.innerHTML = `
-                <div class="d-flex justify-content-between align-items-start mb-1">
-                    <div class="text-truncate fw-medium" style="max-width: 85%; font-size: 0.85rem;" title="${this.escapeHtml(item.user_input_raw)}">
-                        ${this.escapeHtml(item.user_input_raw)}
-                    </div>
-                    <button class="btn btn-link text-danger p-0 delete-memory-btn" style="font-size: 0.8rem;" data-id="${item.unique_id}" title="Forget">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-                <div class="text-muted text-truncate small" style="opacity: 0.7;">
-                    ${this.escapeHtml(aiOutput)}
-                </div>
-            `;
-
-            // Insert after header
+            // Construct partial item to fit interface expected by renderer
+            const newItem = {
+                unique_id: item.id,
+                user_input: item.user_input,
+                ai_output: aiRaw,
+                context_files: item.context_files
+            };
+            const el = ViewRenderer.renderHistoryItem(newItem);
             header.after(el);
-
-            // Re-bind delete buttons
-            el.querySelector('.delete-memory-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.deleteItem(item.unique_id);
-            });
+            this.isEmpty = false; // Mark list as populated
         }
 
         highlightContext(ids) {
@@ -1705,26 +1805,25 @@
     class StreamHandler {
         constructor(app) {
             this.app = app;
+            this.buffer = '';
+            this.firstChunk = true;
+            this.contextFiles = [];
         }
 
-        async start(fd) {
+        async start(formData, contextFiles = []) {
+            this.contextFiles = contextFiles;
             this.app.ui.ensureResultCardExists();
             const body = document.getElementById('ai-response-body');
             const raw = document.getElementById('raw-response');
             body.innerHTML = '';
             raw.value = '';
 
-            // State for new stream
-            let buffer = '';
-            let textAccumulator = '';
-            let firstChunk = true;
-
             try {
-                if (!fd.has(APP_CONFIG.csrfName)) fd.append(APP_CONFIG.csrfName, this.app.csrfHash);
+                if (!formData.has(APP_CONFIG.csrfName)) formData.append(APP_CONFIG.csrfName, this.app.csrfHash);
 
                 const response = await fetch(APP_CONFIG.endpoints.stream, {
                     method: 'POST',
-                    body: fd,
+                    body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
@@ -1743,69 +1842,8 @@
                     const chunk = decoder.decode(value, {
                         stream: true
                     });
-
-                    buffer += chunk;
-                    const lines = buffer.split("\n");
-                    buffer = lines.pop(); // Keep last partial line
-
-                    for (const line of lines) {
-                        if (line.startsWith("data: ")) {
-                            try {
-                                const data = JSON.parse(line.substring(6));
-
-                                if (data.error) {
-                                    this.app.ui.injectFlashError(data.error);
-                                    if (data.csrf_token) this.app.refreshCsrf(data.csrf_token);
-                                    return;
-                                }
-                                if (data.csrf_token) this.app.refreshCsrf(data.csrf_token);
-
-                                if (data.thought) {
-                                    this._ensureThinkingBlock(body);
-                                    this._appendToThinkingBlock(body, data.thought);
-
-                                    if (!raw.value.includes('=== THINKING PROCESS ===')) {
-                                        raw.value = '=== THINKING PROCESS ===\n\n' + raw.value;
-                                    }
-                                    raw.value += data.thought;
-
-                                } else if (data.text) {
-                                    textAccumulator += data.text;
-
-                                    if (raw.value.includes('=== THINKING PROCESS ===') && !raw.value.includes('=== ANSWER ===')) {
-                                        raw.value += '\n\n=== ANSWER ===\n\n';
-                                    }
-
-                                    this._preserveThinkingBlockWhileUpdating(body, () => {
-                                        body.innerHTML = marked.parse(textAccumulator);
-                                        raw.value += data.text;
-                                    });
-                                }
-
-                                // Dynamic History Update
-                                if (data.cost || data.new_interaction_id) {
-                                    this.app.interaction.onInteractionComplete(data, raw.value);
-                                }
-
-                                this.app.ui.setupAutoScroll();
-                            } catch (parseError) {
-                                // Partial JSON or protocol line, ignore
-                            }
-                        } else if (line.startsWith("event: close")) {
-                            this.app.ui.setLoading(false);
-                            this.app.ui.setupCodeHighlighting();
-                        }
-                    }
+                    this._processBuffer(chunk, body, raw);
                 }
-
-                // Process remaining buffer if it looks like final data
-                if (buffer.startsWith("data: ")) {
-                    try {
-                        const finalData = JSON.parse(buffer.substring(6));
-                        this.app.interaction.onInteractionComplete(finalData, raw.value);
-                    } catch (e) {}
-                }
-
             } catch (e) {
                 console.error(e);
                 this.app.ui.injectFlashError("Stream connection interrupted.");
@@ -1813,6 +1851,69 @@
                 this.app.ui.setLoading(false);
                 this.app.ui.setupCodeHighlighting();
             }
+        }
+
+        _processBuffer(chunk, body, raw) {
+            this.buffer += chunk;
+            const lines = this.buffer.split("\n");
+            this.buffer = lines.pop();
+
+            for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                    this._handleDataChunk(line.substring(6), body, raw);
+                } else if (line.startsWith("event: close")) {
+                    this.app.ui.setLoading(false);
+                    this.app.ui.setupCodeHighlighting();
+                }
+            }
+        }
+
+        _handleDataChunk(jsonStr, body, raw) {
+            try {
+                const data = JSON.parse(jsonStr);
+                if (data.error) {
+                    this.app.ui.injectFlashError(data.error);
+                    if (data.csrf_token) this.app.refreshCsrf(data.csrf_token);
+                    return;
+                }
+                if (data.csrf_token) this.app.refreshCsrf(data.csrf_token);
+
+                if (data.thought) {
+                    this._handleThoughtChunk(data.thought, body, raw);
+                } else if (data.text) {
+                    this._handleTextChunk(data.text, body, raw);
+                }
+
+                if (data.cost || data.new_interaction_id) {
+                    this.app.interaction.onInteractionComplete(data, raw.value, this.contextFiles);
+                }
+                this.app.ui.setupAutoScroll();
+            } catch (e) {}
+        }
+
+        _handleThoughtChunk(thought, body, raw) {
+            this._ensureThinkingBlock(body);
+            this._appendToThinkingBlock(body, thought);
+            if (!raw.value.includes('=== THINKING PROCESS ===')) {
+                raw.value = '=== THINKING PROCESS ===\n\n' + raw.value;
+            }
+            raw.value += thought;
+        }
+
+        _handleTextChunk(text, body, raw) {
+            if (raw.value.includes('=== THINKING PROCESS ===') && !raw.value.includes('=== ANSWER ===')) {
+                raw.value += '\n\n=== ANSWER ===\n\n';
+            }
+            this._preserveThinkingBlockWhileUpdating(body, () => {
+                raw.value += text;
+                // Simple incremental markdown parsing can be expensive, but we'll follow Gemini's pattern
+                body.innerHTML = marked.parse(this._getAnswerPart(raw.value));
+            });
+        }
+
+        _getAnswerPart(fullRaw) {
+            const split = fullRaw.split('=== ANSWER ===\n\n');
+            return split.length > 1 ? split[1] : fullRaw.replace('=== THINKING PROCESS ===\n\n', '');
         }
 
         /**
@@ -1882,48 +1983,51 @@
 
         async handleSubmit(e) {
             e.preventDefault();
-
-            // RC-3: Block re-entry from rapid clicks or TinyMCE Enter key
             if (this.isSubmitting) return;
 
             const form = e.target;
             const prompt = document.getElementById('prompt');
 
-            // TinyMCE support
             if (typeof tinymce !== 'undefined') tinymce.triggerSave();
 
-            if (!prompt.value.trim()) {
+            const promptVal = prompt.value.trim();
+            if (!promptVal) {
                 this.app.ui.showToast('Please enter a prompt');
                 return;
             }
 
+            // Capture context files
+            this.currentContextFiles = Array.from(document.querySelectorAll('.file-chip .file-name')).map(el => el.textContent);
+
             this.isSubmitting = true;
             this.app.ui.setLoading(true);
 
-            // Tab Switching (Optimized for Assistant Mode)
             if (document.getElementById('assistantMode')?.checked) {
                 const tabEl = document.getElementById('memory-tab');
-                if (tabEl) {
-                    const tab = bootstrap.Tab.getInstance(tabEl) || new bootstrap.Tab(tabEl);
-                    tab.show();
-                }
+                if (tabEl)(bootstrap.Tab.getInstance(tabEl) || new bootstrap.Tab(tabEl)).show();
             }
 
-            // Create FormData
+            // Optimistic History
+            this.app.history.addItem({
+                id: 'pending-' + Date.now(),
+                timestamp: new Date().toISOString(),
+                user_input: promptVal,
+                context_files: this.currentContextFiles
+            }, '');
+
             const fd = new FormData(form);
 
             try {
                 if (document.getElementById('streamOutput')?.checked) {
-                    await this.app.streamer.start(fd);
+                    await this.app.streamer.start(fd, this.currentContextFiles);
                 } else {
                     await this.handleStandard(fd);
                 }
             } catch (err) {
-                console.error(err);
                 this.app.ui.showStatus(err.message || 'Request failed.');
             } finally {
                 this.app.ui.setLoading(false);
-                this.isSubmitting = false; // RC-3: Always release guard
+                this.isSubmitting = false;
             }
         }
 
@@ -1936,17 +2040,12 @@
                     document.getElementById('raw-response').value = d.raw_result;
                     this.app.ui.setupCodeHighlighting();
                     this.app.ui.setupAutoScroll();
-
-                    this.onInteractionComplete(d, d.raw_result);
-
+                    this.onInteractionComplete(d, d.raw_result, this.currentContextFiles);
                 } else {
                     this.app.ui.injectFlashError(d.message || 'Generation failed.');
                 }
             } catch (e) {
-                console.error(e);
                 this.app.ui.injectFlashError(e.message || 'An error occurred during generation.');
-            } finally {
-                this.app.ui.setLoading(false);
             }
         }
 
@@ -1955,25 +2054,24 @@
          * @param {Object} data - The final data object from server (parsed JSON)
          * @param {string} rawOutput - The complete generated text (for history injection)
          */
-        onInteractionComplete(data, rawOutput) {
-            // 1. Handle Cost & Flash — all writes routed through UIManager (RC-4)
+        onInteractionComplete(data, rawOutput, contextFiles = []) {
             if (data.cost) {
                 this.app.ui.showStatus(`KSH ${parseFloat(data.cost).toFixed(2)} deducted.`, 'success');
             } else if (data.flash_html) {
                 this.app.ui.showServerFlash(data.flash_html);
             }
 
-            // 2. Add to History
             if (data.new_interaction_id) {
-                // In a real app we might inject `addItem` to HistoryManager, 
-                // but refreshing is safer to guarantee server-side order.
-                this.app.history.fetchHistory();
+                this.app.history.addItem({
+                    id: data.new_interaction_id,
+                    timestamp: data.timestamp,
+                    user_input: data.user_input,
+                    context_files: contextFiles
+                }, rawOutput);
             }
 
-            // 3. Highlight Context
             if (data.used_interaction_ids) {
-                // Determine if we need to call highlightContext on history
-                // (requires implementation in HistoryManager if desired)
+                this.app.history.highlightContext(data.used_interaction_ids);
             }
         }
     }

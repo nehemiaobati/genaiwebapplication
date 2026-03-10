@@ -26,7 +26,8 @@ class Autoload extends AutoloadConfig
         'App\Modules\Portfolio' => APPPATH . 'Modules/Portfolio',
         'App\Modules\Documentation' => APPPATH . 'Modules/Documentation',
         'App\Modules\Contact' => APPPATH . 'Modules/Contact',
-    ];
+        'App\Modules\OpenRouter' => APPPATH . 'Modules/OpenRouter',
+        ];
 
     /**
      * Registers an array of files that will be included on each request.

@@ -75,12 +75,12 @@ class OllamaController extends BaseController
     public function publicPage(): string
     {
         return view('App\Modules\Ollama\Views\ollama\public_page', [
-            'pageTitle'       => 'Private, Local AI Workspace | Ollama',
-            'metaDescription' => 'Run powerful LLMs directly on your server. Private, secure, and always available.',
+            'pageTitle'       => 'Ollama Local AI | Private & Secure Offline Workspace | Afrikenkid',
+            'metaDescription' => 'Run powerful open-source LLMs directly on your own hardware. Absolute privacy, self-hosted intelligence, and zero latency.',
             'canonicalUrl'    => url_to('ollama.public'),
             'robotsTag'       => 'index, follow',
-            'heroTitle'       => 'Private, Local AI Workspace',
-            'heroSubtitle'    => 'Run powerful LLMs directly on your server. Private, secure, and always available.'
+            'heroTitle'       => 'Ownership of Intelligence.',
+            'heroSubtitle'    => 'Run powerful open-source LLMs directly on your own hardware. Absolute privacy, self-hosted intelligence, and zero latency.'
         ]);
     }
 

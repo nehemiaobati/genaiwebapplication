@@ -5,7 +5,7 @@
 #==============================================================================
 # DESCRIPTION:
 # Automates the stack installation for the AI Studio application.
-# Includes requirements for: Apache, MySQL, PHP 8.2, FFMpeg, Pandoc + LaTeX.
+# Includes requirements for: Apache, MySQL, PHP, FFMpeg, Pandoc + LaTeX.
 #
 # HOW TO USE:
 # 1. Save as setup.sh:   nano setup.sh
@@ -24,6 +24,7 @@ readonly PROJECT_PATH="/var/www/${PROJECT_DIR_NAME}"
 
 readonly DB_NAME="server_codeigniter"
 readonly DB_USER="ci4_user"
+readonly DOMAIN="afrikenkid.com"
 
 # Global Vars
 DB_PASSWORD=""
@@ -79,11 +80,28 @@ install_apache() {
 
 #==============================================================================
 install_php() {
-    log_step 3 "Installing PHP 8.2 and Extensions"
-    # Added specific extensions used in your provided code (intl, gd, curl, mbstring)
-    apt-get install -y php8.2 php8.2-mysql php8.2-intl php8.2-mbstring \
-                       php8.2-bcmath php8.2-curl php8.2-xml php8.2-zip php8.2-gd \
-                       php8.2-imagick
+    log_step 3 "Installing PHP and Extensions"
+    
+    # 1. Get the version first
+    apt-get install -y php
+    # We do this before installing anything to ensure we target the right version
+    PHP_V=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+    echo "Detected PHP Version: $PHP_V"
+
+    # 2. Install everything version-specific
+    # This ensures mysqli, gd, and zip are matched exactly to your running PHP
+    apt-get update
+    apt-get install -y \
+        "php${PHP_V}-mysql" \
+        "php${PHP_V}-intl" \
+        "php${PHP_V}-curl" \
+        "php${PHP_V}-xml" \
+        "php${PHP_V}-bcmath" \
+        "php${PHP_V}-mbstring" \
+        "php${PHP_V}-gd" \
+        "php${PHP_V}-zip" \
+        "php${PHP_V}-imagick" \
+        "php${PHP_V}-sqlite3"
 }
 
 #==============================================================================
@@ -244,6 +262,9 @@ email.mailType = 'html'
 GEMINI_API_KEY="" 
 # ^^^ ENTER YOUR GOOGLE GEMINI API KEY ABOVE ^^^
 
+OPENROUTER_API_KEY=""
+# ^^^ ENTER YOUR OPENROUTER API KEY ABOVE ^^^
+
 OLLAMA_BASE_URL = "http://localhost:11434"
 
 #--------------------------------------------------------------------
@@ -259,12 +280,18 @@ EOF
 configure_apache() {
     log_step 9 "Configuring Apache vHost"
     local vhost_file="/etc/apache2/sites-available/${PROJECT_DIR_NAME}.conf"
+    local ssl_vhost_file="/etc/apache2/sites-available/${PROJECT_DIR_NAME}-ssl.conf"
+    
+    # Domain handling: If DOMAIN is empty, use PROJECT_DIR_NAME
+    local domain_name="${DOMAIN:-${PROJECT_DIR_NAME}}"
+    local log_prefix="${domain_name%%.*}" # Extract brand name for logs (e.g. 'afrikenkid' from 'afrikenkid.com')
 
+    # Port 80 Configuration
     cat <<EOF > "${vhost_file}"
 <VirtualHost *:80>
-    ServerAdmin webmaster@localhost
+    ServerAdmin webmaster@${domain_name}
     DocumentRoot ${PROJECT_PATH}/public
-    ServerName localhost
+    ServerName http://${domain_name}
 
     <Directory ${PROJECT_PATH}/public>
         Options Indexes FollowSymLinks
@@ -272,14 +299,42 @@ configure_apache() {
         Require all granted
     </Directory>
 
-    ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined
+    ErrorLog \${APACHE_LOG_DIR}/${log_prefix}_error.log
+    CustomLog \${APACHE_LOG_DIR}/${log_prefix}_access.log combined
 </VirtualHost>
 EOF
 
-    a2ensite "${PROJECT_DIR_NAME}.conf"
+    # Port 443 (SSL) Configuration
+    cat <<EOF > "${ssl_vhost_file}"
+<VirtualHost *:443>
+    ServerAdmin webmaster@${domain_name}
+    DocumentRoot "${PROJECT_PATH}/public"
+    ServerName https://${domain_name}
+
+    #DirectoryIndex index.php index.html
+    <Directory "${PROJECT_PATH}/public">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog \${APACHE_LOG_DIR}/${log_prefix}_ssl_error.log
+    CustomLog \${APACHE_LOG_DIR}/${log_prefix}_ssl_access.log common
+
+    SSLEngine on
+    SSLCertificateFile "${PROJECT_PATH}/ssl/certificate.crt"
+    SSLCertificateKeyFile "${PROJECT_PATH}/ssl/private.key"
+    SSLCertificateChainFile "${PROJECT_PATH}/ssl/ca_bundle.crt"
+</VirtualHost>
+EOF
+
+    # Enable Modules and Sites
     a2enmod rewrite
+    a2enmod ssl
     a2dissite 000-default.conf
+    a2ensite "${PROJECT_DIR_NAME}.conf"
+    a2ensite "${PROJECT_DIR_NAME}-ssl.conf"
+    
     service apache2 restart
 }
 
@@ -294,7 +349,7 @@ final_summary() {
     echo "DB Pass: ${DB_PASSWORD}"
     echo ""
     echo "!!! IMPORTANT NEXT STEPS !!!"
-    echo "1. Edit the .env file and add your GEMINI_API_KEY:"
+    echo "1. Edit the .env file and add AI API KEYs (GEMINI_API_KEY, OPENROUTER_API_KEY):"
     echo "   nano ${PROJECT_PATH}/.env"
     echo "2. Optional: Install Ollama (for local AI):"
     echo "   curl -fsSL https://ollama.com/install.sh | sh"
