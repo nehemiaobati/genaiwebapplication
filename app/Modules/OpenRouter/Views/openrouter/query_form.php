@@ -37,6 +37,7 @@
     @media (max-width: 991.98px) {
         body {
             overflow: auto;
+            /* Allow scroll on mobile for keyboard */
         }
     }
 
@@ -1259,12 +1260,26 @@
                     this.app.ui.enableCodeFeatures();
                     this.app.ui.scrollToBottom();
                     if (d.flash_html) this.app.ui.showServerFlash(d.flash_html);
-                    if (d.new_interaction_id) this.app.history.addItem({
-                        id: d.new_interaction_id,
-                        timestamp: d.timestamp,
-                        user_input: d.user_input,
-                        context_files: this.currentContextFiles
-                    }, (d.thought ? `<thought>\n${d.thought}\n</thought>\n\n` : '') + d.raw_result);
+                    if (d.new_interaction_id) {
+                        this.app.history.addItem({
+                            id: d.new_interaction_id,
+                            timestamp: d.timestamp,
+                            user_input: d.user_input,
+                            context_files: this.currentContextFiles
+                        }, (d.thought ? `<thought>\n${d.thought}\n</thought>\n\n` : '') + d.raw_result);
+                        
+                        // Switch to history tab and highlight
+                        const memTab = new bootstrap.Tab(document.getElementById('memory-tab'));
+                        memTab.show();
+                        setTimeout(() => {
+                            const newItem = document.querySelector(`.memory-item[data-id="${d.new_interaction_id}"]`);
+                            if (newItem) {
+                                newItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                newItem.classList.add('bg-warning', 'bg-opacity-10');
+                                setTimeout(() => newItem.classList.remove('bg-warning', 'bg-opacity-10'), 2000);
+                            }
+                        }, 100);
+                    }
                 } else this.app.ui.setError(d.message || 'Generation failed.');
             } catch (e) {
                 this.app.ui.setError(e.message || 'Error occurred.');

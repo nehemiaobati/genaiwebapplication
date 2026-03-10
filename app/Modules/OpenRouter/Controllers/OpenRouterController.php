@@ -164,7 +164,7 @@ class OpenRouterController extends BaseController
                 '<summary class="cursor-pointer text-muted fw-bold small">Thinking Process</summary>' .
                 '<div class="thinking-content fst-italic text-muted p-2 border-start mt-1 small">%s</div>' .
                 '</details>',
-            esc($thoughts)
+            nl2br(esc($thoughts))
         );
     }
 
