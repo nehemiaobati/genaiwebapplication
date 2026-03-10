@@ -108,8 +108,10 @@ class OllamaService
         $thoughts = $nativeReasoning ?: '';
         $result = $content;
 
-        if (empty($thoughts) && preg_match('/<think>(.*?)<\/think>/s', $content, $matches)) {
-            $thoughts = trim($matches[1]);
+        if (preg_match('/<think>(.*?)<\/think>/s', $content, $matches)) {
+            if (empty($thoughts)) {
+                $thoughts = trim($matches[1]);
+            }
             $result = trim(str_replace($matches[0], '', $content));
         }
 
