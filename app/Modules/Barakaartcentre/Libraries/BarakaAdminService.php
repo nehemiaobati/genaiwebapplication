@@ -8,7 +8,10 @@ use App\Modules\Barakaartcentre\Models\ArtworkModel;
 use App\Modules\Barakaartcentre\Models\ServiceModel;
 use App\Modules\Barakaartcentre\Models\WorkshopModel;
 use App\Modules\Barakaartcentre\Models\SignupModel;
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\Files\UploadedFile;
+use CodeIgniter\Model;
+use Config\Database;
 
 /**
  * Class BarakaAdminService
@@ -20,6 +23,7 @@ class BarakaAdminService
     protected ServiceModel $serviceModel;
     protected WorkshopModel $workshopModel;
     protected SignupModel $signupModel;
+    protected BaseConnection $db;
 
     public function __construct()
     {
@@ -27,11 +31,88 @@ class BarakaAdminService
         $this->serviceModel = new ServiceModel();
         $this->workshopModel = new WorkshopModel();
         $this->signupModel = new SignupModel();
+        $this->db = Database::connect();
+    }
+
+    // --- Helper Methods ---
+
+    /**
+     * Internal unified save logic for all entity types.
+     * Handles Transactions, File Uploads, and File Cleanups.
+     */
+    private function _processSave(Model $model, array $data, ?int $id, ?UploadedFile $file, string $imgField): bool
+    {
+        $this->db->transStart();
+        try {
+            /** @var \CodeIgniter\Entity\Entity|null $oldRecord */
+            $oldRecord = $id ? $model->find($id) : null;
+
+            // Handle new file upload
+            if ($uploadedUrl = $this->_handleImageUpload($file)) {
+                $data[$imgField] = $uploadedUrl;
+            }
+
+            if ($id) {
+                // UPDATE: If image changed, delete the old file
+                if ($oldRecord && isset($data[$imgField]) && $data[$imgField] !== $oldRecord->{$imgField}) {
+                    $this->_deleteFileIfUploaded($oldRecord->{$imgField});
+                }
+                $model->update($id, $data);
+            } else {
+                // INSERT
+                $model->insert($data, false);
+            }
+
+            $this->db->transComplete();
+            return $this->db->transStatus() !== false;
+        } catch (\Exception $e) {
+            $this->db->transRollback();
+            log_message('error', '[BarakaAdminService] Save failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return false;
+        }
     }
 
     /**
+     * Handles image upload and returns the public URL.
+     */
+    private function _handleImageUpload(?UploadedFile $file): ?string
+    {
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $newName = $file->getRandomName();
+            $relativePath = 'uploads/baraka/' . date('Y/m');
+            
+            $absoluteDir = FCPATH . $relativePath;
+            if (!is_dir($absoluteDir)) {
+                mkdir($absoluteDir, 0777, true);
+            }
+            
+            $file->move($absoluteDir, $newName);
+            return base_url($relativePath . '/' . $newName);
+        }
+        return null;
+    }
+
+    /**
+     * Physically deletes a file if it belongs to our local uploads.
+     */
+    private function _deleteFileIfUploaded(?string $path): void
+    {
+        if (!$path) return;
+
+        $uploadBase = base_url('uploads/baraka/');
+        if (strpos($path, $uploadBase) === 0) {
+            $relativePath = str_replace(base_url(), '', $path);
+            $absolutePath = FCPATH . ltrim($relativePath, '/');
+            if (file_exists($absolutePath) && is_file($absolutePath)) {
+                @unlink($absolutePath);
+            }
+        }
+    }
+
+    // --- Public Orchestration ---
+
+    /**
      * Retrieves dashboard statistics.
-     * @return array
      */
     public function getDashboardStats(): array
     {
@@ -45,44 +126,7 @@ class BarakaAdminService
         ];
     }
 
-    // --- FILE UPLOADS ------------------------------------------------------
-
-    /**
-     * Handles image upload and returns the public URL.
-     */
-    private function handleImageUpload(?UploadedFile $file): ?string
-    {
-        if ($file && $file->isValid() && !$file->hasMoved()) {
-            $newName = $file->getRandomName();
-            $relativePath = 'uploads/baraka/' . date('Y/m');
-            // Ensure directory exists
-            if (!is_dir(FCPATH . $relativePath)) {
-                mkdir(FCPATH . $relativePath, 0777, true);
-            }
-            $file->move(FCPATH . $relativePath, $newName);
-            return base_url($relativePath . '/' . $newName);
-        }
-        return null;
-    }
-
-    /**
-     * Physically deletes a file if it belongs to our local uploads.
-     */
-    private function deleteFileIfUploaded(?string $path): void
-    {
-        if (!$path) return;
-
-        $uploadBase = base_url('uploads/baraka/');
-        if (strpos($path, $uploadBase) === 0) {
-            $relativePath = str_replace(base_url(), '', $path);
-            $absolutePath = FCPATH . ltrim($relativePath, '/');
-            if (file_exists($absolutePath) && is_file($absolutePath)) {
-                unlink($absolutePath);
-            }
-        }
-    }
-
-    // --- ARTWORKS CRUD -----------------------------------------------------
+    // --- ARTWORKS ----------------------------------------------------------
 
     public function getAllArtworks(): array
     {
@@ -96,37 +140,23 @@ class BarakaAdminService
 
     public function saveArtwork(array $data, ?int $id = null, ?UploadedFile $file = null): bool
     {
-        try {
-            $oldRecord = $id ? $this->artworkModel->find($id) : null;
-
-            if ($uploadedUrl = $this->handleImageUpload($file)) {
-                $data['image_path'] = $uploadedUrl;
-            }
-
-            if ($id) {
-                if ($oldRecord && isset($data['image_path']) && $data['image_path'] !== $oldRecord->image_path) {
-                    $this->deleteFileIfUploaded($oldRecord->image_path);
-                }
-                return $this->artworkModel->update($id, $data);
-            }
-            return $this->artworkModel->insert($data, false) !== false;
-        } catch (\Exception $e) {
-            log_message('error', '[BarakaAdminService] Failed to save artwork: ' . $e->getMessage());
-            return false;
-        }
+        return $this->_processSave($this->artworkModel, $data, $id, $file, 'image_path');
     }
 
     public function deleteArtwork(int $id): bool
     {
+        $this->db->transStart();
         $record = $this->artworkModel->find($id);
         if ($record && $this->artworkModel->delete($id)) {
-            $this->deleteFileIfUploaded($record->image_path);
-            return true;
+            $this->_deleteFileIfUploaded($record->image_path);
+            $this->db->transComplete();
+            return $this->db->transStatus();
         }
+        $this->db->transRollback();
         return false;
     }
     
-    // --- SERVICES CRUD -----------------------------------------------------
+    // --- SERVICES ----------------------------------------------------------
 
     public function getAllServices(): array
     {
@@ -140,38 +170,23 @@ class BarakaAdminService
 
     public function saveService(array $data, ?int $id = null, ?UploadedFile $file = null): bool
     {
-        try {
-            $oldRecord = $id ? $this->serviceModel->find($id) : null;
-
-            if ($uploadedUrl = $this->handleImageUpload($file)) {
-                $data['icon_or_image'] = $uploadedUrl;
-            }
-
-            if ($id) {
-                // If a new file was uploaded OR the user cleared the URL field
-                if ($oldRecord && isset($data['icon_or_image']) && $data['icon_or_image'] !== $oldRecord->icon_or_image) {
-                    $this->deleteFileIfUploaded($oldRecord->icon_or_image);
-                }
-                return $this->serviceModel->update($id, $data);
-            }
-            return $this->serviceModel->insert($data, false) !== false;
-        } catch (\Exception $e) {
-            log_message('error', '[BarakaAdminService] Failed to save service: ' . $e->getMessage());
-            return false;
-        }
+        return $this->_processSave($this->serviceModel, $data, $id, $file, 'icon_or_image');
     }
 
     public function deleteService(int $id): bool
     {
+        $this->db->transStart();
         $record = $this->serviceModel->find($id);
         if ($record && $this->serviceModel->delete($id)) {
-            $this->deleteFileIfUploaded($record->icon_or_image);
-            return true;
+            $this->_deleteFileIfUploaded($record->icon_or_image);
+            $this->db->transComplete();
+            return $this->db->transStatus();
         }
+        $this->db->transRollback();
         return false;
     }
 
-    // --- WORKSHOPS CRUD ----------------------------------------------------
+    // --- WORKSHOPS ---------------------------------------------------------
 
     public function getAllWorkshops(): array
     {
@@ -185,33 +200,19 @@ class BarakaAdminService
 
     public function saveWorkshop(array $data, ?int $id = null, ?UploadedFile $file = null): bool
     {
-        try {
-            $oldRecord = $id ? $this->workshopModel->find($id) : null;
-
-            if ($uploadedUrl = $this->handleImageUpload($file)) {
-                $data['image_path'] = $uploadedUrl;
-            }
-
-            if ($id) {
-                if ($oldRecord && isset($data['image_path']) && $data['image_path'] !== $oldRecord->image_path) {
-                    $this->deleteFileIfUploaded($oldRecord->image_path);
-                }
-                return $this->workshopModel->update($id, $data);
-            }
-            return $this->workshopModel->insert($data, false) !== false;
-        } catch (\Exception $e) {
-            log_message('error', '[BarakaAdminService] Failed to save workshop: ' . $e->getMessage());
-            return false;
-        }
+        return $this->_processSave($this->workshopModel, $data, $id, $file, 'image_path');
     }
 
     public function deleteWorkshop(int $id): bool
     {
+        $this->db->transStart();
         $record = $this->workshopModel->find($id);
         if ($record && $this->workshopModel->delete($id)) {
-            $this->deleteFileIfUploaded($record->image_path);
-            return true;
+            $this->_deleteFileIfUploaded($record->image_path);
+            $this->db->transComplete();
+            return $this->db->transStatus();
         }
+        $this->db->transRollback();
         return false;
     }
 
@@ -227,4 +228,5 @@ class BarakaAdminService
         return $this->signupModel->delete($id);
     }
 }
+
 

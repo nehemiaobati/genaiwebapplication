@@ -33,7 +33,7 @@ class BarakaSeeder extends Seeder
         ];
 
         foreach ($services as $service) {
-            $service['icon_or_image'] = 'https://picsum.photos/seed/'.md5($service['title']).'/100/100';
+            $service['icon_or_image'] = 'https://picsum.photos/seed/' . md5($service['title']) . '/100/100';
             $service['created_at'] = date('Y-m-d H:i:s');
             $service['updated_at'] = date('Y-m-d H:i:s');
             $this->db->table('baraka_services')->insert($service);
@@ -49,7 +49,7 @@ class BarakaSeeder extends Seeder
         ];
 
         foreach ($artworks as $i => $art) {
-            $art['image_path'] = 'https://picsum.photos/seed/art_'.$i.'/600/'.rand(400, 800);
+            $art['image_path'] = 'https://picsum.photos/seed/art_' . $i . '/600/' . rand(400, 800);
             $art['price'] = ($art['category'] === 'Original') ? rand(5000, 20000) : null;
             $art['is_sold'] = false;
             $art['created_at'] = date('Y-m-d H:i:s');
@@ -65,7 +65,7 @@ class BarakaSeeder extends Seeder
         ];
 
         foreach ($workshops as $i => $ws) {
-            $ws['image_path'] = 'https://picsum.photos/seed/workshop_'.$i.'/600/400';
+            $ws['image_path'] = 'https://picsum.photos/seed/workshop_' . $i . '/600/400';
             $ws['created_at'] = date('Y-m-d H:i:s');
             $ws['updated_at'] = date('Y-m-d H:i:s');
             $this->db->table('baraka_workshops')->insert($ws);
