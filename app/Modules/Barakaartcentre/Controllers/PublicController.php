@@ -30,7 +30,7 @@ class PublicController extends BaseController
             'pageTitle'       => "Baraka Art Centre | $title",
             'metaDescription' => $description,
             'canonicalUrl'    => current_url(),
-            'robotsTag'       => 'index, follow', // Standard public pages
+            'robotsTag'       => 'noindex, follow', // Standard public pages
             'metaImage'       => base_url('assets/images/baraka_logo.png'),
         ];
     }
@@ -116,7 +116,7 @@ class PublicController extends BaseController
     {
         $phone = (string) esc($this->request->getPost('mpesa_phone'));
         $amount = (float) $this->request->getPost('amount');
-        
+
         $result = $this->publicService->simulateMpesaPayment($phone, $amount);
 
         $class = $result['status'] ? 'success' : 'error';
@@ -129,7 +129,7 @@ class PublicController extends BaseController
     public function signupNewsletter(): ResponseInterface
     {
         $email = (string) esc($this->request->getPost('email'));
-        
+
         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->publicService->processSignup($email, 'newsletter');
             return redirect()->back()->with('status', 'Thank you for signing up!');
