@@ -41,11 +41,11 @@ class BarakaSeeder extends Seeder
 
         // 3. Seed Sample Artworks
         $artworks = [
-            ['title' => 'Old Town Mural', 'category' => 'Community', 'description' => 'A vibrant collaborative piece.'],
+            ['title' => 'Old Town Mural', 'category' => 'Mural', 'description' => 'A vibrant collaborative piece.'],
             ['title' => 'Abstract Expression', 'category' => 'Original', 'description' => 'An original fine art commission.'],
-            ['title' => 'Digital Branding Demo', 'category' => 'Student', 'description' => 'Design for good initiative example.'],
+            ['title' => 'Digital Branding Demo', 'category' => 'Student Project', 'description' => 'Design for good initiative example.'],
             ['title' => 'Swahili Coastal Vibe', 'category' => 'Original', 'description' => 'Oil on canvas inspired by Mombasa.'],
-            ['title' => 'Youth Art Workshop', 'category' => 'Community', 'description' => 'Draw your mood expression session.'],
+            ['title' => 'Youth Art Workshop Display', 'category' => 'Print', 'description' => 'Limited edition print from workshop results.'],
         ];
 
         foreach ($artworks as $i => $art) {
