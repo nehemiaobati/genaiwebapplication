@@ -24,7 +24,7 @@
         <h1 class="display-4 display-md-3 fw-bold mb-4">The Ultimate <br><span class="text-primary">Generative AI Studio</span></h1>
         <p class="lead mb-4 mx-auto" style="max-width: 800px;">
             Generate enterprise-grade videos, images, text, and reports in seconds.
-            <span class="text-muted d-block mt-2 fs-6">Access industry-leading models via Gemini, OpenRouter, and Local LLMs.</span>
+            <span class="text-muted d-block mt-2 fs-5">Access industry-leading models via Gemini, OpenRouter, and Local LLMs.</span>
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
             <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm" aria-label="Create your free account">Start Creating Free</a>
@@ -88,7 +88,7 @@
                                 <div class="fs-2 text-primary me-4"><i class="bi bi-shield-check"></i></div>
                                 <div>
                                     <h3 class="fs-5 fw-bold mb-1">Data Trust Layer</h3>
-                                    <p class="text-body-secondary small mb-0">Verify data integrity with our immutable Blockchain Analytics tools. <a href="<?= url_to('crypto.public') ?>" class="text-decoration-none fw-bold">View Crypto Query</a>.</p>
+                                    <p class="text-body-secondary mb-0">Verify data integrity with our immutable Blockchain Analytics tools. <a href="<?= url_to('crypto.public') ?>" class="text-decoration-none fw-bold">View Crypto Query</a>.</p>
                                 </div>
                             </div>
                         </div>
@@ -101,7 +101,7 @@
                                 <div class="fs-2 text-primary me-4"><i class="bi bi-wallet2"></i></div>
                                 <div>
                                     <h3 class="fs-5 fw-bold mb-1">Pay-As-You-Go</h3>
-                                    <p class="text-body-secondary small mb-0">Top up via <span class="text-success fw-bold">M-Pesa</span> or <span class="text-danger fw-bold">Airtel</span>. No subscriptions.</p>
+                                    <p class="text-body-secondary mb-0">Top up via <span class="text-success fw-bold">M-Pesa</span> or <span class="text-danger fw-bold">Airtel</span>. No subscriptions.</p>
                                 </div>
                             </div>
                         </div>
@@ -139,7 +139,7 @@
                             <div class="card-body p-4">
                                 <div class="mb-3 text-primary fw-bold fs-4" aria-hidden="true">01</div>
                                 <h3 class="h5 fw-bold">Consultation</h3>
-                                <p class="small text-body-secondary mb-0">We listen to your vision and requirements in a free discovery meeting.</p>
+                                <p class="text-body-secondary mb-0">We listen to your vision and requirements in a free discovery meeting.</p>
                             </div>
                         </div>
                     </div>
@@ -149,7 +149,7 @@
                             <div class="card-body p-4">
                                 <div class="mb-3 text-primary fw-bold fs-4" aria-hidden="true">02</div>
                                 <h3 class="h5 fw-bold">Planning</h3>
-                                <p class="small text-body-secondary mb-0">You get a detailed roadmap, timeline, and transparent pricing.</p>
+                                <p class="text-body-secondary mb-0">You get a detailed roadmap, timeline, and transparent pricing.</p>
                             </div>
                         </div>
                     </div>
@@ -159,7 +159,7 @@
                             <div class="card-body p-4">
                                 <div class="mb-3 text-primary fw-bold fs-4" aria-hidden="true">03</div>
                                 <h3 class="h5 fw-bold">Build & Launch</h3>
-                                <p class="small text-body-secondary mb-0">We develop with clean code and deploy to your secure server.</p>
+                                <p class="text-body-secondary mb-0">We develop with clean code and deploy to your secure server.</p>
                             </div>
                         </div>
                     </div>

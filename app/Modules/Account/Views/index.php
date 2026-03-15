@@ -83,7 +83,7 @@
                                                 ?>
                                                 <span class="badge rounded-pill <?= $badge_class ?> status-badge"><?= esc(ucfirst($status)) ?></span>
                                             </td>
-                                            <td class="text-muted"><small><?= esc($display_references[$index] ?? 'N/A') ?></small></td>
+                                            <td class="text-muted"><?= esc($display_references[$index] ?? 'N/A') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

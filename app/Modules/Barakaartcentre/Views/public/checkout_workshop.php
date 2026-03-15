@@ -1,5 +1,24 @@
 <?= $this->extend('App\Modules\Barakaartcentre\Views\layouts\public') ?>
 
+<?= $this->section('styles') ?>
+<style>
+    @media (max-width: 768px) {
+        .cta-wrapper {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(31, 31, 35, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-top: 1px solid var(--glass-border);
+            z-index: 100;
+        }
+        form { padding-bottom: 80px; } /* Prevent overlap */
+    }
+</style>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 <div style="max-width: 600px; margin: 0 auto;">
     <div class="bento-card">
@@ -26,24 +45,26 @@
             <input type="hidden" name="amount" value="<?= esc($item->fee) ?>">
 
             <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa;">Full Name</label>
-                <input type="text" name="name" placeholder="E.g. John Doe" required value="<?= old('name') ?>">
+                <label for="full_name" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa;">Full Name</label>
+                <input type="text" id="full_name" name="name" placeholder="E.g. John Doe" required value="<?= old('name') ?>">
             </div>
 
             <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa;">Email Address</label>
-                <input type="email" name="email" placeholder="john@example.com" required value="<?= old('email') ?>">
+                <label for="email" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa;">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="john@example.com" required value="<?= old('email') ?>">
             </div>
 
             <div style="margin-bottom: 2rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa;">Phone Number (M-Pesa Preferred)</label>
-                <input type="text" name="phone_number" placeholder="07xxxxxxxx" required value="<?= old('phone_number') ?>">
+                <label for="phone_number" style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #aaa;">Phone Number (M-Pesa Preferred)</label>
+                <input type="text" id="phone_number" name="phone_number" placeholder="07xxxxxxxx" required value="<?= old('phone_number') ?>">
                 <small style="color: var(--text-muted); font-size: 0.8rem;">Used for registration confirmation and support.</small>
             </div>
 
-            <button type="submit" class="btn-mpesa" style="background: var(--accent-gold); color: #000;">
-                Register & Pay
-            </button>
+            <div class="cta-wrapper">
+                <button type="submit" class="btn-mpesa" style="background: var(--accent-gold); color: #000;">
+                    Register & Pay
+                </button>
+            </div>
             <p style="text-align: center; margin-top: 1rem; font-size: 0.85rem;">
                 <a href="<?= route_to('baraka.workshops') ?>" style="color: var(--text-muted); text-decoration: none;">&larr; Back to Workshops</a>
             </p>

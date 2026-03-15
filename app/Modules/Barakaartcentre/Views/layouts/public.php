@@ -48,7 +48,8 @@
         body {
             background-color: var(--bg-dark);
             color: #e0e0e0;
-            line-height: 1.6;
+            font-size: 16px; 
+            line-height: 1.5;
             overflow-x: hidden;
         }
 
@@ -127,9 +128,28 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            font-weight: 500;
-            margin-bottom: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
             display: inline-block;
+            animation: neural-pulse 3s infinite ease-in-out;
+        }
+
+        @keyframes neural-pulse {
+            0%, 100% { opacity: 0.8; transform: scale(1); filter: drop-shadow(0 0 0px var(--steam-cyan)); }
+            50% { opacity: 1; transform: scale(1.02); filter: drop-shadow(0 0 8px var(--steam-cyan)); }
+        }
+
+        .btn-primary {
+            padding: 0.8rem 2rem; background: var(--accent-gold); color: #000; 
+            text-decoration: none; border-radius: 30px; font-weight: 600; 
+            min-height: 48px; display: inline-flex; align-items: center; justify-content: center;
+        }
+
+        .btn-secondary {
+            padding: 0.8rem 2rem; border: 1px solid var(--accent-gold); color: var(--accent-gold); 
+            text-decoration: none; border-radius: 30px; font-weight: 600; 
+            min-height: 48px; display: inline-flex; align-items: center; justify-content: center;
+            background: transparent;
         }
 
         /* Pillars Badges */
@@ -209,15 +229,16 @@
         .masonry-info p { font-size: 0.85rem; margin-bottom: 0; }
 
         /* Inputs & Flow */
-        input[type="text"], input[type="number"], input[type="email"] {
-            width: 100%; padding: 1.2rem; margin-bottom: 1rem;
+        input[type="text"], input[type="number"], input[type="email"], textarea {
+            width: 100%; min-height: 48px; padding: 0.8rem 1.2rem; margin-bottom: 1rem;
             background: rgba(0, 0, 0, 0.4); border: 1px solid var(--glass-border);
             color: #fff; border-radius: 12px; font-size: 1rem; transition: border-color 0.3s;
+            line-height: 1.5;
         }
         input:focus { outline: none; border-color: #52B44B; }
         
         .btn-mpesa {
-            width: 100%; padding: 1.2rem; background: #52B44B; color: white;
+            width: 100%; min-height: 48px; padding: 0.8rem 1.2rem; background: #52B44B; color: white;
             border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600;
             cursor: pointer; display: flex; justify-content: center; align-items: center;
             gap: 10px; transition: background 0.2s, transform 0.1s;

@@ -40,27 +40,27 @@
                         <div class="bg-warning rounded-circle p-2 me-3"><i class="bi bi-wallet2 text-white fs-4"></i></div>
                         <div>
                             <div class="fw-bold">Bitcoin Balance</div>
-                            <div class="small text-muted">1F1t...4xqX</div>
+                            <div class="text-muted">1F1t...4xqX</div>
                         </div>
                         <div class="ms-auto fw-bold text-success">0.3289 BTC</div>
                     </div>
                     <div class="mt-4 p-3 bg-body rounded-3 border">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="badge bg-primary">#1 Transaction</span>
-                            <small class="text-muted">Block: 907824</small>
+                            <span class="text-muted">Block: 907824</span>
                         </div>
-                        <div class="small text-muted text-truncate mb-2" style="font-family: monospace;">Hash: db9ddd2...9a6dab</div>
-                        <div class="small fw-bold mb-1">Fee: 0.00000854 BTC</div>
+                        <div class="text-muted text-truncate mb-2" style="font-family: monospace;">Hash: db9ddd2...9a6dab</div>
+                        <div class="fw-bold mb-1">Fee: 0.00000854 BTC</div>
 
                         <div class="row g-2 mt-2">
                             <div class="col-6">
-                                <div class="p-2 bg-danger-subtle rounded-2 small">
+                                <div class="p-2 bg-danger-subtle rounded-2">
                                     <div class="fw-bold text-danger">FROM</div>
                                     <div class="text-truncate">bc1qcpmw...</div>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="p-2 bg-success-subtle rounded-2 small">
+                                <div class="p-2 bg-success-subtle rounded-2">
                                     <div class="fw-bold text-success">TO</div>
                                     <div class="text-truncate">1F1tAaz5...</div>
                                 </div>
@@ -94,7 +94,7 @@
                     <div class="card-body">
                         <i class="bi bi-currency-bitcoin text-warning display-4 mb-3 d-block"></i>
                         <h5 class="fw-bold mb-0">Bitcoin</h5>
-                        <p class="small text-muted">Mainnet</p>
+                        <p class="text-muted">Mainnet</p>
                     </div>
                 </div>
             </div>
@@ -103,7 +103,7 @@
                     <div class="card-body">
                         <i class="bi bi-currency-exchange text-secondary display-4 mb-3 d-block"></i>
                         <h5 class="fw-bold mb-0">Litecoin</h5>
-                        <p class="small text-muted">Scrypt</p>
+                        <p class="text-muted">Scrypt</p>
                     </div>
                 </div>
             </div>

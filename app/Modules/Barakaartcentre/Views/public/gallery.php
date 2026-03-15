@@ -26,7 +26,7 @@
                             <p style="margin: 0; font-weight: 600; color: #52B44B;">
                                 KES <?= number_format($art->price, 2) ?>
                             </p>
-                            <a href="<?= route_to('baraka.checkout.artwork', $art->id) ?>" style="padding: 0.4rem 0.8rem; background: var(--accent-gold); color: #000; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600;">Buy Now</a>
+                            <a href="<?= route_to('baraka.checkout.artwork', $art->id) ?>" style="padding: 0.8rem 1.2rem; background: var(--accent-gold); color: #000; border-radius: 8px; text-decoration: none; font-size: 0.9rem; font-weight: 600;">Buy Now</a>
                         </div>
                     <?php elseif ($art->is_sold): ?>
                         <p style="margin-top: 1rem; margin-bottom: 0; font-weight: 600; color: var(--steam-red);">

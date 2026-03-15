@@ -22,7 +22,7 @@
                             <button type="submit" id="forgotPasswordSubmit" class="btn btn-primary btn-lg fw-bold">Send Reset Link</button>
                         </div>
                     </form>
-                    <p class="mt-4 text-center text-muted">Remember your password? <a href="<?= url_to('login') ?>">Sign In</a></p>
+                    <p class="mt-4 text-center">Remember your password? <a href="<?= url_to('login') ?>">Sign In</a></p>
                 </div>
             </div>
         </div>

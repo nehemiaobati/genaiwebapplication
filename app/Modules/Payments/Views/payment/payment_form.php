@@ -25,7 +25,7 @@
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg fw-bold">Proceed to Secure Payment</button>
                         </div>
-                        <p class="text-center mt-3 small text-muted"><i class="bi bi-lock-fill"></i> Your financial details are never stored on our servers.</p>
+                        <p class="text-center mt-3 text-muted"><i class="bi bi-lock-fill"></i> Your financial details are never stored on our servers.</p>
                     </form>
                 </div>
             </div>

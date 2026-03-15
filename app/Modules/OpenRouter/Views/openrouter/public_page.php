@@ -102,7 +102,7 @@
             <div class="card rounded-4 border-0 shadow-lg overflow-hidden hover-effect bg-primary text-white">
                 <div class="card-body p-5 text-center">
                     <h2 class="display-5 fw-bold mb-3">Ready to Explore?</h2>
-                    <p class="lead mb-4 opacity-75">Join the platform and start a conversation with the world's best AI models today.</p>
+                    <p class="lead mb-4 mx-auto" style="max-width: 700px;">Connect to the world's most powerful AI models via one API. Optimized for speed and diversity.</p>
                     <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill">Get Started Now</a>
                 </div>
             </div>

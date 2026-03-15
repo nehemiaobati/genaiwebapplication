@@ -23,7 +23,7 @@
         <div class="container py-5 text-center">
             <span class="badge bg-primary-subtle text-primary mb-3 rounded-pill px-3 py-2 fw-bold">Powered by Gemini</span>
             <h1 class="display-3 fw-bold mb-4"><?= esc($heroTitle ?? 'Enterprise AI Solutions') ?></h1>
-            <p class="lead mb-5 mx-auto text-muted" style="max-width: 800px;"><?= esc($heroSubtitle ?? 'Unlock the power of generative AI for content, images, and data analysis.') ?></p>
+            <p class="lead mb-4 mx-auto" style="max-width: 700px;">Unlock the power of Gemini. Generate high-fidelity videos, images, and documents with enterprise-grade precision.</p>
 
             <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
                 <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Start Creating Free</a>
@@ -103,10 +103,10 @@
     <section class="py-5 mb-5">
         <div class="container">
             <div class="card bg-primary text-white rounded-4 overflow-hidden shadow-lg border-0 hover-effect" style="background: var(--hero-gradient, linear-gradient(45deg, #0d6efd, #0a58ca)) !important;">
-                <div class="card-body p-5 text-center position-relative">
-                    <h2 class="display-5 fw-bold mb-4">Ready to Innovate?</h2>
-                    <p class="lead mb-4 opacity-75">Join thousands of creators using our AI platform.</p>
-                    <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill">Get Started Now</a>
+                <div class="card-body p-5 text-center">
+                    <h2 class="display-5 fw-bold mb-3">Ready to Create?</h2>
+                    <p class="lead mb-4">Start your trial with Gemini and see the future of generative media.</p>
+                    <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill">Get Started Free</a>
                 </div>
             </div>
         </div>

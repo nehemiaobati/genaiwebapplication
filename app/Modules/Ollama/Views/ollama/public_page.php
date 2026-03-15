@@ -19,7 +19,7 @@
     <div class="container py-5 text-center">
         <span class="badge bg-primary-subtle text-primary mb-3 rounded-pill px-3 py-2 fw-bold"><i class="bi bi-shield-lock-fill"></i> Powered by Ollama (Local AI)</span>
         <h1 class="display-3 fw-bold mb-4"><?= esc($heroTitle ?? 'Ownership of Intelligence.') ?></h1>
-        <p class="lead mb-5 mx-auto text-muted" style="max-width: 800px;"><?= esc($heroSubtitle ?? 'Run powerful open-source LLMs directly on your own hardware. Absolute privacy, self-hosted intelligence, and zero latency.') ?></p>
+        <p class="lead mb-4 mx-auto" style="max-width: 700px;">Privacy-first AI that runs on your hardware. Hybrid memory, no latency, zero data logs.</p>
 
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
             <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm">Build Your Private AI</a>
@@ -99,11 +99,11 @@
 <section class="py-5 mb-5">
     <div class="container">
         <div class="card bg-primary text-white rounded-4 overflow-hidden shadow-lg border-0 hover-effect" style="background: linear-gradient(45deg, #1e3a8a, #3b82f6) !important;">
-            <div class="card-body p-5 text-center position-relative">
-                <h2 class="display-5 fw-bold mb-4">Ownership of Intelligence</h2>
-                <p class="lead mb-4 opacity-75">Start your self-hosted AI journey today.</p>
-                <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill text-primary">Join Now</a>
-            </div>
+                <div class="card-body p-5 text-center">
+                    <h2 class="display-5 fw-bold mb-3">Ready to Go Private?</h2>
+                    <p class="lead mb-4">Experience the power of local AI with zero compromises on privacy.</p>
+                    <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill">Get Started Now</a>
+                </div>
         </div>
     </div>
 </section>

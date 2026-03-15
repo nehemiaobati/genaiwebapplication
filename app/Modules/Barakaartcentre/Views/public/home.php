@@ -15,9 +15,9 @@
             <span class="pillar-badge">Community</span>
             <span class="pillar-badge">Sustainability</span>
         </div>
-        <div style="margin-top: 2.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-            <a href="<?= route_to('baraka.gallery') ?>" style="padding: 0.8rem 2rem; background: var(--accent-gold); color: #000; text-decoration: none; border-radius: 30px; font-weight: 600;">View Portfolio</a>
-            <a href="<?= route_to('baraka.workshops') ?>" style="padding: 0.8rem 2rem; border: 1px solid var(--accent-gold); color: var(--accent-gold); text-decoration: none; border-radius: 30px; font-weight: 600;">Book a Workshop</a>
+        <div class="cta-group" style="margin-top: 2.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+            <a href="<?= route_to('baraka.gallery') ?>" class="btn-primary">View Portfolio</a>
+            <a href="<?= route_to('baraka.workshops') ?>" class="btn-secondary">Explore Workshops</a>
         </div>
     </div>
     <div class="hero-image-wrapper">
@@ -46,23 +46,24 @@
 </section>
 <?php endif; ?>
 
-<!-- Quick Services Preview -->
+<!-- Core Impact Preview (Cognitive Clarity) -->
 <section class="bento-container" style="margin-top: 4rem;">
-    <div class="bento-card span-2" style="display: flex; flex-direction: column; justify-content: center;">
-        <h2>Our Services</h2>
-        <p>We fuse precise scientific methodologies with the 'Baraka' (blessing or skilled intent) of traditional craftsmanship to build sustainable ecosystems for creators.</p>
-        <a href="<?= route_to('baraka.services') ?>" style="margin-top: 1rem; color: var(--accent-gold); text-decoration: none; font-weight: 600;">Explore All Services &rarr;</a>
-    </div>
-    <?php if (!empty($services)): ?>
-        <?php foreach (array_slice($services, 0, 2) as $service): ?>
-        <div class="bento-card">
-            <?php if ($service->icon_or_image): ?>
-                <img src="<?= esc($service->icon_or_image) ?>" alt="" style="width: 48px; height: 48px; border-radius: 8px; margin-bottom: 1rem;">
-            <?php endif; ?>
-            <h4 style="color: <?= $service->type === 'Revenue' ? 'var(--steam-yellow)' : 'var(--steam-cyan)' ?>;"><?= esc($service->title) ?></h4>
-            <p style="font-size: 0.9rem; margin-bottom: 0;"><?= esc($service->short_description) ?></p>
+    <div class="bento-card span-3" style="text-align: center; border-bottom: 2px solid var(--accent-gold);">
+        <h2 style="margin-bottom: 0.5rem;">One Mission. Multiple Paths.</h2>
+        <p style="max-width: 800px; margin: 0 auto 2rem auto;">We fuse precise scientific methodologies with the 'Baraka' (blessing) of craftsmanship to heal nervous systems and build sustainable creative ecosystems.</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; text-align: left;">
+            <div>
+                <h4 style="color: var(--steam-yellow);">Revenue Projects</h4>
+                <p style="font-size: 0.9rem;">High-value art commissions & design solutions that fund our primary community mission.</p>
+            </div>
+            <div>
+                <h4 style="color: var(--steam-cyan);">Community Impact</h4>
+                <p style="font-size: 0.9rem;">Guided therapeutic workshops and subsidized creative programs for youth and local creators.</p>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <a href="<?= route_to('baraka.services') ?>" class="btn-secondary" style="width: auto;">Explore All Services &rarr;</a>
+            </div>
         </div>
-        <?php endforeach; ?>
-    <?php endif; ?>
+    </div>
 </section>
 <?= $this->endSection() ?>

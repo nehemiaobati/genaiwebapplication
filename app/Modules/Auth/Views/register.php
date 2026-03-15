@@ -99,7 +99,7 @@
                                 <div class="d-grid">
                                     <button type="submit" id="registerSubmit" class="btn btn-primary btn-lg">Register</button>
                                 </div>
-                                <p class="mt-4 text-center text-muted">Already have an account? <a href="<?= url_to('login') ?>">Login here</a></p>
+                                <p class="mt-4 text-center">Already have an account? <a href="<?= url_to('login') ?>">Login here</a></p>
                             </form>
                         </div>
                     </div>

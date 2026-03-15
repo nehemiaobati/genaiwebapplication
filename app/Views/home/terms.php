@@ -66,7 +66,7 @@
                     <h2>11. Contact Information</h2>
                     <p>If you have any questions about these Terms, please contact us at <a href="mailto:afrikenkid@gmail.com">Email</a> or <a href="tel:254794587533">Phone</a>.</p>
 
-                    <p class="mt-5 text-muted">Last updated: January 18, 2026</p>
+                    <p class="mt-5">Last updated: January 18, 2026</p>
                 </div>
             </div>
         </div>

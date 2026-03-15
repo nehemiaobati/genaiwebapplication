@@ -182,14 +182,14 @@
 
         /* Theme Toggle & Mobile UI */
         .theme-toggle {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
             transition: all 0.2s ease;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
         }
 
         .theme-toggle:hover {
@@ -343,7 +343,7 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6 mb-4">
                     <h5>AFRIKENKID</h5>
-                    <p class="small">The ultimate Generative AI Studio. Build with Gemini, OpenRouter, and Ollama for all your text, image, and video generation needs.</p>
+                    <p>The ultimate Generative AI Studio. Build with Gemini, OpenRouter, and Ollama for all your text, image, and video generation needs.</p>
                 </div>
                 <div class="col-lg-2 col-6">
                     <h5>Services</h5>
@@ -373,7 +373,7 @@
             <div class="text-center border-top pt-4 mt-4">
                 &copy; <?= date('Y') ?> AFRIKENKID. All rights reserved.
                 <?php if (ENVIRONMENT !== 'production') : ?>
-                    <div class="small text-muted mt-2">Page rendered in <strong>{elapsed_time}</strong>s</div>
+                    <div class="text-muted mt-2">Page rendered in <strong>{elapsed_time}</strong>s</div>
                 <?php endif; ?>
             </div>
         </div>
