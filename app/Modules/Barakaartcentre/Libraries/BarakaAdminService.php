@@ -7,6 +7,7 @@ namespace App\Modules\Barakaartcentre\Libraries;
 use App\Modules\Barakaartcentre\Models\ArtworkModel;
 use App\Modules\Barakaartcentre\Models\ServiceModel;
 use App\Modules\Barakaartcentre\Models\WorkshopModel;
+use App\Modules\Barakaartcentre\Models\OrderModel;
 use App\Modules\Barakaartcentre\Models\SignupModel;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\Files\UploadedFile;
@@ -23,6 +24,7 @@ class BarakaAdminService
     protected ServiceModel $serviceModel;
     protected WorkshopModel $workshopModel;
     protected SignupModel $signupModel;
+    protected OrderModel $orderModel;
     protected BaseConnection $db;
 
     public function __construct()
@@ -31,6 +33,7 @@ class BarakaAdminService
         $this->serviceModel = new ServiceModel();
         $this->workshopModel = new WorkshopModel();
         $this->signupModel = new SignupModel();
+        $this->orderModel = new OrderModel();
         $this->db = Database::connect();
     }
 
@@ -226,6 +229,71 @@ class BarakaAdminService
     public function deleteSignup(int $id): bool
     {
         return $this->signupModel->delete($id);
+    }
+
+    // --- PAYMENTS & ORDERS -------------------------------------------------
+
+    /**
+     * Retrieves all orders for the admin dashboard.
+     * 
+     * @param string|null $status Filter by status.
+     * @return array
+     */
+    public function getAllOrders(?string $status = null): array
+    {
+        if ($status) {
+            $this->orderModel->where('status', $status);
+        }
+        $orders = $this->orderModel->orderBy('created_at', 'DESC')->findAll();
+
+        // Map titles for visibility
+        if (!empty($orders)) {
+            $artworkIds = [];
+            $workshopIds = [];
+            foreach ($orders as $order) {
+                if ($order->item_type === 'artwork') $artworkIds[] = $order->item_id;
+                if ($order->item_type === 'workshop') $workshopIds[] = $order->item_id;
+            }
+
+            $artworkTitles = !empty($artworkIds) ? $this->artworkModel->whereIn('id', array_unique($artworkIds))->select('id, title')->findAll() : [];
+            $workshopTitles = !empty($workshopIds) ? $this->workshopModel->whereIn('id', array_unique($workshopIds))->select('id, title')->findAll() : [];
+
+            $artworkMap = [];
+            foreach ($artworkTitles as $a) $artworkMap[$a->id] = $a->title;
+            $workshopMap = [];
+            foreach ($workshopTitles as $w) $workshopMap[$w->id] = $w->title;
+
+            foreach ($orders as $order) {
+                if ($order->item_type === 'artwork') {
+                    $order->item_title = $artworkMap[$order->item_id] ?? 'Deleted Artwork (ID: ' . $order->item_id . ')';
+                } else {
+                    $order->item_title = $workshopMap[$order->item_id] ?? 'Deleted Workshop (ID: ' . $order->item_id . ')';
+                }
+            }
+        }
+
+        return $orders;
+    }
+
+    /**
+     * Checks if an item has any successful orders.
+     * Use this to block deletion of revenue-linked items.
+     */
+    public function hasUnresolvedOrders(string $type, int $id): bool
+    {
+        return $this->orderModel->where('item_type', $type)
+                                ->where('item_id', $id)
+                                ->where('status', 'success')
+                                ->where('is_resolved', 0)
+                                ->countAllResults() > 0;
+    }
+
+    /**
+     * Marks an order as resolved/fulfilled.
+     */
+    public function resolveOrder(int $id): bool
+    {
+        return $this->orderModel->update($id, ['is_resolved' => 1]);
     }
 }
 

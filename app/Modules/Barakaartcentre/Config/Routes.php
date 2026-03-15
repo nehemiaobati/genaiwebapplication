@@ -17,6 +17,12 @@ $routes->group('baraka-art-centre', ['namespace' => 'App\Modules\Barakaartcentre
     $routes->get('workshops', 'PublicController::workshops', ['as' => 'baraka.workshops']);
     $routes->get('contact', 'PublicController::contact', ['as' => 'baraka.contact']);
     $routes->post('newsletter', 'PublicController::signupNewsletter', ['as' => 'baraka.newsletter']);
+
+    // Checkout & Payments
+    $routes->get('checkout/artwork/(:num)', 'PublicController::checkoutArtwork/$1', ['as' => 'baraka.checkout.artwork']);
+    $routes->get('checkout/workshop/(:num)', 'PublicController::checkoutWorkshop/$1', ['as' => 'baraka.checkout.workshop']);
+    $routes->post('checkout/process', 'PublicController::processOrder', ['as' => 'baraka.process.order']);
+    $routes->get('payment/verify', 'PublicController::verifyPayment', ['as' => 'baraka.payment.verify']);
 });
 
 // Auth Routes
@@ -57,4 +63,8 @@ $routes->group('baraka-art-centre/admin', ['namespace' => 'App\Modules\Barakaart
     // Signups Management
     $routes->get('signups', 'AdminController::signups', ['as' => 'baraka.admin.signups']);
     $routes->post('signups/delete/(:num)', 'AdminController::deleteSignup/$1', ['as' => 'baraka.admin.signups.delete']);
+
+    // Payments & Orders
+    $routes->get('payments', 'AdminController::payments', ['as' => 'baraka.admin.payments']);
+    $routes->post('payments/resolve/(:num)', 'AdminController::resolveOrder/$1', ['as' => 'baraka.admin.payments.resolve']);
 });

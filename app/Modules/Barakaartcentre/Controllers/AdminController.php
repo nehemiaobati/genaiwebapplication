@@ -127,7 +127,14 @@ class AdminController extends BaseController
 
     public function deleteArtwork(string $id): \CodeIgniter\HTTP\RedirectResponse
     {
-        if ($this->adminService->deleteArtwork((int)$id)) {
+        $artworkId = (int)$id;
+        
+        // Safety check: Don't delete if it has unresolved successful orders
+        if ($this->adminService->hasUnresolvedOrders('artwork', $artworkId)) {
+            return redirect()->back()->with('error', 'Cannot delete this artwork because it has outstanding (unresolved) successful orders. Please resolve the orders first.');
+        }
+
+        if ($this->adminService->deleteArtwork($artworkId)) {
             return redirect()->route('baraka.admin.artworks')->with('status', 'Artwork deleted.');
         }
         return redirect()->back()->with('error', 'Failed to delete artwork.');
@@ -219,7 +226,14 @@ class AdminController extends BaseController
 
     public function deleteWorkshop(string $id): \CodeIgniter\HTTP\RedirectResponse
     {
-        if ($this->adminService->deleteWorkshop((int)$id)) {
+        $workshopId = (int)$id;
+
+        // Safety check: Don't delete if it has unresolved successful orders
+        if ($this->adminService->hasUnresolvedOrders('workshop', $workshopId)) {
+            return redirect()->back()->with('error', 'Cannot delete this workshop because it has outstanding (unresolved) paid attendees. Please fulfill and resolve the orders first.');
+        }
+
+        if ($this->adminService->deleteWorkshop($workshopId)) {
             return redirect()->route('baraka.admin.workshops')->with('status', 'Workshop cancelled/deleted.');
         }
         return redirect()->back()->with('error', 'Failed to delete workshop.');
@@ -233,6 +247,24 @@ class AdminController extends BaseController
             return redirect()->route('baraka.admin.signups')->with('status', 'Signup record removed.');
         }
         return redirect()->back()->with('error', 'Failed to remove signup.');
+    }
+
+    // --- PAYMENTS & ORDERS ------------------------------------------------------- //
+
+    public function payments(): string
+    {
+        $data = $this->getAdminSeoData('Payments & Orders');
+        $data['orders'] = $this->adminService->getAllOrders();
+
+        return view('App\Modules\Barakaartcentre\Views\admin\payments', $data);
+    }
+
+    public function resolveOrder(string $id): \CodeIgniter\HTTP\RedirectResponse
+    {
+        if ($this->adminService->resolveOrder((int)$id)) {
+            return redirect()->route('baraka.admin.payments')->with('status', 'Order marked as resolved/fulfilled.');
+        }
+        return redirect()->back()->with('error', 'Failed to update order status.');
     }
 }
 

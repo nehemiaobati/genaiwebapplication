@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Barakaartcentre\Libraries;
 
 use App\Modules\Barakaartcentre\Models\ArtworkModel;
+use App\Modules\Barakaartcentre\Models\OrderModel;
 use App\Modules\Barakaartcentre\Models\ServiceModel;
 use App\Modules\Barakaartcentre\Models\WorkshopModel;
 use App\Modules\Barakaartcentre\Models\SignupModel;
@@ -20,6 +21,7 @@ class BarakaPublicService
     protected ServiceModel $serviceModel;
     protected WorkshopModel $workshopModel;
     protected SignupModel $signupModel;
+    protected OrderModel $orderModel;
 
     public function __construct()
     {
@@ -27,6 +29,77 @@ class BarakaPublicService
         $this->serviceModel = new ServiceModel();
         $this->workshopModel = new WorkshopModel();
         $this->signupModel = new SignupModel();
+        $this->orderModel   = new OrderModel();
+    }
+
+    /**
+     * Initializes a new order in a 'pending' state.
+     * Use this to capture initial intent for Helpdesk recovery.
+     * 
+     * @param array $data
+     * @return \App\Modules\Barakaartcentre\Entities\Order|null
+     */
+    public function createOrder(array $data): ?\App\Modules\Barakaartcentre\Entities\Order
+    {
+        $order = new \App\Modules\Barakaartcentre\Entities\Order($data);
+        $order->status = 'pending';
+        
+        $paystack = service('paystackService');
+        $order->order_reference = $paystack->generateReference();
+
+        if ($this->orderModel->save($order)) {
+            $id = $this->orderModel->getInsertID();
+            return $this->orderModel->find($id);
+        }
+
+        return null;
+    }
+
+    /**
+     * Verifies the payment with Paystack and updates the order status.
+     * 
+     * @param string $orderRef The internal order reference.
+     * @param string $paystackRef The Paystack transaction reference.
+     * @return array ['status' => bool, 'message' => string]
+     */
+    public function verifyOrderPayment(string $orderRef, string $paystackRef): array
+    {
+        /** @var \App\Modules\Barakaartcentre\Entities\Order|null $order */
+        $order = $this->orderModel->where('order_reference', $orderRef)->first();
+
+        if (!$order) {
+            return ['status' => false, 'message' => 'Order not found.'];
+        }
+
+        if ($order->status === 'success') {
+            return ['status' => true, 'message' => 'Order already processed.'];
+        }
+
+        $paystack = service('paystackService');
+        $response = $paystack->verifyTransaction($paystackRef);
+        $isSuccess = ($response['status'] === true && isset($response['data']['status']) && $response['data']['status'] === 'success');
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        $this->orderModel->update($order->id, [
+            'status' => $isSuccess ? 'success' : 'failed'
+        ]);
+
+        if ($isSuccess && $order->item_type === 'artwork') {
+            $this->artworkModel->update($order->item_id, ['is_sold' => 1]);
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            return ['status' => false, 'message' => 'Transaction failed during order processing.'];
+        }
+
+        return [
+            'status'  => $isSuccess,
+            'message' => $isSuccess ? 'Payment verified successfully!' : 'Payment verification failed.'
+        ];
     }
 
     /**
@@ -49,6 +122,16 @@ class BarakaPublicService
     }
 
     /**
+     * Fetches a single artwork by ID.
+     * @param int $id
+     * @return object|null
+     */
+    public function getArtworkById(int $id): ?object
+    {
+        return $this->artworkModel->find($id);
+    }
+
+    /**
      * Fetches all registered services.
      * @return array
      */
@@ -64,6 +147,16 @@ class BarakaPublicService
     public function getUpcomingWorkshops(): array
     {
         return $this->workshopModel->where('event_date >=', date('Y-m-d'))->orderBy('event_date', 'ASC')->findAll();
+    }
+
+    /**
+     * Fetches a single workshop by ID.
+     * @param int $id
+     * @return object|null
+     */
+    public function getWorkshopById(int $id): ?object
+    {
+        return $this->workshopModel->find($id);
     }
 
     /**

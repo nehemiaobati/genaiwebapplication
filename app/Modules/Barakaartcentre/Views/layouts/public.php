@@ -228,6 +228,7 @@
         .msg { padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.95rem; }
         .msg.success { background: rgba(82, 180, 75, 0.1); color: #52B44B; border: 1px solid #52B44B; }
         .msg.error { background: rgba(230, 57, 70, 0.1); color: var(--steam-red); border: 1px solid var(--steam-red); }
+        .msg.warning { background: rgba(244, 162, 97, 0.1); color: var(--steam-yellow); border: 1px solid var(--steam-yellow); }
 
         /* Responsive Video Container */
         .video-responsive {
@@ -301,6 +302,18 @@
     </header>
 
     <main class="container">
+        <?php if (session()->getFlashdata('status')): ?>
+            <div class="msg success"><?= esc(session()->getFlashdata('status')) ?></div>
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="msg error"><?= esc(session()->getFlashdata('error')) ?></div>
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('warning')): ?>
+            <div class="msg warning"><?= esc(session()->getFlashdata('warning')) ?></div>
+        <?php endif; ?>
+
         <?= $this->renderSection('content') ?>
     </main>
 

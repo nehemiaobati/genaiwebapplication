@@ -40,7 +40,7 @@
                         <span style="font-weight: 600; color: #52B44B;">
                             <?= $workshop->fee > 0 ? 'KES ' . number_format($workshop->fee, 0) : 'Free' ?>
                         </span>
-                        <a href="<?= route_to('baraka.contact') ?>" style="padding: 0.5rem 1rem; background: var(--glass-bg); border: 1px solid var(--accent-gold); color: var(--accent-gold); border-radius: 8px; text-decoration: none; font-size: 0.85rem; transition: background 0.3s;">Reserve Spot</a>
+                        <a href="<?= route_to('baraka.checkout.workshop', $workshop->id) ?>" style="padding: 0.5rem 1rem; background: var(--glass-bg); border: 1px solid var(--accent-gold); color: var(--accent-gold); border-radius: 8px; text-decoration: none; font-size: 0.85rem; transition: background 0.3s;">Join Workshop</a>
                     </div>
                 </div>
             </div>

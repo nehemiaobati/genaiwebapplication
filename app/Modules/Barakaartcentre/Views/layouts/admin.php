@@ -54,6 +54,7 @@
         .msg { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
         .msg.success { background: rgba(82, 180, 75, 0.1); color: #52B44B; border: 1px solid #52B44B; }
         .msg.error { background: rgba(230, 57, 70, 0.1); color: #e63946; border: 1px solid #e63946; }
+        .msg.warning { background: rgba(244, 162, 97, 0.1); color: #f4a261; border: 1px solid #f4a261; }
     </style>
 </head>
 <body>
@@ -71,6 +72,7 @@
             <a href="<?= base_url('baraka-art-centre/admin/artworks') ?>" class="<?= strpos($uri, 'admin/artworks') !== false ? 'active' : '' ?>">Artworks</a>
             <a href="<?= base_url('baraka-art-centre/admin/workshops') ?>" class="<?= strpos($uri, 'admin/workshops') !== false ? 'active' : '' ?>">Workshops</a>
             <a href="<?= base_url('baraka-art-centre/admin/signups') ?>" class="<?= strpos($uri, 'admin/signups') !== false ? 'active' : '' ?>">Signups</a>
+            <a href="<?= route_to('baraka.admin.payments') ?>" class="<?= strpos($uri, 'admin/payments') !== false ? 'active' : '' ?>">Payments</a>
             <a href="<?= route_to('baraka.home') ?>" target="_blank" style="margin-top: 2rem; color: var(--accent-gold);">View Site ↗</a>
         </nav>
     </aside>
@@ -86,6 +88,14 @@
 
         <?php if (session()->getFlashdata('status')): ?>
             <div class="msg success"><?= esc(session()->getFlashdata('status')) ?></div>
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('error')): ?>
+            <div class="msg error"><?= esc(session()->getFlashdata('error')) ?></div>
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('warning')): ?>
+            <div class="msg warning"><?= esc(session()->getFlashdata('warning')) ?></div>
         <?php endif; ?>
 
         <?= $this->renderSection('content') ?>

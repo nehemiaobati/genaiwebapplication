@@ -137,4 +137,80 @@ class PublicController extends BaseController
 
         return redirect()->back()->with('error', 'Please provide a valid email.');
     }
+
+    // --- CHECKOUT FLOW -----------------------------------------------------
+
+    public function checkoutArtwork(int $id): string|ResponseInterface
+    {
+        $artwork = $this->publicService->getArtworkById($id);
+        if (!$artwork || $artwork->is_sold) {
+            return redirect()->route('baraka.gallery')->with('error', 'Artwork not available or not found.');
+        }
+
+        $data = $this->getBaseSeoData('Checkout Artwork', 'Secure your artwork commission from Baraka Art Centre.');
+        $data['item'] = $artwork;
+        $data['item_type'] = 'artwork';
+
+        return view('App\Modules\Barakaartcentre\Views\public\checkout_artwork', $data);
+    }
+
+    public function checkoutWorkshop(int $id): string|ResponseInterface
+    {
+        $workshop = $this->publicService->getWorkshopById($id);
+        if (!$workshop) {
+            return redirect()->route('baraka.workshops')->with('error', 'Workshop not found.');
+        }
+
+        $data = $this->getBaseSeoData('Join Workshop', 'Register and join an upcoming mindfulness workshop.');
+        $data['item'] = $workshop;
+        $data['item_type'] = 'workshop';
+
+        return view('App\Modules\Barakaartcentre\Views\public\checkout_workshop', $data);
+    }
+
+    public function processOrder(): ResponseInterface
+    {
+        $postData = $this->request->getPost();
+        
+        // Log attempt immediately as 'pending'
+        $order = $this->publicService->createOrder($postData);
+
+        if (!$order) {
+            return redirect()->back()->withInput()->with('error', 'Failed to initialize order. Please try again.');
+        }
+
+        // Initialize Paystack
+        $paystack = service('paystackService');
+        $callbackUrl = base_url(route_to('baraka.payment.verify')) . '?order_ref=' . $order->order_reference;
+
+        $response = $paystack->initializeTransaction(
+            $order->email,
+            (int) $order->amount,
+            $callbackUrl
+        );
+
+        if ($response['status'] === true && isset($response['data']['authorization_url'])) {
+            return redirect()->to($response['data']['authorization_url']);
+        }
+
+        return redirect()->back()->with('error', 'Payment gateway error: ' . ($response['message'] ?? 'Unknown error'));
+    }
+
+    public function verifyPayment(): ResponseInterface
+    {
+        $orderRef = (string) $this->request->getGet('order_ref');
+        $paystackRef = (string) $this->request->getGet('trxref'); // Paystack standard param
+
+        if (!$orderRef || !$paystackRef) {
+            return redirect()->route('baraka.home')->with('error', 'Invalid payment verification request.');
+        }
+
+        $result = $this->publicService->verifyOrderPayment($orderRef, $paystackRef);
+
+        if ($result['status'] === true) {
+            return redirect()->route('baraka.home')->with('status', 'Payment successful! Thank you for supporting Baraka Art Centre.');
+        }
+
+        return redirect()->route('baraka.home')->with('error', 'Payment verification failed: ' . $result['message']);
+    }
 }
