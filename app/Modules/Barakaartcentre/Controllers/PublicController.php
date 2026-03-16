@@ -112,19 +112,6 @@ class PublicController extends BaseController
         return view('App\Modules\Barakaartcentre\Views\public\contact', $data);
     }
 
-    public function processPayment(): ResponseInterface
-    {
-        $phone = (string) esc($this->request->getPost('mpesa_phone'));
-        $amount = (float) $this->request->getPost('amount');
-
-        $result = $this->publicService->simulateMpesaPayment($phone, $amount);
-
-        $class = $result['status'] ? 'success' : 'error';
-
-        return redirect()->to(base_url('baraka-art-centre/contact#support'))
-            ->with('payment_status', $result['message'])
-            ->with('payment_class', $class);
-    }
 
     public function signupNewsletter(): ResponseInterface
     {

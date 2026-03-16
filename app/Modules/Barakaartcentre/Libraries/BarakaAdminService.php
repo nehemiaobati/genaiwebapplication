@@ -239,40 +239,55 @@ class BarakaAdminService
      * @param string|null $status Filter by status.
      * @return array
      */
-    public function getAllOrders(?string $status = null): array
+    public function getGroupedOrders(?string $status = null): array
     {
         if ($status) {
             $this->orderModel->where('status', $status);
         }
+        
+        /** @var array<int, \App\Modules\Barakaartcentre\Entities\Order> $orders */
         $orders = $this->orderModel->orderBy('created_at', 'DESC')->findAll();
 
-        // Map titles for visibility
-        if (!empty($orders)) {
-            $artworkIds = [];
-            $workshopIds = [];
-            foreach ($orders as $order) {
-                if ($order->item_type === 'artwork') $artworkIds[] = $order->item_id;
-                if ($order->item_type === 'workshop') $workshopIds[] = $order->item_id;
-            }
+        $grouped = [
+            'artwork'  => [],
+            'workshop' => [],
+            'support'  => []
+        ];
 
-            $artworkTitles = !empty($artworkIds) ? $this->artworkModel->whereIn('id', array_unique($artworkIds))->select('id, title')->findAll() : [];
-            $workshopTitles = !empty($workshopIds) ? $this->workshopModel->whereIn('id', array_unique($workshopIds))->select('id, title')->findAll() : [];
-
-            $artworkMap = [];
-            foreach ($artworkTitles as $a) $artworkMap[$a->id] = $a->title;
-            $workshopMap = [];
-            foreach ($workshopTitles as $w) $workshopMap[$w->id] = $w->title;
-
-            foreach ($orders as $order) {
-                if ($order->item_type === 'artwork') {
-                    $order->item_title = $artworkMap[$order->item_id] ?? 'Deleted Artwork (ID: ' . $order->item_id . ')';
-                } else {
-                    $order->item_title = $workshopMap[$order->item_id] ?? 'Deleted Workshop (ID: ' . $order->item_id . ')';
-                }
-            }
+        if (empty($orders)) {
+            return $grouped;
         }
 
-        return $orders;
+        // Map titles for visibility
+        $artworkIds = [];
+        $workshopIds = [];
+        foreach ($orders as $order) {
+            if ($order->item_type === 'artwork') $artworkIds[] = (int) $order->item_id;
+            if ($order->item_type === 'workshop') $workshopIds[] = (int) $order->item_id;
+        }
+
+        $artworkTitles = !empty($artworkIds) ? $this->artworkModel->whereIn('id', array_unique($artworkIds))->select('id, title')->findAll() : [];
+        $workshopTitles = !empty($workshopIds) ? $this->workshopModel->whereIn('id', array_unique($workshopIds))->select('id, title')->findAll() : [];
+
+        $artworkMap = [];
+        foreach ($artworkTitles as $a) $artworkMap[$a->id] = $a->title;
+        $workshopMap = [];
+        foreach ($workshopTitles as $w) $workshopMap[$w->id] = $w->title;
+
+        foreach ($orders as $order) {
+            if ($order->item_type === 'artwork') {
+                $order->item_title = $artworkMap[$order->item_id] ?? 'Deleted Artwork (ID: ' . $order->item_id . ')';
+            } elseif ($order->item_type === 'workshop') {
+                $order->item_title = $workshopMap[$order->item_id] ?? 'Deleted Workshop (ID: ' . $order->item_id . ')';
+            } elseif ($order->item_type === 'support') {
+                $order->item_title = 'General Support Contribution';
+            }
+            
+            // Assign to appropriate group
+            $grouped[$order->item_type][] = $order;
+        }
+
+        return $grouped;
     }
 
     /**

@@ -15,6 +15,7 @@
 <div class="tabs" style="margin-bottom: 2rem; display: flex; gap: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
     <button class="tab-btn active" onclick="switchTab(event, 'artworks-tab')" style="background: none; border: none; color: var(--accent-gold); font-weight: 600; cursor: pointer; padding-bottom: 5px; border-bottom: 2px solid var(--accent-gold);">Artwork Orders</button>
     <button class="tab-btn" onclick="switchTab(event, 'workshops-tab')" style="background: none; border: none; color: #aaa; font-weight: 600; cursor: pointer; padding-bottom: 5px;">Workshop Orders</button>
+    <button class="tab-btn" onclick="switchTab(event, 'support-tab')" style="background: none; border: none; color: #aaa; font-weight: 600; cursor: pointer; padding-bottom: 5px;">General Support</button>
 </div>
 
 <div id="artworks-tab" class="tab-content active-content">
@@ -26,6 +27,12 @@
 <div id="workshops-tab" class="tab-content" style="display: none;">
     <div class="bento-card" style="padding: 0; overflow-x: auto;">
         <?= $this->setData(['orders' => $workshop_orders])->include('App\Modules\Barakaartcentre\Views\admin\partials\_orders_table') ?>
+    </div>
+</div>
+
+<div id="support-tab" class="tab-content" style="display: none;">
+    <div class="bento-card" style="padding: 0; overflow-x: auto;">
+        <?= $this->setData(['orders' => $support_orders])->include('App\Modules\Barakaartcentre\Views\admin\partials\_orders_table') ?>
     </div>
 </div>
 

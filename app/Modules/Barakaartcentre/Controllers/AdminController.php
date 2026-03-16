@@ -254,10 +254,11 @@ class AdminController extends BaseController
     public function payments(): string
     {
         $data = $this->getAdminSeoData('Payments & Orders');
-        $all_orders = $this->adminService->getAllOrders();
+        $grouped = $this->adminService->getGroupedOrders();
 
-        $data['artwork_orders']  = array_filter($all_orders, fn($o) => $o->item_type === 'artwork');
-        $data['workshop_orders'] = array_filter($all_orders, fn($o) => $o->item_type === 'workshop');
+        $data['artwork_orders']  = $grouped['artwork'];
+        $data['workshop_orders'] = $grouped['workshop'];
+        $data['support_orders']  = $grouped['support'];
 
         return view('App\Modules\Barakaartcentre\Views\admin\payments', $data);
     }

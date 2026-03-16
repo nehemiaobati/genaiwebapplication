@@ -45,8 +45,8 @@ class OrderModel extends Model
         'name'           => 'required|min_length[3]',
         'email'          => 'required|valid_email',
         'item_type'      => 'required',
-        'item_id'        => 'required|is_natural_no_zero',
-        'amount'         => 'required|decimal',
+        'item_id'        => 'required|is_natural',
+        'amount'         => 'required|numeric',
         'status'         => 'required'
     ];
     protected $validationMessages   = [];

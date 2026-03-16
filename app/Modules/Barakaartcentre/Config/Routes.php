@@ -9,7 +9,6 @@ namespace App\Modules\Barakaartcentre\Config;
 // Public Routes
 $routes->group('baraka-art-centre', ['namespace' => 'App\Modules\Barakaartcentre\Controllers'], static function ($routes) {
     $routes->get('/', 'PublicController::index', ['as' => 'baraka.home']);
-    $routes->post('/', 'PublicController::processPayment');
     $routes->get('about', 'PublicController::about', ['as' => 'baraka.about']);
     $routes->get('services', 'PublicController::services', ['as' => 'baraka.services']);
     $routes->get('science', 'PublicController::science', ['as' => 'baraka.science']);

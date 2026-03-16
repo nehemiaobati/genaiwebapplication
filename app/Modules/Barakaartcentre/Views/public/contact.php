@@ -34,19 +34,28 @@
             </div>
         <?php endif; ?>
 
-        <form action="<?= base_url('baraka-art-centre') ?>" method="POST" style="margin-top: 2rem;">
+        <form action="<?= route_to('baraka.process.order') ?>" method="POST" style="margin-top: 2rem;">
             <?= csrf_field() ?>
-            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-muted);">Safaricom Phone Number</label>
-            <input type="text" name="mpesa_phone" placeholder="e.g. 0712 345 678" required>
+            <input type="hidden" name="item_type" value="support">
+            <input type="hidden" name="item_id" value="0">
             
-            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-muted);">Amount (KES)</label>
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-muted);">Full Name</label>
+            <input type="text" name="name" placeholder="E.g. John Doe" required style="margin-bottom: 1rem;">
+
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-muted);">Email Address</label>
+            <input type="email" name="email" placeholder="john@example.com" required style="margin-bottom: 1rem;">
+
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-muted);">Safaricom Phone Number</label>
+            <input type="text" name="phone_number" placeholder="e.g. 0712 345 678" required style="margin-bottom: 1rem;">
+            
+            <label style="display:block; margin-bottom:0.5rem; font-size:0.85rem; color:var(--text-muted);">Amount to Support (KES)</label>
             <input type="number" name="amount" placeholder="Amount" required min="10">
             
-            <button type="submit" class="btn-mpesa" style="margin-top: 1rem;">
+            <button type="submit" class="btn-mpesa" style="margin-top: 1.5rem;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                 </svg>
-                Initiate Prompt
+                Support with Paystack
             </button>
         </form>
     </section>

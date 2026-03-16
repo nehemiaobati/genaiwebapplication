@@ -52,6 +52,7 @@ class BarakaPublicService
             return $this->orderModel->find($id);
         }
 
+        log_message('error', '[BarakaPublicService] Order save failed. Errors: ' . json_encode($this->orderModel->errors()));
         return null;
     }
 
@@ -180,25 +181,4 @@ class BarakaPublicService
         return $this->signupModel->insert($signup) !== false;
     }
 
-    /**
-     * Simulates an M-Pesa STK Push.
-     * @param string $phone
-     * @param float $amount
-     * @return array
-     */
-    public function simulateMpesaPayment(string $phone, float $amount): array
-    {
-        // Basic Safaricom format validation
-        if (preg_match('/^(?:254|\+254|0)?([71](?:(?:0[0-8])|(?:[12][0-9])|(?:4[0-35-9])|(?:5[7-9])|(?:6[89])|(?:9[0-9]))[0-9]{6})$/', $phone)) {
-            return [
-                'status' => true,
-                'message' => "Kachiri! STK Push sent to $phone for KES $amount. Tafadhali weka M-Pesa PIN yako to empower a creator."
-            ];
-        }
-
-        return [
-            'status' => false,
-            'message' => "Namba sio sahihi. Please enter a valid Kenyan Safaricom number."
-        ];
-    }
 }
