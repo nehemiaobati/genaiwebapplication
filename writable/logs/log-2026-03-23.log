@@ -193,3 +193,5 @@ INFO - 2026-03-23 23:49:17 --> [GeminiService] Retry attempt 1/1 for model: gemi
 WARNING - 2026-03-23 23:49:17 --> [GeminiService] Retryable HTTP 429 for model: gemini-flash-latest, attempt 1/1, backing off 2s
 ERROR - 2026-03-23 23:49:19 --> [GeminiService] Request failed after all retries for model: gemini-flash-latest. Last Code: 429
 WARNING - 2026-03-23 23:49:19 --> [GeminiService] HTTP 429 for model: gemini-flash-latest, trying next model
+DEBUG - 2026-03-23 23:54:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\DatabaseHandler' driver.
+DEBUG - 2026-03-23 23:56:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\DatabaseHandler' driver.
