@@ -1,5 +1,10 @@
 <?php
 
+// Get the composer autoloader if it's available
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require __DIR__ . '/../vendor/autoload.php';
+}
+
 use CodeIgniter\Boot;
 use Config\Paths;
 
