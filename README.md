@@ -1,36 +1,80 @@
-# CodeIgniter 4 Web Platform
+# GenAI Web Platform
 
-## Project Overview
+> A full‑stack, multi‑module portal built on CodeIgniter 4. It combines a professional portfolio with AI services, cryptocurrency analytics, payment processing, and an administrative suite.
 
-This project is a comprehensive, multi-functional application built on the CodeIgniter 4 framework. It serves as a portal for registered users to access a suite of powerful digital services, including AI-driven tools and cryptocurrency data analysis.
+## 🎯 Overview
 
-For complete setup instructions, architectural details, and technical specifications, please refer to the **[Comprehensive Documentation](documentation.md)**.
+GenAI Web Platform is the flagship web application powering [afrikenkid.com](https://afrikenkid.com). It provides a secure, scalable foundation for:
 
-## Key Features
+- **User authentication & account management**
+- **AI-powered conversations** via Google Gemini (with memory)
+- **Cryptocurrency balance lookups** (BTC, LTC)
+- **Payment gateway** integration (Paystack: M‑Pesa, Airtel, cards)
+- **Content management**: blog, affiliate system, admin dashboard
 
-*   **User Authentication:** Secure registration, login, and account management.
-*   **Payment Gateway Integration:** Seamless payments via Paystack (M-Pesa, Airtel, Card).
-*   **AI Service Integration:** Advanced text and multimedia interaction with Google's Gemini API, featuring conversational memory.
-*   **Cryptocurrency Data Service:** Real-time balance and transaction queries for Bitcoin (BTC) and Litecoin (LTC) addresses.
-*   **Administrative Dashboard:** Robust tools for user management, financial oversight, and email campaigns.
+Whether you need a personal portfolio or a commercial SaaS product, this platform offers a ready‑made, well‑architected starting point.
 
-## Quick Start
+## 🏗️ Architecture
 
-An automated setup script (`setup.sh`) is provided to configure the entire server environment on Ubuntu.
+Built with **CodeIgniter 4** using a modular approach:
+
+- `app/Modules/` — self‑contained features (Portfolio, AI, Crypto, Payments, Admin, Blog, Affiliate)
+- Service‑layer design for clean separation of concerns
+- Environment‑based configuration (`.env`) for security
+- Comprehensive documentation in `documentation.md`
+
+## ⚡ Quick Start
+
+### Automated (Ubuntu)
 
 ```bash
-# Make the script executable
-chmod +x setup.sh
-
-# Run with sudo to install and configure all dependencies
-sudo ./setup.sh
+git clone https://github.com/nehemiaobati/genaiwebapplication.git
+cd genaiwebapplication
+sudo ./setup.sh   # installs LAMP/LEMP and configures the server
 ```
 
-After the script completes, you must edit the `.env` file to add your API keys and other sensitive credentials. For detailed manual setup and configuration, see the [full documentation](documentation.md).
+After setup, edit `.env` to add your API keys (Gemini, Paystack, etc.).
 
-## License
+### Manual (any OS)
 
-This project is open-source software licensed under the [MIT license](LICENSE).
+```bash
+composer install
+cp env .env
+# Edit .env with your credentials
+./spark serve
+```
 
+Visit `http://localhost:8000` and register the first admin user.
 
+## 🔐 Security
 
+- CSRF protection enabled
+- Password hashing with `password_hash()`
+- Input validation & filtering
+- reCAPTCHA on public forms
+- Secure session handling
+- environment‑specific configs
+
+**Important**: Never commit your real `.env` file. The repository includes an `env` example.
+
+## 📖 Documentation
+
+The full technical guide is in `documentation.md`. It covers:
+
+1. Introduction & technology stack
+2. Installation (automated & manual)
+3. Core concepts: MVC, Service Container, Security
+4. Feature deep‑dives: Auth, Payments, AI, Crypto
+5. Deployment & maintenance
+
+## 🌐 Live Demo
+
+Explore the live site: [afrikenkid.com](https://afrikenkid.com)
+
+## 📄 License
+
+MIT License. See `LICENSE` file.
+
+---
+
+*Built with care in Nairobi, Kenya.*
