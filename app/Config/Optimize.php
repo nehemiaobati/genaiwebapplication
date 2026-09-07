@@ -17,7 +17,7 @@ class Optimize
      *
      * @see https://codeigniter.com/user_guide/concepts/factories.html#config-caching
      */
-    public bool $configCacheEnabled = true;
+    public bool $configCacheEnabled = false;
 
     /**
      * --------------------------------------------------------------------------
@@ -26,5 +26,5 @@ class Optimize
      *
      * @see https://codeigniter.com/user_guide/concepts/autoloader.html#file-locator-caching
      */
-    public bool $locatorCacheEnabled = true;
+    public bool $locatorCacheEnabled = false;
 }
