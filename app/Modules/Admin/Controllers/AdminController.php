@@ -5,121 +5,134 @@ declare(strict_types=1);
 namespace App\Modules\Admin\Controllers;
 
 use App\Controllers\BaseController;
-use App\Models\UserModel;
-use App\Entities\User; // Import the User entity
+use App\Modules\Admin\Libraries\AdminService;
+use App\Libraries\WalletService;
+use App\Libraries\LogViewer;
+use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Manages administrative functions related to user accounts, including viewing,
- * searching, updating balances, and deleting users.
+ * Class AdminController
+ *
+ * Manages administrative functions related to user accounts, search, balance updates, and logs.
+ *
+ * @package App\Modules\Admin\Controllers
+ * @author  Senior Developer
+ * @since   1.0.0
  */
 class AdminController extends BaseController
 {
     /**
+     * Admin Service instance.
+     *
+     * @var AdminService
+     */
+    protected AdminService $adminService;
+
+    /**
+     * Loaded helpers.
+     *
+     * @var array<int, string>
+     */
+    protected $helpers = ['form'];
+
+    /**
+     * AdminController constructor.
+     */
+    public function __construct()
+    {
+        /** @var AdminService $service */
+        $service = service('adminService');
+        $this->adminService = $service;
+    }
+
+    /**
      * Displays a paginated list of all users.
      *
-     * @return \CodeIgniter\HTTP\ResponseInterface The rendered admin index view with user data.
+     * @return string|ResponseInterface
      */
-    public function index()
+    public function index(): string|ResponseInterface
     {
-        $userModel = new UserModel();
-        // Paginate users, displaying 10 per page.
-        $data['users'] = $userModel->paginate(10);
-        // Pass the pager instance to the view for pagination controls.
-        $data['pager'] = $userModel->pager;
-        // Get the total number of users for display.
-        $data['total_users'] = $userModel->pager->getTotal();
-        // Retrieve the total balance of all users, assuming UserModel has getTotalBalance().
-        $data['total_balance'] = $userModel->getTotalBalance();
+        $userData = $this->adminService->getPaginatedUsers(10);
 
-        $data['pageTitle']       = 'User Management | Admin';
-        $data['metaDescription'] = 'Manage registered users, view statistics, and update account balances.';
-        $data['canonicalUrl']    = url_to('admin.index');
-        // Add noindex directive for authenticated pages
-        $data['robotsTag'] = 'noindex, follow';
+        $data = [
+            'users'           => $userData['users'],
+            'pager'           => $userData['pager'],
+            'total_users'     => $userData['total_users'],
+            'total_balance'   => $userData['total_balance'],
+            'pageTitle'       => 'User Management | Admin',
+            'metaDescription' => 'Manage registered users, view statistics, and update account balances.',
+            'canonicalUrl'    => url_to('admin.index'),
+            'robotsTag'       => 'noindex, follow',
+        ];
 
-        return $this->response->setBody(view('App\Modules\Admin\Views\index_view', $data));
+        return view('App\Modules\Admin\Views\index_view', $data);
     }
 
     /**
      * Handles user search functionality based on a query parameter.
      *
-     * Searches for users by username or email. If no search query is provided,
-     * it redirects to the main user list.
-     *
-     * @return \CodeIgniter\HTTP\ResponseInterface The rendered view with search results.
+     * @return string|ResponseInterface
      */
-    public function searchUsers()
+    public function searchUsers(): string|ResponseInterface
     {
-        $userModel = new UserModel();
-        // Get the search query from the 'q' GET parameter.
-        $searchQuery = $this->request->getGet('q');
+        $searchQuery = (string) ($this->request->getGet('q') ?? '');
 
-        // If no search query is provided, redirect to the main user list.
-        if (empty($searchQuery)) {
+        if ($searchQuery === '') {
             return redirect()->to(url_to('admin.index'));
         }
 
-        // Perform a search for users whose username or email contains the search query.
-        // Use paginate(10) to retrieve paginated results.
-        $data['users'] = $userModel->like('username', $searchQuery)
-            ->orLike('email', $searchQuery)
-            ->paginate(10);
-        // Pass the pager instance to the view for pagination controls.
-        $data['pager'] = $userModel->pager;
-        $data['search_query'] = $searchQuery;
-        // Count the number of users found in the search results.
-        $data['total_users'] = count($data['users']);
+        $results = $this->adminService->searchUsers($searchQuery, 10);
 
-        $data['pageTitle']       = 'Search Users | Admin';
-        $data['metaDescription'] = 'Search results for users matching: ' . esc($searchQuery);
-        $data['canonicalUrl']    = current_url();
-        // Add noindex directive for authenticated pages
-        $data['robotsTag'] = 'noindex, follow';
+        $data = [
+            'users'           => $results['users'],
+            'pager'           => $results['pager'],
+            'search_query'    => $results['search_query'],
+            'total_users'     => count($results['users']),
+            'pageTitle'       => 'Search Users | Admin',
+            'metaDescription' => 'Search results for users matching: ' . esc($searchQuery, 'html'),
+            'canonicalUrl'    => current_url(),
+            'robotsTag'       => 'noindex, follow',
+        ];
 
-        // Render the user search results view.
-        return $this->response->setBody(view('App\Modules\Admin\Views\user_search_results', $data));
+        return view('App\Modules\Admin\Views\user_search_results', $data);
     }
 
     /**
      * Displays the details of a specific user.
      *
-     * @param int $id The unique identifier of the user to display.
-     * @return \CodeIgniter\HTTP\ResponseInterface The rendered view with user details or an error message.
+     * @param int|string $id The unique identifier of the user to display.
+     *
+     * @return string|ResponseInterface
      */
-    public function show($id)
+    public function show(int|string $id): string|ResponseInterface
     {
-        $userModel = new UserModel();
+        $userModel = model(\App\Models\UserModel::class);
         /** @var \App\Entities\User|null $user */
-        $user = $userModel->find($id);
-        $data['user'] = $user;
+        $user = $userModel->find((int) $id);
 
-        if ($data['user']) {
-            $data['pageTitle']       = 'User Details: ' . esc($data['user']->username) . ' | Admin';
-            $data['metaDescription'] = 'View and manage profile details for ' . esc($data['user']->username);
-            $data['canonicalUrl']    = url_to('admin.users.show', $id);
-        }
-
-        // Add noindex directive for authenticated pages
-        $data['robotsTag'] = 'noindex, follow';
-
-        // If the user is not found, redirect back with an error message.
-        if (!$data['user']) {
+        if ($user === null) {
             return redirect()->back()->with('error', 'User not found.');
         }
 
-        return $this->response->setBody(view('App\Modules\Admin\Views\user_details', $data));
+        $data = [
+            'user'            => $user,
+            'pageTitle'       => 'User Details: ' . esc($user->username, 'html') . ' | Admin',
+            'metaDescription' => 'View and manage profile details for ' . esc($user->username, 'html'),
+            'canonicalUrl'    => url_to('admin.users.show', (int) $id),
+            'robotsTag'       => 'noindex, follow',
+        ];
+
+        return view('App\Modules\Admin\Views\user_details', $data);
     }
 
     /**
      * Updates a user's balance.
      *
-     * Validates input for amount and action (deposit/withdraw) and performs
-     * precise balance updates using bcmath functions within a database transaction.
+     * @param int|string $id The user ID.
      *
-     * @param int $id The unique identifier of the user whose balance is to be updated.
-     * @return \CodeIgniter\HTTP\ResponseInterface Redirects back with status messages or errors.
+     * @return ResponseInterface
      */
-    public function updateBalance($id)
+    public function updateBalance(int|string $id): ResponseInterface
     {
         $rules = [
             'amount' => 'required|numeric|greater_than[0]',
@@ -130,75 +143,66 @@ class AdminController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        $walletService = new \App\Libraries\WalletService();
+        $walletService = new WalletService();
         $result = $walletService->updateBalance(
             (int) $id,
             (float) $this->request->getPost('amount'),
-            $this->request->getPost('action')
+            (string) $this->request->getPost('action')
         );
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return redirect()->back()->withInput()->with('error', $result['message']);
         }
 
-        return redirect()->to(url_to('admin.users.show', $id))->with('success', $result['message']);
+        return redirect()->to(url_to('admin.users.show', (int) $id))->with('success', $result['message']);
     }
 
     /**
      * Deletes a specific user.
      *
-     * Prevents an administrator from deleting their own account.
+     * @param int|string $id User ID.
      *
-     * @param int $id The unique identifier of the user to delete.
-     * @return \CodeIgniter\HTTP\ResponseInterface Redirects to the admin index with a status message.
+     * @return ResponseInterface
      */
-    public function delete($id)
+    public function delete(int|string $id): ResponseInterface
     {
-        $userModel = new UserModel();
-        // Get the ID of the currently logged-in user to prevent self-deletion.
         $currentUserId = session()->get('userId');
 
-        // Prevent the administrator from deleting their own account.
-        if ($id == $currentUserId) {
+        if ((int) $id === (int) $currentUserId) {
             return redirect()->back()->with('error', 'You cannot delete your own account.');
         }
 
-        // Attempt to delete the user from the database.
-        if ($userModel->delete($id)) {
-            // Redirect to the admin index with a success message.
+        if ($this->adminService->deleteUser((int) $id)) {
             return redirect()->to(url_to('admin.index'))->with('success', 'User deleted successfully.');
-        } else {
-            // If deletion fails, redirect back with an error message.
-            return redirect()->back()->with('error', 'Failed to delete user.');
         }
+
+        return redirect()->back()->with('error', 'Failed to delete user.');
     }
 
     /**
      * Displays the application log files for debugging.
-     * Only accessible by administrators.
      *
-     * @return \CodeIgniter\HTTP\ResponseInterface|string
+     * @return string|ResponseInterface
      */
-    public function logs()
+    public function logs(): string|ResponseInterface
     {
-        if (!session()->get('is_admin')) {
+        if (! session()->get('is_admin')) {
             return redirect()->to(url_to('home'))->with('error', 'Permission denied.');
         }
 
-        $logViewer = new \App\Libraries\LogViewer();
-        $logFiles = $logViewer->getLogFiles();
-
-        $selectedFile = $this->request->getGet('file') ?? ($logFiles[0] ?? null);
-        $logContent = ($selectedFile) ? $logViewer->getLogContent($selectedFile) : '';
+        $logViewer    = new LogViewer();
+        $logFiles     = $logViewer->getLogFiles();
+        $selectedFile = (string) ($this->request->getGet('file') ?? ($logFiles[0] ?? ''));
+        $logContent   = ($selectedFile !== '') ? $logViewer->getLogContent($selectedFile) : '';
 
         $data = [
-            'pageTitle'    => 'Application Logs | Admin',
+            'pageTitle'       => 'Application Logs | Admin',
             'metaDescription' => 'Review system log files for debugging and monitoring.',
-            'canonicalUrl' => url_to('admin.logs'),
-            'logFiles'     => $logFiles,
-            'selectedFile' => $selectedFile,
-            'logContent'   => $logContent,
-            'robotsTag'    => 'noindex, nofollow',
+            'canonicalUrl'    => url_to('admin.logs'),
+            'logFiles'        => $logFiles,
+            'selectedFile'    => $selectedFile,
+            'logContent'      => $logContent,
+            'robotsTag'       => 'noindex, nofollow',
         ];
 
         return view('App\Modules\Admin\Views\logs_view', $data);

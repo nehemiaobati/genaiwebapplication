@@ -34,7 +34,7 @@ class OllamaController extends BaseController
         protected ?UserModel $userModel = null,
         protected ?OllamaService $ollamaService = null
     ) {
-        $this->userModel = $userModel ?? new UserModel();
+        $this->userModel = $userModel ?? model(UserModel::class);
         $this->ollamaService = $ollamaService ?? service('ollamaService');
     }
 
@@ -312,10 +312,17 @@ class OllamaController extends BaseController
         return $this->_respondError('Failed to save');
     }
 
-    public function deletePrompt($id): ResponseInterface
+    /**
+     * Deletes a saved prompt.
+     *
+     * @param int|string $id Prompt ID.
+     *
+     * @return ResponseInterface
+     */
+    public function deletePrompt(int|string $id): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        if ($this->ollamaService->deletePrompt($userId, (int)$id)) {
+        if ($this->ollamaService->deletePrompt($userId, (int) $id)) {
             return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
         return $this->_respondError('Failed to delete');

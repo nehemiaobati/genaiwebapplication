@@ -21,11 +21,14 @@ class AffiliateController extends BaseController
     protected AffiliateLinkModel $affiliateModel;
     protected AffiliateLinkService $affiliateService;
 
+    protected $helpers = ['form'];
+
     public function __construct()
     {
         $this->affiliateModel   = new AffiliateLinkModel();
-        $this->affiliateService = new AffiliateLinkService($this->affiliateModel);
-        helper('form');
+        /** @var AffiliateLinkService $service */
+        $service = service('affiliateLinkService');
+        $this->affiliateService = $service;
     }
 
     // --- PUBLIC-FACING METHODS ---

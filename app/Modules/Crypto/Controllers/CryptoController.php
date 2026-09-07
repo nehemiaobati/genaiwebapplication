@@ -57,7 +57,7 @@ class CryptoController extends BaseController
     public function __construct()
     {
         $this->cryptoService = service('cryptoService');
-        $this->userModel = new UserModel();
+        $this->userModel     = model(UserModel::class);
     }
 
     /**

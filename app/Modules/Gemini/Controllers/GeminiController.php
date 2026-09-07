@@ -40,7 +40,7 @@ class GeminiController extends BaseController
         protected ?UserModel $userModel = null,
         protected ?GeminiService $geminiService = null
     ) {
-        $this->userModel = $userModel ?? new UserModel();
+        $this->userModel = $userModel ?? model(UserModel::class);
         $this->geminiService = $geminiService ?? service('geminiService');
     }
 

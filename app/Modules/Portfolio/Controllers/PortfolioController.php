@@ -5,89 +5,49 @@ declare(strict_types=1);
 namespace App\Modules\Portfolio\Controllers;
 
 use App\Controllers\BaseController;
+use App\Modules\Portfolio\Libraries\PortfolioService;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\ResponseInterface;
 
-helper('form');
-
+/**
+ * Class PortfolioController
+ *
+ * Handles the display of the developer portfolio and processes contact inquiries.
+ *
+ * @package App\Modules\Portfolio\Controllers
+ * @author  Senior Developer
+ * @since   1.0.0
+ */
 class PortfolioController extends BaseController
 {
-    // --- Helper Methods ---
-
     /**
-     * Define validation rules for the contact form.
-     */
-    private function _getValidationRules(): array
-    {
-        return [
-            'name'    => 'required|min_length[3]',
-            'email'   => 'required|valid_email',
-            'subject' => 'required|min_length[5]',
-            'message' => 'required|min_length[10]',
-        ];
-    }
-
-    /**
-     * Verify the reCAPTCHA response using the service.
+     * Portfolio Service instance.
      *
-     * @param string|null $response The reCAPTCHA response token.
+     * @var PortfolioService
      */
-    private function _verifyRecaptcha(?string $response): bool
-    {
-        return service('recaptchaService')->verify($response);
-    }
+    protected PortfolioService $portfolioService;
 
     /**
-     * Construct the HTML email body.
+     * Loaded helpers.
      *
-     * @param array $data Sanitized form data.
+     * @var array<int, string>
      */
-    private function _buildEmailBody(array $data): string
-    {
-        return '
-        <html>
-        <body>
-            <p><strong>Name:</strong> ' . (string) esc($data['name']) . '</p>
-            <p><strong>Email:</strong> ' . (string) esc($data['email']) . '</p>
-            <p><strong>Subject:</strong> ' . (string) esc($data['subject']) . '</p>
-            <p><strong>Message:</strong></p>
-            <p>' . nl2br((string) esc($data['message'])) . '</p>
-        </body>
-        </html>';
-    }
+    protected $helpers = ['form'];
 
     /**
-     * Configure and send the email.
-     *
-     * @param array $data Sanitized form data.
+     * PortfolioController constructor.
      */
-    private function _sendPortfolioEmail(array $data): bool
+    public function __construct()
     {
-        $emailService = service('email');
-
-        // Config values
-        $fromEmail = config('Email')->fromEmail;
-        $fromName  = config('Email')->fromName;
-
-        $emailService->setFrom($fromEmail, $fromName);
-        $emailService->setTo('nehemiahobati@gmail.com'); // Target recipient
-        $emailService->setReplyTo($data['email']);        // User's email
-        $emailService->setSubject($data['subject']);
-        $emailService->setMessage($this->_buildEmailBody($data));
-        $emailService->setMailType('html');
-
-        if ($emailService->send()) {
-            return true;
-        }
-
-        // Log failure details
-        $debuggerData = $emailService->printDebugger(['headers']);
-        log_message('error', '[PortfolioController] Email sending failed: ' . print_r($debuggerData, true));
-
-        return false;
+        /** @var PortfolioService $service */
+        $service = service('portfolioService');
+        $this->portfolioService = $service;
     }
 
     /**
      * Display the portfolio homepage.
+     *
+     * @return string
      */
     public function index(): string
     {
@@ -96,7 +56,7 @@ class PortfolioController extends BaseController
             'metaDescription' => 'The professional portfolio of Nehemia Obati, a full-stack software developer specializing in scalable AI integrations, PHP, Python, and cloud solutions.',
             'metaImage'       => base_url('assets/images/potraitwebp.webp'),
             'canonicalUrl'    => url_to('portfolio.index'),
-            //'robotsTag'       => 'index, follow',
+            'robotsTag'       => 'index, follow',
         ];
 
         return view('App\Modules\Portfolio\Views\portfolio_view', $data);
@@ -104,30 +64,37 @@ class PortfolioController extends BaseController
 
     /**
      * Handle the contact form submission.
+     *
+     * @return RedirectResponse
      */
     public function sendEmail(): RedirectResponse
     {
-        // 1. Validate Form Input
-        if (! $this->validate($this->_getValidationRules())) {
+        $rules = [
+            'name'    => 'required|min_length[3]',
+            'email'   => 'required|valid_email',
+            'subject' => 'required|min_length[5]',
+            'message' => 'required|min_length[10]',
+        ];
+
+        if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
-        // 2. Verify reCAPTCHA
-        $recaptchaResponse = $this->request->getPost('g-recaptcha-response');
-        if (! $this->_verifyRecaptcha($recaptchaResponse)) {
+        $recaptchaResponse = (string) ($this->request->getPost('g-recaptcha-response') ?? '');
+        $recaptchaService  = service('recaptchaService');
+
+        if (! $recaptchaService->verify($recaptchaResponse)) {
             return redirect()->back()->withInput()->with('error', 'Please complete the reCAPTCHA.');
         }
 
-        // 3. Prepare Email Data
         $emailData = [
-            'name'    => $this->request->getPost('name', FILTER_SANITIZE_SPECIAL_CHARS),
-            'email'   => $this->request->getPost('email', FILTER_SANITIZE_EMAIL),
-            'subject' => $this->request->getPost('subject', FILTER_SANITIZE_SPECIAL_CHARS),
-            'message' => $this->request->getPost('message', FILTER_SANITIZE_SPECIAL_CHARS),
+            'name'    => (string) ($this->request->getPost('name', FILTER_SANITIZE_SPECIAL_CHARS) ?? ''),
+            'email'   => (string) ($this->request->getPost('email', FILTER_SANITIZE_EMAIL) ?? ''),
+            'subject' => (string) ($this->request->getPost('subject', FILTER_SANITIZE_SPECIAL_CHARS) ?? ''),
+            'message' => (string) ($this->request->getPost('message', FILTER_SANITIZE_SPECIAL_CHARS) ?? ''),
         ];
 
-        // 4. Send Email
-        if ($this->_sendPortfolioEmail($emailData)) {
+        if ($this->portfolioService->sendPortfolioInquiry($emailData)) {
             return redirect()->back()->with('success', 'Your message has been sent successfully!');
         }
 

@@ -1,3 +1,11 @@
+<?php
+/**
+ * @var string $pageTitle
+ * @var string $metaDescription
+ * @var string $canonicalUrl
+ * @var string $robotsTag
+ */
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('content') ?>

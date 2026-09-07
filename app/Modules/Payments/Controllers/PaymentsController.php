@@ -17,12 +17,13 @@ class PaymentsController extends BaseController
     protected PaystackService $paystackService;
     protected UserModel $userModel;
 
+    protected $helpers = ['form', 'url'];
+
     public function __construct()
     {
-        $this->paymentModel    = new PaymentModel();
-        $this->paystackService = \Config\Services::paystackService();
-        $this->userModel       = new UserModel();
-        helper(['form', 'url']);
+        $this->paymentModel    = model(PaymentModel::class);
+        $this->paystackService = service('paystackService');
+        $this->userModel       = model(UserModel::class);
     }
 
     public function index(): string

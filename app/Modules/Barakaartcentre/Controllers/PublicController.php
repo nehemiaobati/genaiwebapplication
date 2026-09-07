@@ -18,7 +18,9 @@ class PublicController extends BaseController
 
     public function __construct()
     {
-        $this->publicService = new BarakaPublicService();
+        /** @var BarakaPublicService $service */
+        $service = service('barakaPublicService');
+        $this->publicService = $service;
     }
 
     /**

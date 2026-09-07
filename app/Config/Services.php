@@ -47,4 +47,22 @@ class Services extends BaseService
 
         return new RecaptchaService();
     }
+
+    /**
+     * The HomeService.
+     *
+     * @param bool $getShared
+     * @return \App\Libraries\HomeService
+     */
+    public static function homeService(bool $getShared = true): \App\Libraries\HomeService
+    {
+        if ($getShared) {
+            /** @var \App\Libraries\HomeService $service */
+            $service = static::getSharedInstance('homeService');
+
+            return $service;
+        }
+
+        return new \App\Libraries\HomeService();
+    }
 }

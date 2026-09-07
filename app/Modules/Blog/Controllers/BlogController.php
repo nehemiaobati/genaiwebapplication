@@ -19,11 +19,14 @@ class BlogController extends BaseController
     protected PostModel $postModel;
     protected BlogService $blogService;
 
+    protected $helpers = ['form'];
+
     public function __construct()
     {
-        $this->postModel        = new PostModel();
-        $this->blogService      = new BlogService();
-        helper('form');
+        $this->postModel   = model(PostModel::class);
+        /** @var BlogService $service */
+        $service           = service('blogService');
+        $this->blogService = $service;
     }
 
     // --- PUBLIC-FACING METHODS ---

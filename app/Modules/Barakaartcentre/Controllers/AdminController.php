@@ -18,7 +18,9 @@ class AdminController extends BaseController
 
     public function __construct()
     {
-        $this->adminService = new BarakaAdminService();
+        /** @var BarakaAdminService $service */
+        $service = service('barakaAdminService');
+        $this->adminService = $service;
     }
 
     /**
