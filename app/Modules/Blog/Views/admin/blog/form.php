@@ -1,3 +1,14 @@
+<?php
+/**
+ * @var string $formTitle
+ * @var string $formAction
+ * @var \App\Modules\Blog\Entities\Post|null $post
+ * @var string $pageTitle
+ * @var string $metaDescription
+ * @var string $canonicalUrl
+ * @var string $robotsTag
+ */
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
@@ -54,7 +65,7 @@
                             }
                             ?>
                             <?php if (!empty($contentBlocks)): ?>
-                                <?php foreach ($contentBlocks as $block): ?>
+                                <?php foreach ($contentBlocks as $index => $block): ?>
                                     <?php if ($block->type === 'text'): ?>
                                         <div class="content-block p-3 pt-5" id="block-<?= $index ?>">
                                             <input type="hidden" id="content_type_<?= $index ?>" name="content_type[]" value="text">
