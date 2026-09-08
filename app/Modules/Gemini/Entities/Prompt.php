@@ -9,12 +9,16 @@ use CodeIgniter\Entity\Entity;
 /**
  * Represents a saved user prompt template.
  *
+ * @package App\Modules\Gemini\Entities
+ * @author  Senior Developer
+ * @since   1.0.0
+ *
  * @property int|null $id
  * @property int|null $user_id
  * @property string|null $title
  * @property string|null $prompt_text
- * @property string|null $created_at
- * @property string|null $updated_at
+ * @property \CodeIgniter\I18n\Time|null $created_at
+ * @property \CodeIgniter\I18n\Time|null $updated_at
  */
 class Prompt extends Entity
 {

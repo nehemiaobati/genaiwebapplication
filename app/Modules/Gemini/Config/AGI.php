@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Modules\Gemini\Config; // Updated namespace
+declare(strict_types=1);
+
+namespace App\Modules\Gemini\Config;
 
 use CodeIgniter\Config\BaseConfig;
 
@@ -10,6 +12,10 @@ use CodeIgniter\Config\BaseConfig;
  * This class holds all the configuration settings related to the AGI's
  * behavior, including API endpoints, model IDs, memory management,
  * and search tuning parameters.
+ *
+ * @package App\Modules\Gemini\Config
+ * @author  Senior Developer
+ * @since   1.0.0
  */
 class AGI extends BaseConfig
 {

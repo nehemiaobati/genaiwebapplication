@@ -17,17 +17,33 @@ use CodeIgniter\I18n\Time;
  */
 class MediaGenerationService
 {
-    /** @var ModelPayloadService */
-    protected $modelPayloadService;
+    /**
+     * Payload builder service.
+     *
+     * @var ModelPayloadService
+     */
+    protected ModelPayloadService $modelPayloadService;
 
-    /** @var UserModel */
-    protected $userModel;
+    /**
+     * User data model.
+     *
+     * @var UserModel
+     */
+    protected UserModel $userModel;
 
-    /** @var \CodeIgniter\Database\BaseConnection */
-    protected $db;
+    /**
+     * Database connection.
+     *
+     * @var \CodeIgniter\Database\BaseConnection
+     */
+    protected \CodeIgniter\Database\BaseConnection $db;
 
-    /** @var \CodeIgniter\HTTP\CURLRequest */
-    protected $curl;
+    /**
+     * HTTP Curl client.
+     *
+     * @var \CodeIgniter\HTTP\CURLRequest
+     */
+    protected \CodeIgniter\HTTP\CURLRequest $curl;
 
     /**
      * Managed providers and pricing configurations.
@@ -112,14 +128,64 @@ class MediaGenerationService
     ];
 
     /**
-     * Constructor.
+     * MediaGenerationService Constructor with explicit dependency injection.
+     *
+     * @param ModelPayloadService|null              $modelPayloadService Payload builder
+     * @param UserModel|null                        $userModel           User model
+     * @param \CodeIgniter\Database\BaseConnection|null $db                  Database connection
+     * @param \CodeIgniter\HTTP\CURLRequest|null    $curl                HTTP client
      */
-    public function __construct()
+    public function __construct(
+        ?ModelPayloadService $modelPayloadService = null,
+        ?UserModel $userModel = null,
+        ?\CodeIgniter\Database\BaseConnection $db = null,
+        ?\CodeIgniter\HTTP\CURLRequest $curl = null
+    ) {
+        $this->modelPayloadService = $modelPayloadService ?? service('modelPayloadService');
+        $this->userModel           = $userModel ?? model(UserModel::class);
+        $this->db                  = $db ?? \Config\Database::connect();
+        $this->curl                = $curl ?? \Config\Services::curlrequest();
+    }
+
+    /**
+     * Prepares multimodal parts from temporary disk uploads and executes media generation.
+     * Encapsulates filesystem logic away from Controllers.
+     *
+     * @param int                  $userId          Operating user ID
+     * @param string               $prompt          User text prompt
+     * @param array<int, string>   $uploadedFileIds Temporary media file IDs
+     * @param string               $modelId         Target model ID
+     *
+     * @return array<string, mixed>
+     */
+    public function generateMediaFromPrompt(int $userId, string $prompt, array $uploadedFileIds, string $modelId): array
     {
-        $this->modelPayloadService = service('modelPayloadService');
-        $this->userModel = new UserModel();
-        $this->db = \Config\Database::connect();
-        $this->curl = \Config\Services::curlrequest();
+        $input = $prompt;
+
+        if (! empty($uploadedFileIds)) {
+            $parts        = [['text' => $prompt]];
+            $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
+
+            foreach ($uploadedFileIds as $fileId) {
+                $filePath = $userTempPath . basename((string) $fileId);
+                if (file_exists($filePath)) {
+                    $mimeType = mime_content_type($filePath);
+                    $parts[]  = [
+                        'inlineData' => [
+                            'mimeType' => $mimeType,
+                            'data'     => base64_encode(file_get_contents($filePath)),
+                        ],
+                    ];
+
+                    if (! unlink($filePath)) {
+                        log_message('error', "[MediaGenerationService] Failed to delete temporary uploaded file: {$filePath}");
+                    }
+                }
+            }
+            $input = $parts;
+        }
+
+        return $this->generateMedia($userId, $input, $modelId);
     }
 
     // --- Helper Methods ---
@@ -443,7 +509,7 @@ class MediaGenerationService
         }
 
         $parts = is_string($input) ? [['text' => $input]] : $input;
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = (string) env('GEMINI_API_KEY');
 
         // 0. Concurrency Check (Gatekeeper)
         // Strictly block new VIDEO requests if one is pending.
@@ -518,7 +584,7 @@ class MediaGenerationService
      */
     public function pollVideoStatus(string $opId): array
     {
-        $apiKey = getenv('GEMINI_API_KEY');
+        $apiKey = (string) env('GEMINI_API_KEY');
         $url = "https://generativelanguage.googleapis.com/v1beta/{$opId}?key=" . urlencode($apiKey);
 
         try {

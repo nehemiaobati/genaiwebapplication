@@ -9,28 +9,29 @@ use App\Modules\Gemini\Models\PromptModel;
 use App\Modules\Gemini\Models\UserSettingsModel;
 
 /**
+ * Class GeminiService
+ *
  * Provides high-level orchestration for Google's Gemini API.
  *
- * Implements:
- * - Content generation (Text, Multimodal).
- * - Real-time streaming with SSE buffer management.
- * - Dynamic model fallback and quota handling.
- * - Transactional billing and conversational memory persistence.
- * - Automated TTS synthesis.
+ * @package App\Modules\Gemini\Libraries
+ * @author  Senior Developer
+ * @since   1.0.0
  */
 class GeminiService
 {
     public const MODEL_PRIORITIES = [
-        "gemini-3.8-flash",         // Latest generational Flash model with top benchmark scores and lowest latency
-        "gemini-3.7-flash",         // Stable previous point release
-        "gemini-3.6-flash",         // Stable release
-        "gemini-3.5-flash",         // Widely deployed fast multimodal model
-        "gemini-3.5-flash-lite",    // High-throughput, ultra-low cost / low-latency
+        "gemini-2.5-flash",         // Primary high-throughput, low-latency reasoning Flash model
         "gemini-flash-latest",      // Dynamic pointer alias to Google's latest production Flash model
+        "gemini-2.5-flash-lite",    // High-throughput, ultra-low cost / low-latency
         "gemini-flash-lite-latest", // Dynamic pointer alias to Google's latest production Flash-Lite model
+        "gemini-3.8-flash",         // Future generational Flash models
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
         "gemini-3-flash-preview",   // Flash Preview model
-        "gemini-2.5-flash",         // Long-term stable fallback (1M context limit)
-        "gemini-2.5-flash-lite",    // Long-term stable fallback lite
+        "gemini-2.0-flash",         // Stable fallbacks
+        "gemini-2.0-flash-lite",
     ];
 
     public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -61,32 +62,81 @@ class GeminiService
     ];
 
     /**
-     * Constructor with Property Promotion (PHP 8.0+)
+     * Gemini API Key.
      *
-     * @param string|null $apiKey API key for Gemini (defaults to env variable)
-     * @param mixed $payloadService Service for building model-specific payloads
-     * @param UserModel|null $userModel User model for balance management
-     * @param mixed $db Database connection for transactions
-     * @param mixed $ffmpegService FFMpeg service for audio processing
-     * @param PromptModel|null $promptModel
-     * @param UserSettingsModel|null $userSettingsModel
+     * @var string|null
+     */
+    protected ?string $apiKey;
+
+    /**
+     * Model payload builder service.
+     *
+     * @var ModelPayloadService
+     */
+    protected ModelPayloadService $payloadService;
+
+    /**
+     * User data model.
+     *
+     * @var UserModel
+     */
+    protected UserModel $userModel;
+
+    /**
+     * Database connection.
+     *
+     * @var \CodeIgniter\Database\BaseConnection
+     */
+    protected \CodeIgniter\Database\BaseConnection $db;
+
+    /**
+     * Ffmpeg audio converter service.
+     *
+     * @var FfmpegService
+     */
+    protected FfmpegService $ffmpegService;
+
+    /**
+     * Prompt persistence model.
+     *
+     * @var PromptModel
+     */
+    protected PromptModel $promptModel;
+
+    /**
+     * User settings model.
+     *
+     * @var UserSettingsModel
+     */
+    protected UserSettingsModel $userSettingsModel;
+
+    /**
+     * Constructor with strict property types.
+     *
+     * @param string|null                          $apiKey            API key for Gemini
+     * @param ModelPayloadService|null              $payloadService    Payload builder service
+     * @param UserModel|null                        $userModel         User model for balance management
+     * @param \CodeIgniter\Database\BaseConnection|null $db                Database connection
+     * @param FfmpegService|null                    $ffmpegService     FFMpeg service for audio processing
+     * @param PromptModel|null                      $promptModel       Prompt model
+     * @param UserSettingsModel|null                $userSettingsModel Settings model
      */
     public function __construct(
-        protected ?string $apiKey = null,
-        protected $payloadService = null,
-        protected ?UserModel $userModel = null,
-        protected $db = null,
-        protected $ffmpegService = null,
-        protected ?PromptModel $promptModel = null,
-        protected ?UserSettingsModel $userSettingsModel = null
+        ?string $apiKey = null,
+        ?ModelPayloadService $payloadService = null,
+        ?UserModel $userModel = null,
+        ?\CodeIgniter\Database\BaseConnection $db = null,
+        ?FfmpegService $ffmpegService = null,
+        ?PromptModel $promptModel = null,
+        ?UserSettingsModel $userSettingsModel = null
     ) {
-        $this->apiKey = $apiKey ?? env('GEMINI_API_KEY');
-        $this->payloadService = $payloadService ?? service('modelPayloadService');
-        $this->userModel = $userModel ?? new UserModel();
-        $this->db = $db ?? \Config\Database::connect();
-        $this->ffmpegService = $ffmpegService ?? service('ffmpegService');
-        $this->promptModel = $promptModel ?? new PromptModel();
-        $this->userSettingsModel = $userSettingsModel ?? new UserSettingsModel();
+        $this->apiKey            = $apiKey ?? (string) env('GEMINI_API_KEY');
+        $this->payloadService    = $payloadService ?? service('modelPayloadService');
+        $this->userModel         = $userModel ?? model(UserModel::class);
+        $this->db                = $db ?? \Config\Database::connect();
+        $this->ffmpegService     = $ffmpegService ?? service('ffmpegService');
+        $this->promptModel       = $promptModel ?? model(PromptModel::class);
+        $this->userSettingsModel = $userSettingsModel ?? model(UserSettingsModel::class);
     }
 
     // --- Helper Methods ---
@@ -202,18 +252,24 @@ class GeminiService
                 $err = json_decode($responseBody, true);
                 $lastErrorMsg = $err['error']['message'] ?? "API Error $code";
 
-                // Fail Fast (400-499 except 429)
-                if ($code >= 400 && $code < 500 && $code !== 429) {
+                // Fail Fast for non-recoverable client errors (400-499 except 404 Model Not Found and 429 Rate Limit)
+                if ($code >= 400 && $code < 500 && $code !== 429 && $code !== 404) {
                     log_message('error', "[GeminiService] Fatal HTTP {$code} for model: {$model}. Msg: {$lastErrorMsg}");
                     return ['error' => $lastErrorMsg, 'http_code' => $code];
                 }
 
-                // Retryable Codes
-                if (in_array($code, $retryableCodes)) {
+                // Retryable Codes (429 or 5xx)
+                if (in_array($code, $retryableCodes, true)) {
                     $backoffSeconds = 1 * ($i + 1);
                     log_message('warning', "[GeminiService] Retryable HTTP {$code} for model: {$model}, attempt {$i}/{$maxRetries}, backing off {$backoffSeconds}s");
                     sleep($backoffSeconds);
                     continue; // Retry loop
+                }
+
+                // If 404 (e.g. model discontinued or renamed on upstream API), return code for model fallback
+                if ($code === 404) {
+                    log_message('warning', "[GeminiService] HTTP 404 Model Not Found for: {$model}");
+                    return ['error' => $lastErrorMsg, 'http_code' => 404];
                 }
 
                 // Other non-200 codes (treated as errors, no specific retry logic unless covered above)
@@ -427,8 +483,8 @@ class GeminiService
             $httpCode = $result['http_code'] ?? 0;
 
             // Decision: Fallback or Fail?
-            // Fallback on: 429 (Rate Limit) or >= 500 (Server Errors)
-            if ($httpCode === 429 || $httpCode >= 500) {
+            // Fallback on: 404 (Model alias changed/unavailable), 429 (Rate Limit), or >= 500 (Server Errors)
+            if ($httpCode === 404 || $httpCode === 429 || $httpCode >= 500) {
                 log_message('warning', "[GeminiService] HTTP {$httpCode} for model: {$model}, trying next model");
                 continue;
             }
@@ -560,8 +616,8 @@ class GeminiService
             // Handle Errors
             log_message('warning', "[GeminiService] Stream Error HTTP {$code} for model: {$model}. Curl Error: {$err}");
 
-            // Retryable codes: 429 or 5xx -> Continue to next model
-            if ($code === 429 || $code >= 500 || $code === 0) { // 0 is usually network error
+            // Retryable codes: 404 (Not Found), 429 (Rate Limit), or 5xx -> Continue to next model
+            if ($code === 404 || $code === 429 || $code >= 500 || $code === 0) {
                 continue;
             }
 
@@ -612,48 +668,53 @@ class GeminiService
      */
     public function countTokens(array $parts): array
     {
-        $apiKey = trim($this->apiKey);
-        if (!$apiKey) {
+        $apiKey = trim((string) $this->apiKey);
+        if ($apiKey === '') {
             return ['status' => false, 'error' => 'GEMINI_API_KEY not set in .env file.'];
         }
 
-        // Use the primary model — consistent with MODEL_PRIORITIES fallback chain
-        $currentModel = self::MODEL_PRIORITIES[0];
-        $countTokensApi = "countTokens";
-        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:{$countTokensApi}?key=" . urlencode($apiKey);
-
-        $requestPayload = ["contents" => [["parts" => $parts]]];
         $client = \Config\Services::curlrequest();
+        $requestPayload = ["contents" => [["parts" => $parts]]];
 
-        try {
-            $response = $client->request('POST', $apiUrl, [
-                'body' => json_encode($requestPayload),
-                'headers' => ['Content-Type' => 'application/json'],
-                'timeout' => 10,
-            ]);
+        // Cascade through model priority list to prevent 404/429 token estimation aborts
+        foreach (self::MODEL_PRIORITIES as $model) {
+            $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:countTokens?key=" . urlencode($apiKey);
 
-            $statusCode = $response->getStatusCode();
-            $responseBody = $response->getBody();
+            try {
+                $response = $client->request('POST', $apiUrl, [
+                    'body'        => json_encode($requestPayload),
+                    'headers'     => ['Content-Type' => 'application/json'],
+                    'timeout'     => 10,
+                    'http_errors' => false,
+                ]);
 
-            if ($statusCode !== 200) {
-                $errorData = json_decode($responseBody, true);
-                $errorMessage = $errorData['error']['message'] ?? 'Unknown API error during token count.';
-                log_message('error', "[GeminiService] countTokens Error: Status {$statusCode} - {$errorMessage}. Body: {$responseBody}");
+                $statusCode   = $response->getStatusCode();
+                $responseBody = $response->getBody();
+
+                if ($statusCode === 200) {
+                    $responseData = json_decode($responseBody, true);
+                    if (isset($responseData['totalTokens'])) {
+                        return ['status' => true, 'totalTokens' => (int) $responseData['totalTokens']];
+                    }
+                }
+
+                // If 404 (model not found) or 429 (rate limit), continue to next model
+                if ($statusCode === 404 || $statusCode === 429 || $statusCode >= 500) {
+                    continue;
+                }
+
+                $errorData    = json_decode($responseBody, true);
+                $errorMessage = $errorData['error']['message'] ?? 'API error during token count.';
+                log_message('error', "[GeminiService] countTokens Error: Status {$statusCode} - {$errorMessage}");
+
                 return ['status' => false, 'error' => $errorMessage];
+            } catch (\Throwable $e) {
+                log_message('warning', "[GeminiService] countTokens Exception on {$model}: " . $e->getMessage());
+                continue;
             }
-
-            $responseData = json_decode($responseBody, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                log_message('error', "[GeminiService] countTokens JSON Decode Error: " . json_last_error_msg() . " | Body: " . $responseBody);
-                return ['status' => false, 'error' => 'Failed to decode API response.'];
-            }
-            $totalTokens = $responseData['totalTokens'] ?? 0;
-
-            return ['status' => true, 'totalTokens' => $totalTokens];
-        } catch (\Exception $e) {
-            log_message('error', "[GeminiService] countTokens Exception: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
-            return ['status' => false, 'error' => 'Could not connect to the AI service to estimate cost.'];
         }
+
+        return ['status' => false, 'error' => 'Could not connect to the AI service to estimate cost.'];
     }
 
     /**

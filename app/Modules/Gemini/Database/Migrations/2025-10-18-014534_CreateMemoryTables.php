@@ -1,15 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Gemini\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
+/**
+ * Class CreateMemoryTables
+ *
+ * @package App\Modules\Gemini\Database\Migrations
+ * @author  Senior Developer
+ * @since   1.0.0
+ */
 class CreateMemoryTables extends Migration
 {
-    public function up()
+    public function up(): void
     {
         // --- Interactions Table ---
-        // Stores each conversation turn with the AI.
         $this->forge->addField([
             'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
             'user_id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
@@ -31,14 +39,18 @@ class CreateMemoryTables extends Migration
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addKey('timestamp');
         $this->forge->addKey('created_at');
-        $this->forge->createTable('interactions');
+        $this->forge->createTable('interactions', true, [
+            'ENGINE'          => 'InnoDB',
+            'CHARACTER SET'   => 'utf8mb4',
+            'COLLATE'         => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'      => 'DYNAMIC',
+        ]);
 
         // --- Entities Table ---
-        // Acts as the knowledge graph, tracking concepts and their relationships.
         $this->forge->addField([
             'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
             'user_id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
-            'entity_key' => ['type' => 'VARCHAR', 'constraint' => 255], // lowercase name
+            'entity_key' => ['type' => 'VARCHAR', 'constraint' => 255],
             'name' => ['type' => 'VARCHAR', 'constraint' => 255],
             'type' => ['type' => 'VARCHAR', 'constraint' => 50, 'default' => 'Concept'],
             'access_count' => ['type' => 'INT', 'constraint' => 11, 'default' => 0],
@@ -51,14 +63,19 @@ class CreateMemoryTables extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addUniqueKey(['user_id', 'entity_key']);
-        $this->forge->addKey('type'); // Added for performance on type-based queries
-        $this->forge->addKey('created_at'); // Added for performance on date-based queries
-        $this->forge->createTable('entities');
+        $this->forge->addKey('type');
+        $this->forge->addKey('created_at');
+        $this->forge->createTable('entities', true, [
+            'ENGINE'          => 'InnoDB',
+            'CHARACTER SET'   => 'utf8mb4',
+            'COLLATE'         => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'      => 'DYNAMIC',
+        ]);
     }
 
-    public function down()
+    public function down(): void
     {
-        $this->forge->dropTable('interactions');
-        $this->forge->dropTable('entities');
+        $this->forge->dropTable('interactions', true);
+        $this->forge->dropTable('entities', true);
     }
 }

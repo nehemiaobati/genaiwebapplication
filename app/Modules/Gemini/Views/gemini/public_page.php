@@ -1,3 +1,18 @@
+<?php
+/**
+ * Public Landing Page View
+ *
+ * @var string $pageTitle
+ * @var string $metaDescription
+ * @var string $metaKeywords
+ * @var string $canonicalUrl
+ * @var string $robotsTag
+ * @var string $metaImage
+ * @var array<string, mixed>|null $schemaJson
+ * @var string $heroTitle
+ * @var string $heroSubtitle
+ */
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>

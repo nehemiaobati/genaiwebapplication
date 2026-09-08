@@ -1,12 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Gemini\Config;
 
+use CodeIgniter\Router\RouteCollection;
+
 /**
- * @var \CodeIgniter\Router\RouteCollection $routes
+ * @var RouteCollection $routes
  */
 
-$routes->group('', ['namespace' => 'App\Modules\Gemini\Controllers'], static function ($routes) {
+$routes->group('', ['namespace' => 'App\Modules\Gemini\Controllers'], static function (RouteCollection $routes): void {
 
     // Public Routes
     $routes->get('ai-studio', 'GeminiController::publicPage', ['as' => 'gemini.public']);

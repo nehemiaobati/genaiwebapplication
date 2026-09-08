@@ -7,18 +7,26 @@ namespace App\Modules\Gemini\Entities;
 use CodeIgniter\Entity\Entity;
 
 /**
+ * Class Interaction
+ *
+ * @package App\Modules\Gemini\Entities
+ * @author  Senior Developer
+ * @since   1.0.0
+ *
  * @property int $id
  * @property int $user_id
  * @property string $unique_id
- * @property string $timestamp
+ * @property \CodeIgniter\I18n\Time|null $timestamp
  * @property string $user_input_raw
  * @property string $ai_output
- * @property array|null $ai_output_raw
+ * @property array<string, mixed>|null $ai_output_raw
  * @property float $relevance_score
- * @property string $last_accessed
- * @property array|null $context_used_ids
- * @property array|null $embedding
- * @property array|null $keywords
+ * @property \CodeIgniter\I18n\Time|null $last_accessed
+ * @property array<int, string>|null $context_used_ids
+ * @property array<int, float>|null $embedding
+ * @property array<int, string>|null $keywords
+ * @property \CodeIgniter\I18n\Time|null $created_at
+ * @property \CodeIgniter\I18n\Time|null $updated_at
  */
 class Interaction extends Entity
 {
