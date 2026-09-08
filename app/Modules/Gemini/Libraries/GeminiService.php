@@ -149,11 +149,10 @@ class GeminiService
     {
         $maxRetries = 1;
         $retryableCodes = [429, 500, 502, 503, 504];
+        $lastStatusCode = 0;
+        $lastErrorMsg = '';
 
         for ($i = 0; $i <= $maxRetries; $i++) {
-            $lastStatusCode = 0;
-            $lastErrorMsg = '';
-
             try {
                 if ($i > 0) {
                     log_message('info', "[GeminiService] Retry attempt {$i}/{$maxRetries} for model: {$model}");

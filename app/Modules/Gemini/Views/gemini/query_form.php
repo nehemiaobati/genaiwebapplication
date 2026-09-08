@@ -1,3 +1,29 @@
+<?php
+/**
+ * @var string $pageTitle
+ * @var string $metaDescription
+ * @var string $canonicalUrl
+ * @var string $robotsTag
+ * @var string|null $result
+ * @var string|null $error
+ * @var array $prompts
+ * @var bool $assistant_mode_enabled
+ * @var bool $voice_output_enabled
+ * @var bool $stream_output_enabled
+ * @var string|null $audio_url
+ * @var int $maxFileSize
+ * @var int $maxFiles
+ * @var string $supportedMimeTypes
+ * @var array<string, array<string, mixed>> $mediaConfigs
+ * @var string $currency_symbol
+ * @var int|float $exchange_rate
+ */
+
+$mediaConfigs = $mediaConfigs ?? [];
+$assistant_mode_enabled = $assistant_mode_enabled ?? true;
+$voice_output_enabled = $voice_output_enabled ?? false;
+$stream_output_enabled = $stream_output_enabled ?? false;
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>

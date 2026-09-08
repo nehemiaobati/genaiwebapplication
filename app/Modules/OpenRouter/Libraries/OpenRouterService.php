@@ -25,19 +25,22 @@ class OpenRouterService
     public const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
     /** Default Model (Used if user has no preferred model) */
-    public const DEFAULT_MODEL = 'stepfun/step-3.5-flash:free';
+    public const DEFAULT_MODEL = 'google/gemini-3.5-flash-lite';
 
     /** Recommended models for the selector */
     public const RECOMMENDED_MODELS = [
-        'anthropic/claude-3.5-sonnet'      => 'Claude 3.5 Sonnet',
-        'anthropic/claude-3-opus'          => 'Claude 3 Opus',
-        'openai/gpt-4o'                    => 'GPT-4o',
-        'openai/gpt-4o-mini'               => 'GPT-4o Mini',
-        'meta-llama/llama-3.1-70b-instruct' => 'Llama 3.1 70B',
-        'mistralai/mistral-large'           => 'Mistral Large',
-        'stepfun/step-3.5-flash:free'       => 'step-3.5-flash:free',
-        'google/gemma-3-27b-it:free'        => 'Gemma 3.27B (Free)',
-        'google/gemma-3-12b-it:free'        => 'Gemma 3.12B (Free)',
+        'google/gemini-3.5-flash-lite'                 => 'Gemini 3.5 Flash Lite',
+        'nvidia/nemotron-3-ultra-550b-a55b:free'        => 'NVIDIA Nemotron 3 Ultra 55B (Free)',
+        'nvidia/nemotron-3-ultra-550b-a55b'             => 'NVIDIA Nemotron 3 Ultra 55B',
+        'anthropic/claude-sonnet-4.5'                   => 'Claude Sonnet 4.5',
+        'openai/gpt-4o'                                 => 'GPT-4o',
+        'openai/gpt-4o-mini'                            => 'GPT-4o Mini',
+        'meta-llama/llama-3.3-70b-instruct'             => 'Llama 3.3 70B',
+        'mistralai/mistral-large'                        => 'Mistral Large',
+        'deepseek/deepseek-chat'                         => 'DeepSeek V3',
+        'google/gemma-4-31b-it:free'                     => 'Gemma 4 31B (Free)',
+        'google/gemma-4-26b-a4b-it:free'                 => 'Gemma 4 26B (Free)',
+        'stepfun/step-3.7-flash'                         => 'StepFun 3.7 Flash',
     ];
 
     /**
