@@ -21,13 +21,16 @@ use App\Modules\Gemini\Models\UserSettingsModel;
 class GeminiService
 {
     public const MODEL_PRIORITIES = [
-        "gemini-3-flash-preview",   // Preview: Latest Flash model with preview features
-        "gemini-flash-latest",      // Primary: Latest Flash model for speed and efficiency
-        "gemini-flash-lite-latest", // Secondary: Lite version for lower latency
-        "gemini-2.5-flash",         // Fallback: Stable Flash version
-        "gemini-2.5-flash-lite",    // Fallback: Stable Lite version
-        "gemini-2.0-flash",         // Legacy Fallback
-        "gemini-2.0-flash-lite",    // Legacy Fallback
+        "gemini-3.8-flash",         // Latest generational Flash model with top benchmark scores and lowest latency
+        "gemini-3.7-flash",         // Stable previous point release
+        "gemini-3.6-flash",         // Stable release
+        "gemini-3.5-flash",         // Widely deployed fast multimodal model
+        "gemini-3.5-flash-lite",    // High-throughput, ultra-low cost / low-latency
+        "gemini-flash-latest",      // Dynamic pointer alias to Google's latest production Flash model
+        "gemini-flash-lite-latest", // Dynamic pointer alias to Google's latest production Flash-Lite model
+        "gemini-3-flash-preview",   // Flash Preview model
+        "gemini-2.5-flash",         // Long-term stable fallback (1M context limit)
+        "gemini-2.5-flash-lite",    // Long-term stable fallback lite
     ];
 
     public const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
