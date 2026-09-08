@@ -40,7 +40,7 @@ class OpenRouterController extends BaseController
         protected ?OpenRouterPandocService $pandocService = null
     ) {
         $this->openRouterService = $openRouterService ?? service('openRouterService');
-        $this->pandocService     = $pandocService ?? service('openRouterPandoc');
+        $this->pandocService     = $pandocService ?? service('openRouterPandocService');
     }
 
     // --- Helper Methods ---
@@ -101,7 +101,7 @@ class OpenRouterController extends BaseController
      * @param array  $data
      * @return ResponseInterface|RedirectResponse
      */
-    private function _respondSuccess(string $message, array $data = [])
+    private function _respondSuccess(string $message, array $data = []): ResponseInterface|RedirectResponse
     {
         if ($this->request->isAJAX()) {
             return $this->response->setJSON(array_merge([
@@ -120,7 +120,7 @@ class OpenRouterController extends BaseController
      * @param array  $errors
      * @return ResponseInterface|RedirectResponse
      */
-    private function _respondError(string $message, array $errors = [])
+    private function _respondError(string $message, array $errors = []): ResponseInterface|RedirectResponse
     {
         if ($this->request->isAJAX()) {
             return $this->response->setJSON([
@@ -238,7 +238,7 @@ class OpenRouterController extends BaseController
      *
      * @return ResponseInterface|RedirectResponse
      */
-    public function generate()
+    public function generate(): ResponseInterface|RedirectResponse
     {
         $ctx = $this->_prepareInteractionContext();
         if (isset($ctx['error'])) {
@@ -436,7 +436,7 @@ class OpenRouterController extends BaseController
      *
      * @return ResponseInterface|RedirectResponse
      */
-    public function addPrompt()
+    public function addPrompt(): ResponseInterface|RedirectResponse
     {
         $userId = (int) session()->get('userId');
         $rules  = ['title' => 'required|max_length[255]', 'prompt_text' => 'required'];
@@ -465,7 +465,7 @@ class OpenRouterController extends BaseController
      * @param int $id
      * @return ResponseInterface|RedirectResponse
      */
-    public function deletePrompt(int $id)
+    public function deletePrompt(int $id): ResponseInterface|RedirectResponse
     {
         $userId = (int) session()->get('userId');
         if ($this->openRouterService->deletePrompt($userId, $id)) {
@@ -599,7 +599,7 @@ class OpenRouterController extends BaseController
      *
      * @return ResponseInterface|RedirectResponse Binary file or redirect on error.
      */
-    public function downloadDocument()
+    public function downloadDocument(): ResponseInterface|RedirectResponse
     {
         $userId = (int) session()->get('userId');
 

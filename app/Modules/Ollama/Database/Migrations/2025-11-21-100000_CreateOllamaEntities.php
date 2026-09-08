@@ -23,7 +23,12 @@ class CreateOllamaEntities extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addUniqueKey(['user_id', 'entity_key']);
-        $this->forge->createTable('ollama_entities');
+        $this->forge->createTable('ollama_entities', true, [
+            'ENGINE'        => 'InnoDB',
+            'CHARACTER SET' => 'utf8mb4',
+            'COLLATE'       => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'    => 'DYNAMIC',
+        ]);
 
         // Update Interactions Table to support scores and keywords
         $this->forge->addColumn('ollama_interactions', [

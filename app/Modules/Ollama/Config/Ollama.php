@@ -1,9 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Ollama\Config;
 
 use CodeIgniter\Config\BaseConfig;
 
+/**
+ * Ollama Configuration.
+ *
+ * @package App\Modules\Ollama\Config
+ * @author  Senior Developer
+ * @since   1.0.0
+ */
 class Ollama extends BaseConfig
 {
     /**

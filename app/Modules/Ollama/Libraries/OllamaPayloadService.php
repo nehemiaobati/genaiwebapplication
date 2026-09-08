@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Ollama\Libraries;
 
 use App\Modules\Ollama\Config\Ollama as OllamaConfig;

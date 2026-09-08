@@ -57,7 +57,8 @@ class OpenRouterService
         protected ?OpenRouterPromptModel $promptModel = null,
         protected ?OpenRouterUserSettingsModel $userSettingsModel = null
     ) {
-        $this->apiKey            = $apiKey ?? env('OPENROUTER_API_KEY');
+        $resolvedKey             = $apiKey ?? env('OPENROUTER_API_KEY');
+        $this->apiKey            = is_string($resolvedKey) ? trim($resolvedKey, " \t\n\r\0\x0B\"'") : null;
         $this->userModel         = $userModel ?? new UserModel();
         $this->db                = $db ?? \Config\Database::connect();
         $this->promptModel       = $promptModel ?? new OpenRouterPromptModel();

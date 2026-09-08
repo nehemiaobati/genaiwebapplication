@@ -1,13 +1,16 @@
 <?php
 
-if (!isset($routes)) {
-    $routes = \Config\Services::routes();
-}
+declare(strict_types=1);
+
+namespace App\Modules\OpenRouter\Config;
+
+use CodeIgniter\Router\RouteCollection;
 
 /**
- * @var \CodeIgniter\Router\RouteCollection $routes
+ * @var RouteCollection $routes
  */
-$routes->group('', ['namespace' => 'App\Modules\OpenRouter\Controllers'], static function ($routes) {
+
+$routes->group('', ['namespace' => 'App\Modules\OpenRouter\Controllers'], static function (RouteCollection $routes): void {
 
     // Public Route — distinct slug avoids collision with the auth group's /openrouter/ prefix
     $routes->get('openrouter-ai', 'OpenRouterController::publicPage', ['as' => 'openrouter.public']);

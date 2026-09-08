@@ -28,7 +28,12 @@ class CreateOpenRouterPromptsTable extends Migration
         $this->forge->addKey('user_id');
         $this->forge->addKey('created_at');
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('openrouter_prompts');
+        $this->forge->createTable('openrouter_prompts', true, [
+            'ENGINE'        => 'InnoDB',
+            'CHARACTER SET' => 'utf8mb4',
+            'COLLATE'       => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'    => 'DYNAMIC',
+        ]);
     }
 
     /**

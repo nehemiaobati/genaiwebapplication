@@ -18,7 +18,8 @@ class OpenRouterEmbeddingService
 
     public function __construct()
     {
-        $this->apiKey = env('OPENROUTER_API_KEY');
+        $rawKey = env('OPENROUTER_API_KEY');
+        $this->apiKey = is_string($rawKey) ? trim($rawKey, " \t\n\r\0\x0B\"'") : null;
         $config = config(OpenRouterAGI::class);
         $this->modelId = $config->embeddingModel;
         $this->isEnabled = $config->enableEmbeddings;
@@ -42,6 +43,8 @@ class OpenRouterEmbeddingService
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->apiKey,
                     'Content-Type'  => 'application/json',
+                    'HTTP-Referer'  => base_url(),
+                    'X-Title'       => 'OpenRouter AI Studio',
                 ],
                 'json' => [
                     'model' => $this->modelId,

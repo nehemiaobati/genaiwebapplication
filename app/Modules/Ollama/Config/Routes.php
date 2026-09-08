@@ -1,17 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Ollama\Config;
 
+use CodeIgniter\Router\RouteCollection;
+
 /**
- * @var \CodeIgniter\Router\RouteCollection $routes
+ * @var RouteCollection $routes
  */
 
 // Public Routes
-$routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers'], static function ($routes) {
+$routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers'], static function (RouteCollection $routes): void {
     $routes->get('intro', 'OllamaController::publicPage', ['as' => 'ollama.public']);
 });
 
-$routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filter' => 'auth'], static function ($routes) {
+$routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
     $routes->get('/', 'OllamaController::index', ['as' => 'ollama.index']);
 
     // Core Generation
