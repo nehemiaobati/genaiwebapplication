@@ -33,24 +33,6 @@ class CryptoController extends BaseController
     protected UserModel $userModel;
 
     /**
-     * Displays the public-facing landing page for the CryptoQuery tool.
-     *
-     * @return string The rendered view.
-     */
-    public function publicPage(): string
-    {
-        $data = [
-            'pageTitle'       => 'Blockchain Audit & Verification Tools | Afrikenkid',
-            'metaDescription' => 'Verify data integrity and audit records with our immutable blockchain ledger tools. 100% anonymous and secure.',
-            'canonicalUrl'    => url_to('crypto.public'),
-            'robotsTag'       => 'index, follow',
-        ];
-
-        // Updated view path to reflect module structure
-        return view('App\Modules\Crypto\Views\crypto\public_page', $data);
-    }
-
-    /**
      * Constructor.
      * Initializes the CryptoService and UserModel.
      */

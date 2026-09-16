@@ -12,9 +12,6 @@ use CodeIgniter\Router\RouteCollection;
 
 $routes->group('', ['namespace' => 'App\Modules\OpenRouter\Controllers'], static function (RouteCollection $routes): void {
 
-    // Public Route — distinct slug avoids collision with the auth group's /openrouter/ prefix
-    $routes->get('openrouter-ai', 'OpenRouterController::publicPage', ['as' => 'openrouter.public']);
-
     // Authenticated Routes
     $routes->group('openrouter', ['filter' => 'auth'], static function ($routes) {
         $routes->get('/', 'OpenRouterController::index', ['as' => 'openrouter.index']);

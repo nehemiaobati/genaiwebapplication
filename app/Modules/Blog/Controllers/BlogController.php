@@ -33,16 +33,25 @@ class BlogController extends BaseController
 
     public function index(): string
     {
+        $schemaJson = [
+            '@context'    => 'https://schema.org',
+            '@type'       => 'Blog',
+            '@id'         => url_to('blog.index') . '#blog',
+            'name'        => 'AFRIKENKID Engineering Blog',
+            'description' => 'Tutorials and deep dives on Generative AI, cloud infrastructure, and software engineering.',
+            'url'         => url_to('blog.index'),
+            'publisher'   => ['@id' => base_url('#organization')],
+        ];
+
         $data = [
-            // SEO: Strong title focusing on value proposition
-            'pageTitle'       => 'Tech Insights & Tutorials | Afrikenkid Blog',
-            // SEO: Clear description with keywords for the target market
-            'metaDescription' => 'Explore expert articles on Generative AI, software development, fintech, and consumer tech tailored for industry professionals.',
+            'pageTitle'       => 'Engineering & AI Insights Blog | AFRIKENKID Studio',
+            'metaDescription' => 'Practical engineering tutorials and deep dives into Generative AI implementations, fintech architecture, local LLMs, and high-performance web development.',
+            'metaKeywords'    => 'Blog, Tutorials, Insights, Software, Generative AI, Cloud Architecture',
             'canonicalUrl'    => url_to('blog.index'),
             'posts'           => $this->postModel->where('status', 'published')->orderBy('published_at', 'DESC')->paginate(6),
             'pager'           => $this->postModel->pager,
-            // SEO: Allow indexing for the blog listing
             'robotsTag'       => 'index, follow',
+            'schemaJson'      => $schemaJson,
         ];
         return view('App\Modules\Blog\Views\blog\index', $data);
     }
@@ -68,7 +77,8 @@ class BlogController extends BaseController
             "author"          => ["@type" => "Person", "name"  => $post->author_name],
             "publisher"       => [
                 "@type" => "Organization",
-                "name"  => "Afrikenkid",
+                "@id"   => base_url('#organization'),
+                "name"  => "AFRIKENKID Studio",
                 "logo"  => ["@type" => "ImageObject", "url"   => base_url('assets/images/logo.png')],
             ],
             "description"     => $post->meta_description,
@@ -82,7 +92,7 @@ class BlogController extends BaseController
             'canonicalUrl'    => url_to('blog.show', $slug),
             'post'            => $post,
             'robotsTag'       => 'index, follow',
-            'json_ld_schema'  => '<script type="application/ld+json">' . json_encode($schema) . '</script>',
+            'schemaJson'      => $schema,
         ];
         return view('App\Modules\Blog\Views\blog\post', $data);
     }

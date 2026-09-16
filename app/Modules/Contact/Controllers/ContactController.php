@@ -51,11 +51,32 @@ class ContactController extends BaseController
      */
     public function form(): string
     {
+        $schemaJson = [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'ContactPage',
+            'name'       => 'Contact AFRIKENKID Studio',
+            'url'        => url_to('contact.form'),
+            'mainEntity' => [
+                '@type'        => 'Organization',
+                '@id'          => base_url('#organization'),
+                'name'         => 'AFRIKENKID Studio',
+                'url'          => base_url(),
+                'contactPoint' => [
+                    '@type'             => 'ContactPoint',
+                    'contactType'       => 'Customer Support',
+                    'availableLanguage' => ['English', 'Swahili'],
+                    'url'               => url_to('contact.form'),
+                ],
+            ],
+        ];
+
         $data = [
-            'pageTitle'       => 'Contact Us | Afrikenkid',
-            'metaDescription' => 'Get in touch with our team for support, enterprise inquiries, or custom AI development projects.',
+            'pageTitle'       => 'Contact AFRIKENKID Studio | Software & AI Solutions',
+            'metaDescription' => 'Get in touch with AFRIKENKID Studio. Inquire about custom generative AI systems, full-stack web applications, technical consulting, and architecture audits.',
+            'metaKeywords'    => 'Custom Software Solutions, software development, Contact Afrikenkid, AI Consulting',
             'canonicalUrl'    => url_to('contact.form'),
             'robotsTag'       => 'index, follow',
+            'schemaJson'      => $schemaJson,
         ];
 
         return view('App\Modules\Contact\Views\contact_form', $data);

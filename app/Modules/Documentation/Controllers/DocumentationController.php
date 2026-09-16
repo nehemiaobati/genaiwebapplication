@@ -20,11 +20,38 @@ class DocumentationController extends BaseController
      */
     public function index(): string
     {
+        $schemaJson = [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'CollectionPage',
+            '@id'        => url_to('documentation') . '#webpage',
+            'url'        => url_to('documentation'),
+            'name'       => 'AFRIKENKID Platform Documentation Hub',
+            'breadcrumb' => [
+                '@type'           => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type'    => 'ListItem',
+                        'position' => 1,
+                        'name'     => 'Home',
+                        'item'     => url_to('landing'),
+                    ],
+                    [
+                        '@type'    => 'ListItem',
+                        'position' => 2,
+                        'name'     => 'Documentation',
+                        'item'     => url_to('documentation'),
+                    ],
+                ],
+            ],
+        ];
+
         $data = [
-            'pageTitle'       => 'Platform Documentation | User Guides & Resources',
-            'metaDescription' => 'Learn how to leverage our industry-leading GenAI platform to generate content, analyze documents, and access crypto market insights instantly.',
-            'canonicalUrl'    => url_to('documentation'), // Ensure route name exists
-            'robotsTag'       => 'index, follow', // CHANGED: Allow indexing
+            'pageTitle'       => 'Documentation Hub — AI Models & Architecture | AFRIKENKID',
+            'metaDescription' => 'Developer documentation for AFRIKENKID Studio: Integration guides for multimodal LLMs, Ollama local inference, blockchain verification, and custom APIs.',
+            'metaKeywords'    => 'Generative AI Documentation, Models Guide, Blockchain Docs, Custom Software Architecture',
+            'canonicalUrl'    => url_to('documentation'),
+            'robotsTag'       => 'index, follow',
+            'schemaJson'      => $schemaJson,
         ];
         return view('App\Modules\Documentation\Views\index', $data);
     }
@@ -36,11 +63,23 @@ class DocumentationController extends BaseController
      */
     public function web(): string
     {
+        $schemaJson = [
+            '@context'  => 'https://schema.org',
+            '@type'     => 'TechArticle',
+            'headline'  => 'Platform Architecture and Custom Software Solutions Guide',
+            'url'       => url_to('documentation.web'),
+            'author'    => ['@id' => base_url('#organization')],
+            'publisher' => ['@id' => base_url('#organization')],
+            'inLanguage' => 'en',
+        ];
+
         $data = [
-            'pageTitle'       => 'Web Platform Guide |  Architecture',
-            'metaDescription' => 'Detailed overview of the platform architecture and features for users and administrators.',
+            'pageTitle'       => 'Platform Architecture & Systems Guide | AFRIKENKID Docs',
+            'metaDescription' => 'Deep dive into the AFRIKENKID web application architecture, CodeIgniter 4 framework patterns, database schemas, and microservice integration workflows.',
+            'metaKeywords'    => 'Software Solutions Guide, Architecture, CodeIgniter 4 Development',
             'canonicalUrl'    => url_to('documentation.web'),
-            'robotsTag'       => 'index, follow', // CHANGED
+            'robotsTag'       => 'index, follow',
+            'schemaJson'      => $schemaJson,
         ];
         return view('App\Modules\Documentation\Views\web_documentation', $data);
     }
@@ -52,11 +91,23 @@ class DocumentationController extends BaseController
      */
     public function agi(): string
     {
+        $schemaJson = [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'TechArticle',
+            'headline'   => 'Generative Models and AI Studio Implementation Guide',
+            'url'        => url_to('documentation.agi'),
+            'author'     => ['@id' => base_url('#organization')],
+            'publisher'  => ['@id' => base_url('#organization')],
+            'inLanguage' => 'en',
+        ];
+
         $data = [
-            'pageTitle'       => 'AI Tools Guide | Architecture',
-            'metaDescription' => 'How to leverage our Gemini-powered AI tools for text generation, document analysis, and TTS solutions.',
+            'pageTitle'       => 'Generative Models & LLM Studio Guide | AFRIKENKID Docs',
+            'metaDescription' => 'Learn how to configure Google Gemini, route via OpenRouter, and deploy private Ollama LLM inference with vector memory inside AFRIKENKID Generative AI Studio.',
+            'metaKeywords'    => 'Generative Models Guide, Gemini AI Studio, OpenRouter Hub, Ollama Private LLM',
             'canonicalUrl'    => url_to('documentation.agi'),
-            'robotsTag'       => 'index, follow', // CHANGED
+            'robotsTag'       => 'index, follow',
+            'schemaJson'      => $schemaJson,
         ];
         return view('App\Modules\Documentation\Views\agi_documentation', $data);
     }

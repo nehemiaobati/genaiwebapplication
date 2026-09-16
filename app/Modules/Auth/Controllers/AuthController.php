@@ -55,10 +55,10 @@ class AuthController extends BaseController
         }
 
         $data = [
-            'pageTitle'       => 'Create Your Account | Afrikenkid',
-            'metaDescription' => 'Sign up for a free account. Make your first deposit to get KSH 30 in starter credits.',
+            'pageTitle'       => 'Create an Account — Get Started | AFRIKENKID Studio',
+            'metaDescription' => 'Sign up for AFRIKENKID Studio. Start generating text, images, and videos with cutting-edge AI models and claim your starter platform credits.',
             'canonicalUrl'    => url_to('register'),
-            'robotsTag'       => 'noindex, follow',
+            'robotsTag'       => 'index, follow',
         ];
 
         return view('App\Modules\Auth\Views\register', $data);
@@ -121,10 +121,10 @@ class AuthController extends BaseController
         }
 
         $data = [
-            'pageTitle'       => 'Login | Afrikenkid',
-            'metaDescription' => 'Access your dashboard.',
+            'pageTitle'       => 'Sign In to Your Workspace | AFRIKENKID Studio',
+            'metaDescription' => 'Log in to your AFRIKENKID Studio workspace to access your generative AI studio, credit balance, API integrations, and saved generative projects.',
             'canonicalUrl'    => url_to('login'),
-            'robotsTag'       => 'noindex, follow',
+            'robotsTag'       => 'index, follow',
         ];
 
         return view('App\Modules\Auth\Views\login', $data);

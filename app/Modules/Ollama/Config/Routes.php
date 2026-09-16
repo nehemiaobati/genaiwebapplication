@@ -10,11 +10,6 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 
-// Public Routes
-$routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers'], static function (RouteCollection $routes): void {
-    $routes->get('intro', 'OllamaController::publicPage', ['as' => 'ollama.public']);
-});
-
 $routes->group('ollama', ['namespace' => 'App\Modules\Ollama\Controllers', 'filter' => 'auth'], static function (RouteCollection $routes): void {
     $routes->get('/', 'OllamaController::index', ['as' => 'ollama.index']);
 

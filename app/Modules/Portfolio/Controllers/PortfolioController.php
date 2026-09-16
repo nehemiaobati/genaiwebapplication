@@ -51,12 +51,36 @@ class PortfolioController extends BaseController
      */
     public function index(): string
     {
+        $schemaJson = [
+            '@context'   => 'https://schema.org',
+            '@type'      => 'Person',
+            '@id'        => url_to('portfolio.index') . '#person',
+            'name'       => 'Nehemia Obati',
+            'jobTitle'   => 'Software Engineer | Software Development and Technical Support',
+            'worksFor'   => ['@id' => base_url('#organization')],
+            'url'        => url_to('portfolio.index'),
+            'image'      => base_url('assets/images/potraitwebp.webp'),
+            'sameAs'     => [
+                'https://www.linkedin.com/in/nehemia-obati-b74886344',
+            ],
+            'knowsAbout' => [
+                'Generative AI',
+                'Large Language Models',
+                'Full-Stack Web Development',
+                'PHP CodeIgniter',
+                'Python',
+                'Cloud Infrastructure & Distributed Systems',
+            ],
+        ];
+
         $data = [
-            'pageTitle'       => 'Nehemia Obati | Software Developer Portfolio',
-            'metaDescription' => 'The professional portfolio of Nehemia Obati, a full-stack software developer specializing in scalable AI integrations, PHP, Python, and cloud solutions.',
+            'pageTitle'       => 'Nehemia Obati — Software Engineer | Software Development and Technical Support',
+            'metaDescription' => 'Portfolio of Nehemia Obati: Software Engineer | Software Development and Technical Support | PHP, Python and HTML | GCP/AWS.',
+            'metaKeywords'    => 'Software Engineer, Full Stack Developer, AI Solutions, Cloud',
             'metaImage'       => base_url('assets/images/potraitwebp.webp'),
             'canonicalUrl'    => url_to('portfolio.index'),
             'robotsTag'       => 'index, follow',
+            'schemaJson'      => $schemaJson,
         ];
 
         return view('App\Modules\Portfolio\Views\portfolio_view', $data);

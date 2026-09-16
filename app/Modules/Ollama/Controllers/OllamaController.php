@@ -78,18 +78,6 @@ class OllamaController extends BaseController
         return view('App\Modules\Ollama\Views\ollama\query_form', $data);
     }
 
-    public function publicPage(): string
-    {
-        return view('App\Modules\Ollama\Views\ollama\public_page', [
-            'pageTitle'       => 'Ollama Local AI | Private & Secure Offline Workspace | Afrikenkid',
-            'metaDescription' => 'Run powerful open-source LLMs directly on your own hardware. Absolute privacy, self-hosted intelligence, and zero latency.',
-            'canonicalUrl'    => url_to('ollama.public'),
-            'robotsTag'       => 'index, follow',
-            'heroTitle'       => 'Ownership of Intelligence.',
-            'heroSubtitle'    => 'Run powerful open-source LLMs directly on your own hardware. Absolute privacy, self-hosted intelligence, and zero latency.'
-        ]);
-    }
-
     // --- Media Handling ---
 
     public function uploadMedia(): ResponseInterface

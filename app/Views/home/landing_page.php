@@ -28,7 +28,7 @@
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
             <a href="<?= url_to('register') ?>" class="btn btn-primary btn-lg px-5 fw-bold rounded-pill shadow-sm" aria-label="Create your free account">Start Creating Free</a>
-            <a href="<?= url_to('openrouter.public') ?>" class="btn btn-outline-secondary btn-lg px-5 rounded-pill" aria-label="Explore Free Models">Explore Free Models</a>
+            <a href="<?= url_to('openrouter.index') ?>" class="btn btn-outline-secondary btn-lg px-5 rounded-pill" aria-label="Explore Free Models">Explore Free Models</a>
         </div>
     </div>
 </section>
@@ -49,7 +49,7 @@
                         <div class="fs-1 text-primary mb-3"><i class="bi bi-stars"></i></div>
                         <h3 class="fs-4 fw-bold mb-3">Enterprise AI</h3>
                         <p class="text-body-secondary mb-0">Powered by Gemini. Generate high-fidelity videos, images, and strategic reports.</p>
-                        <a href="<?= url_to('gemini.public') ?>" class="btn btn-link mt-3 fw-bold text-decoration-none">Learn More <i class="bi bi-arrow-right"></i></a>
+                        <a href="<?= url_to('gemini.index') ?>" class="btn btn-link mt-3 fw-bold text-decoration-none">Learn More <i class="bi bi-arrow-right"></i></a>
                     </div>
                 </div>
             </div>
@@ -61,7 +61,7 @@
                         <div class="fs-1 text-info mb-3"><i class="bi bi-diagram-3-fill"></i></div>
                         <h3 class="fs-4 fw-bold mb-3">Multi-Model Hub</h3>
                         <p class="text-body-secondary mb-0">Access 100+ top-tier models through OpenRouter. Includes high-speed free models.</p>
-                        <a href="<?= url_to('openrouter.public') ?>" class="btn btn-link text-info mt-3 fw-bold text-decoration-none">Explore Models <i class="bi bi-arrow-right"></i></a>
+                        <a href="<?= url_to('openrouter.index') ?>" class="btn btn-link text-info mt-3 fw-bold text-decoration-none">Explore Models <i class="bi bi-arrow-right"></i></a>
                     </div>
                 </div>
             </div>
@@ -73,7 +73,7 @@
                         <div class="fs-1 text-success mb-3"><i class="bi bi-shield-lock-fill"></i></div>
                         <h3 class="fs-4 fw-bold mb-3">Private Workspace</h3>
                         <p class="text-body-secondary mb-0">Local inference via Ollama. Absolute data privacy, hybrid memory, and zero latency.</p>
-                        <a href="<?= url_to('ollama.public') ?>" class="btn btn-link text-success mt-3 fw-bold text-decoration-none">Go Private <i class="bi bi-arrow-right"></i></a>
+                        <a href="<?= url_to('ollama.index') ?>" class="btn btn-link text-success mt-3 fw-bold text-decoration-none">Go Private <i class="bi bi-arrow-right"></i></a>
                     </div>
                 </div>
             </div>
@@ -87,8 +87,8 @@
                             <div class="card-body p-4 d-flex align-items-center">
                                 <div class="fs-2 text-primary me-4"><i class="bi bi-shield-check"></i></div>
                                 <div>
-                                    <h3 class="fs-5 fw-bold mb-1">Data Trust Layer</h3>
-                                    <p class="text-body-secondary mb-0">Verify data integrity with our immutable Blockchain Analytics tools. <a href="<?= url_to('crypto.public') ?>" class="text-decoration-none fw-bold">View Crypto Query</a>.</p>
+                                    <h3 class="fs-5 fw-bold mb-1">Blockchain </h3>
+                                    <p class="text-body-secondary mb-0">Audit on-chain Bitcoin and Litecoin transactions and verify wallet balances in real-time. Anonymous and immutable. <a href="<?= url_to('crypto.index') ?>" class="text-decoration-none fw-bold">Explore Blockchain</a>.</p>
                                 </div>
                             </div>
                         </div>

@@ -269,30 +269,6 @@ class GeminiController extends BaseController
         ]) . "\n\n");
     }
 
-    // --- Public API ---
-
-    /**
-     * Renders the public landing page.
-     *
-     * @return string Validated HTML content.
-     */
-    public function publicPage(): string
-    {
-        $data = [
-            'pageTitle'       => 'Gemini Enterprise AI | Video, Image & Text Studio | Afrikenkid',
-            'metaDescription' => 'Generate strategic reports, high-fidelity images, and synthesize videos instantly using Gemini Enterprise AI. The ultimate content engine for professionals.',
-            'metaKeywords'    => 'gemini, ai studio, enterprise ai, video synthesis, image generation, text studio',
-            'canonicalUrl'    => url_to('gemini.public'),
-            'robotsTag'       => 'index, follow',
-            'metaImage'       => base_url('assets/images/og-default.jpg'),
-            'schemaJson'      => null,
-            'heroTitle'       => 'Enterprise AI Solutions, Powered by Gemini.',
-            'heroSubtitle'    => 'Unlock the power of generative AI for content, images, videos, and data analysis. Turn raw ideas into executive-ready assets.',
-        ];
-
-        return view('App\Modules\Gemini\Views\gemini\public_page.php', $data);
-    }
-
     /**
      * Renders the main application dashboard.
      *

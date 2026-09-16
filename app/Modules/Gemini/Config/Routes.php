@@ -12,9 +12,6 @@ use CodeIgniter\Router\RouteCollection;
 
 $routes->group('', ['namespace' => 'App\Modules\Gemini\Controllers'], static function (RouteCollection $routes): void {
 
-    // Public Routes
-    $routes->get('ai-studio', 'GeminiController::publicPage', ['as' => 'gemini.public']);
-
     // Authenticated Routes
     $routes->group('gemini', ['filter' => 'auth'], static function ($routes) {
         $routes->get('/', 'GeminiController::index', ['as' => 'gemini.index']);

@@ -154,22 +154,6 @@
 
 <?= $this->section('content') ?>
 <main>
-    <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "Person",
-            "name": "Nehemia Obati",
-            "url": "<?= url_to('portfolio.index') ?>",
-            "image": "<?= base_url('assets/images/potraitwebp.webp') ?>",
-            "sameAs": ["https://www.linkedin.com/in/nehemia-obati-b74886344"],
-            "jobTitle": "Software Developer",
-            "worksFor": {
-                "@type": "Organization",
-                "name": "Kingsway Business Systems LTD"
-            },
-            "knowsAbout": ["PHP", "CodeIgniter", "Python", "Google Cloud Platform", "AWS", "Linux", "Server Management", "SQL", "JavaScript"]
-        }
-    </script>
     <div class="container pb-5">
         <!-- Hero Section -->
         <section id="home" class="py-5 mb-4">

@@ -15,7 +15,6 @@ use Parsedown;
  * OpenRouterController — HTTP Orchestration for the OpenRouter module.
  *
  * Mirrors the Gemini module's controller structure:
- * - publicPage()       → Marketing landing page.
  * - index()            → Authenticated AI workspace.
  * - generate()         → Synchronous chat generation.
  * - stream()           → SSE streaming generation.
@@ -180,26 +179,6 @@ class OpenRouterController extends BaseController
         $parsedown->setSafeMode(true);
         $parsedown->setBreaksEnabled(true);
         return $parsedown->text($text);
-    }
-
-    // --- Public API ---
-
-    /**
-     * Renders the OpenRouter public marketing landing page.
-     *
-     * @return string
-     */
-    public function publicPage(): string
-    {
-        $data = [
-            'pageTitle'       => 'OpenRouter AI | Access 100+ Models & Free LLMs | Afrikenkid',
-            'metaDescription' => 'Access the world\'s best open-source and proprietary AI models through one seamless interface. Includes free high-speed models to start prompting immediately.',
-            'canonicalUrl'    => url_to('openrouter.public'),
-            'robotsTag'       => 'index, follow',
-            'heroTitle'       => 'Multi-Model AI, Unified.',
-            'heroSubtitle'    => 'Access the world\'s best open-source and proprietary AI models through one seamless interface. Intelligent conversations, fast responses, zero friction.'
-        ];
-        return view('App\Modules\OpenRouter\Views\openrouter\public_page', $data);
     }
 
     /**
