@@ -37,41 +37,38 @@
     <meta name="twitter:image:alt" content="AFRIKENKID Generative AI Studio Preview">
 
     <!-- Structured Data -->
-    <?php if (! empty($schemaJson)) : ?>
-        <script type="application/ld+json">
-            <?= is_array($schemaJson) ? json_encode($schemaJson, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) : $schemaJson ?>
-        </script>
-    <?php else : ?>
-        <script type="application/ld+json">
-            {
-                "@context": "https://schema.org",
-                "@type": "SoftwareApplication",
-                "@id": "<?= base_url('#software') ?>",
-                "name": "AFRIKENKID Studio Platform",
-                "applicationCategory": "DeveloperApplication",
-                "operatingSystem": "Web Browser",
-                "description": "<?= esc($metaDescription ?? 'Explore AFRIKENKID Studio: Access unified generative AI models, private local LLM inference, blockchain verification, and custom web software solutions.', 'js') ?>",
-                "url": "<?= esc($canonicalUrl ?? current_url(), 'js') ?>",
-                "author": {
-                    "@id": "<?= base_url('#organization') ?>"
-                },
-                "featureList": [
-                    "Generative AI Models",
-                    "Google Gemini Generative AI",
-                    "OpenRouter Multi-Model Hub",
-                    "Ollama Private Local LLM Inference",
-                    "Real-Time Blockchain Verification",
-                    "Custom Software Solutions & High-Performance Architecture"
-                ],
-                "offers": {
-                    "@type": "Offer",
-                    "price": "0",
-                    "priceCurrency": "KES",
-                    "description": "Freemium access with credit-based top-ups."
-                }
-            }
-        </script>
-    <?php endif; ?>
+    <?php
+    $resolvedSchema = ! empty($schemaJson) ? $schemaJson : [
+        '@context'            => 'https://schema.org',
+        '@type'               => 'SoftwareApplication',
+        '@id'                 => base_url('#software'),
+        'name'                => 'AFRIKENKID Studio Platform',
+        'applicationCategory' => 'DeveloperApplication',
+        'operatingSystem'     => 'Web Browser',
+        'description'         => $metaDescription ?? 'Explore AFRIKENKID Studio: Access unified generative AI models, private local LLM inference, blockchain verification, and custom web software solutions.',
+        'url'                 => $canonicalUrl ?? current_url(),
+        'author'              => [
+            '@id' => base_url('#organization'),
+        ],
+        'featureList'         => [
+            'Generative AI Models',
+            'Google Gemini Generative AI',
+            'OpenRouter Multi-Model Hub',
+            'Ollama Private Local LLM Inference',
+            'Real-Time Blockchain Verification',
+            'Custom Software Solutions & High-Performance Architecture',
+        ],
+        'offers'              => [
+            '@type'         => 'Offer',
+            'price'         => '0',
+            'priceCurrency' => 'KES',
+            'description'   => 'Freemium access with credit-based top-ups.',
+        ],
+    ];
+    ?>
+    <script type="application/ld+json">
+        <?= is_array($resolvedSchema) ? json_encode($resolvedSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $resolvedSchema ?>
+    </script>
 
     <!-- Stylesheets -->
     <link href="<?= base_url('assets/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">

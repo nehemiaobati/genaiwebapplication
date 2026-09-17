@@ -204,8 +204,8 @@ return view('App\Modules\[ModuleName]\Views\record\index', [
     'metaKeywords'    => 'domain, record, entries',
     'canonicalUrl'    => url_to('domain.record.index'),
     'robotsTag'       => 'index, follow', // 'index, follow' for public pages; 'noindex, follow' for private dashboards/auth forms
-    'metaImage'       => 'https://example.com/assets/og-image.jpg',
-    'schemaJson'      => $jsonLdData,     // Targeted JSON-LD Schema config block or null
+    'metaImage'       => base_url('assets/images/og-image.jpg'),
+    'schemaJson'      => $jsonLdData,     // Targeted JSON-LD Schema associative array or null
     'data'            => $serviceResult,  // Pre-formatted presentation payload
 ]);
 ```
@@ -910,7 +910,13 @@ To support plug-and-play theme swapability, all custom stylesheets and component
 * **Indexing Strategy:**
   * Public Pages: USE `index, follow` (Marketing, informative, and public tool pages).
   * Private/Auth Pages: USE `noindex, follow` (Auth forms, User dashboards, Admin panels).
-* **JSON-LD Schema:** Provide a targeted JSON-LD `<script type="application/ld+json">` configuration block relevant to the page context (e.g., `WebPage`, `Product`, `Organization`, or `BreadcrumbList`).
+* **JSON-LD Schema Standard & Serialization:**
+  * Controllers **MUST** pass structured data as native PHP associative arrays (`$schemaJson`) or `null`.
+  * Schemas **MUST** be serialized exclusively via `json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)`.
+  * Manual string concatenation of JSON and using `esc($val, 'js')` inside `<script type="application/ld+json">` is strictly **FORBIDDEN** (as hexadecimal byte escapes like `\x20` violate RFC 8259 JSON standards and trigger Google Search Console syntax errors).
+  * Layouts **MUST** provide a valid, deterministic fallback schema serialized via `json_encode()` when `$schemaJson` is omitted.
+  * Internal/native domain URLs and `@id` entity nodes **MUST** be generated dynamically via `base_url()` and `url_to()`, reserving hardcoded external URLs strictly for third-party platforms (e.g., LinkedIn, Schema.org contexts).
+  * Multiple related entities (e.g. `Organization`, `WebSite`, `SoftwareApplication`) **MUST** be interconnected via `@graph` structures using consistent `@id` identifiers (e.g. `base_url('#organization')`).
 * **Social Sharing:** Layouts **MUST** include complete Open Graph AND Twitter Card meta tags:
   * Open Graph: `og:type`, `og:url`, `og:title`, `og:description`, `og:image`
   * Twitter Card: `twitter:card`, `twitter:site`, `twitter:title`, `twitter:description`, `twitter:image`, `twitter:image:alt`
