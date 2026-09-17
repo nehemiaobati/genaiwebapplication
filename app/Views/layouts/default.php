@@ -189,6 +189,13 @@
             border-radius: 50%;
             transition: all 0.2s ease;
             font-size: 1.4rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .theme-toggle:focus-visible {
+            outline: 2px solid var(--bs-primary);
+            outline-offset: 2px;
         }
 
         .theme-toggle:hover {
@@ -428,12 +435,19 @@
                         }
                     });
                     this.toggles.forEach(toggle => {
-                        toggle.addEventListener('click', () => {
+                        const switchTheme = () => {
                             const currentTheme = document.documentElement.getAttribute('data-bs-theme');
                             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
                             this.setStoredTheme(newTheme);
                             this.setTheme(newTheme);
                             this.updateToggleIcons(newTheme);
+                        };
+                        toggle.addEventListener('click', switchTheme);
+                        toggle.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                switchTheme();
+                            }
                         });
                     });
                 }

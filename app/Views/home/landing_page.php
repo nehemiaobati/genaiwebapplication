@@ -60,7 +60,7 @@
                     <div class="card-body p-4 p-sm-5 text-center d-flex flex-column justify-content-center">
                         <div class="fs-1 text-info mb-3"><i class="bi bi-diagram-3-fill"></i></div>
                         <h3 class="fs-4 fw-bold mb-3">Multi-Model Hub</h3>
-                        <p class="text-body-secondary mb-0">Access 100+ top-tier models through OpenRouter. Includes high-speed free models.</p>
+                        <p class="text-body-secondary mb-0">Access 100+ frontier and open-source models through OpenRouter. Includes free models.</p>
                         <a href="<?= url_to('openrouter.index') ?>" class="btn btn-link text-info mt-3 fw-bold text-decoration-none">Explore Models <i class="bi bi-arrow-right"></i></a>
                     </div>
                 </div>
@@ -72,7 +72,7 @@
                     <div class="card-body p-4 p-sm-5 text-center d-flex flex-column justify-content-center">
                         <div class="fs-1 text-success mb-3"><i class="bi bi-shield-lock-fill"></i></div>
                         <h3 class="fs-4 fw-bold mb-3">Private Workspace</h3>
-                        <p class="text-body-secondary mb-0">Local inference via Ollama. Absolute data privacy, hybrid memory, and zero latency.</p>
+                        <p class="text-body-secondary mb-0">Local inference via Ollama. Absolute data privacy and low latency.</p>
                         <a href="<?= url_to('ollama.index') ?>" class="btn btn-link text-success mt-3 fw-bold text-decoration-none">Go Private <i class="bi bi-arrow-right"></i></a>
                     </div>
                 </div>

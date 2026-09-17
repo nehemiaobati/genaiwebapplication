@@ -29,15 +29,15 @@
     </div>
 
     <!-- Main Dashboard Grid -->
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
 
-        <!-- AI Studio -->
+        <!-- AI Studio (Gemini) -->
         <div class="col">
             <div class="card h-100 border-0 shadow-sm hover-effect">
                 <div class="card-body p-4 d-flex flex-column">
                     <div class="fs-1 text-primary mb-3"><i class="bi bi-stars"></i></div>
-                    <h4 class="fw-bold text-body-emphasis">AI Studio <span class="badge bg-success-subtle text-success-emphasis fs-6 ms-2">New</span></h4>
-                    <p class="text-body-secondary">Your creative co-pilot for writing, <strong>image generation</strong>, <strong>video generation</strong>, and document analysis. Powered by Google's Gemini.</p>
+                    <h4 class="fw-bold text-body-emphasis">Gemini AI Studio <span class="badge bg-success-subtle text-success-emphasis fs-6 ms-2">Enterprise</span></h4>
+                    <p class="text-body-secondary">Your creative co-pilot for writing, <strong>image generation</strong>, <strong>video generation</strong>, and multimodal document analysis.</p>
 
                     <!-- Simplified Prompt Suggestion -->
                     <div class="p-3 bg-body-tertiary rounded mb-3 border border-dashed position-relative">
@@ -49,36 +49,60 @@
                         </button>
                     </div>
 
-                    <a href="<?= url_to('gemini.index') ?>" class="btn btn-primary mt-auto">Launch AI Studio <i class="bi bi-arrow-right-short"></i></a>
+                    <a href="<?= url_to('gemini.index') ?>" class="btn btn-primary mt-auto">Launch Studio <i class="bi bi-arrow-right-short"></i></a>
                 </div>
             </div>
         </div>
 
-        <!-- CryptoQuery -->
+        <!-- Multi-Model Hub (OpenRouter) -->
         <div class="col">
             <div class="card h-100 border-0 shadow-sm hover-effect">
                 <div class="card-body p-4 d-flex flex-column">
-                    <div class="fs-1 text-primary mb-3"><i class="bi bi-search"></i></div>
-                    <h4 class="fw-bold text-body-emphasis">CryptoQuery</h4>
-                    <p class="text-body-secondary">Get instant, real-time balance and transaction history for any public Bitcoin or Litecoin address.</p>
-                    <a href="<?= url_to('crypto.index') ?>" class="btn btn-primary mt-auto">Run a Query <i class="bi bi-arrow-right-short"></i></a>
+                    <div class="fs-1 text-info mb-3"><i class="bi bi-diagram-3-fill"></i></div>
+                    <h4 class="fw-bold text-body-emphasis">OpenRouter Hub <span class="badge bg-info-subtle text-info-emphasis fs-6 ms-2">100+ Models</span></h4>
+                    <p class="text-body-secondary">Access over 100 frontier and open-source models through OpenRouter. Includes free models.</p>
+                    <a href="<?= url_to('openrouter.index') ?>" class="btn btn-info text-white mt-auto">Explore Models <i class="bi bi-arrow-right-short"></i></a>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Actions -->
+        <!-- Private Workspace (Ollama) -->
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm hover-effect">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="fs-1 text-success mb-3"><i class="bi bi-shield-lock-fill"></i></div>
+                    <h4 class="fw-bold text-body-emphasis">Ollama Private LLM <span class="badge bg-success-subtle text-success-emphasis fs-6 ms-2">Private</span></h4>
+                    <p class="text-body-secondary">Local inference with absolute data privacy and low latency.</p>
+                    <a href="<?= url_to('ollama.index') ?>" class="btn btn-success mt-auto">Launch Ollama <i class="bi bi-arrow-right-short"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blockchain Explorer -->
+        <div class="col">
+            <div class="card h-100 border-0 shadow-sm hover-effect">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="fs-1 text-primary mb-3"><i class="bi bi-shield-check"></i></div>
+                    <h4 class="fw-bold text-body-emphasis">Blockchain Explorer</h4>
+                    <p class="text-body-secondary">Get instant, real-time balance and transaction verification for public Bitcoin and Litecoin addresses.</p>
+                    <a href="<?= url_to('crypto.index') ?>" class="btn btn-outline-primary mt-auto">Run Query <i class="bi bi-arrow-right-short"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions & Balance -->
         <div class="col">
             <div class="card h-100 border-0 shadow-sm hover-effect">
                 <div class="card-body p-4 d-flex flex-column">
                     <div class="fs-1 text-primary mb-3"><i class="bi bi-wallet2"></i></div>
-                    <h4 class="fw-bold text-body-emphasis">Quick Actions</h4>
+                    <h4 class="fw-bold text-body-emphasis">Account & Balance</h4>
                     <div class="text-center my-3">
-                        <p class="text-body-secondary text-uppercase small mb-1">Current Balance</p>
-                        <div class="fs-1 fw-bold text-success lh-1"><?= esc(number_format((float)($balance ?? 0), 2)) ?></div>
+                        <p class="text-body-secondary text-uppercase small mb-1">Available Credits</p>
+                        <div class="fs-1 fw-bold text-success lh-1">Ksh. <?= esc(number_format((float)($balance ?? 0), 2)) ?></div>
                     </div>
                     <div class="d-grid gap-2 mt-auto">
-                        <a href="<?= url_to('payment.index') ?>" class="btn btn-success"><i class="bi bi-plus-circle"></i> Add Funds</a>
-                        <a href="<?= url_to('account.index') ?>" class="btn btn-outline-secondary"><i class="bi bi-receipt"></i> View History</a>
+                        <a href="<?= url_to('payment.index') ?>" class="btn btn-success"><i class="bi bi-plus-circle me-1"></i> Top Up Credits</a>
+                        <a href="<?= url_to('account.index') ?>" class="btn btn-outline-secondary"><i class="bi bi-receipt me-1"></i> View Account History</a>
                     </div>
                 </div>
             </div>

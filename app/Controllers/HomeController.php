@@ -56,6 +56,7 @@ class HomeController extends BaseController
         $data = [
             'pageTitle'       => 'Dashboard | ' . session()->get('username'),
             'metaDescription' => 'Your dashboard. Check your account balance, manage your details, and access our AI and Blockchain services.',
+            'pageIdentifier'  => 'dashboard',
             'username'        => session()->get('username'),
             'email'           => session()->get('userEmail'),
             'member_since'    => $user->created_at ?? null,
