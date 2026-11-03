@@ -1,3 +1,11 @@
+<?php
+/**
+ * @var string $pageTitle
+ * @var string $metaDescription
+ * @var string $canonicalUrl
+ * @var string $robotsTag
+ */
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
@@ -42,6 +50,24 @@
         margin-bottom: 1rem;
     }
 </style>
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const loginForm = document.querySelector('form');
+        const loginSubmit = document.getElementById('loginSubmit');
+
+        if (loginForm && loginSubmit) {
+            loginForm.addEventListener('submit', function() {
+                if (loginForm.checkValidity()) {
+                    loginSubmit.setAttribute('disabled', 'disabled');
+                    loginSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Signing In...';
+                }
+            });
+        }
+    });
+</script>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>

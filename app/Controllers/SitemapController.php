@@ -12,49 +12,58 @@ class SitemapController extends BaseController
      */
     public function index(): ResponseInterface
     {
-        // Array of public-facing, static pages by their route name
-        $pages = [
-            'landing', 'register', 'login', 'contact.form',
-            'portfolio.index', 'terms', 'privacy',
-            'gemini.public', 'openrouter.public', 'ollama.public', 
-            'crypto.public', 'blog.index',
+        // Array of public-facing, indexable static pages with their priority
+        $pagePriorities = [
+            'landing'            => '1.0',
+            'portfolio.index'    => '0.8',
+            'blog.index'         => '0.8',
+            'documentation'      => '0.8',
+            'documentation.agi'  => '0.7',
+            'documentation.web'  => '0.7',
+            'contact.form'       => '0.7',
+            'register'           => '0.6',
+            'login'              => '0.5',
+            'terms'              => '0.4',
+            'privacy'            => '0.4',
         ];
 
         $urls = [];
         $today = date('Y-m-d');
 
-        foreach ($pages as $page) {
+        foreach ($pagePriorities as $page => $priority) {
             $generatedUrl = url_to($page);
 
             if ($generatedUrl) {
                 $urls[] = [
                     'loc'        => $generatedUrl,
                     'lastmod'    => $today,
-                    'changefreq' => 'monthly',
-                    'priority'   => ($page === 'landing') ? '1.0' : '0.8',
+                    'changefreq' => ($priority >= '0.8') ? 'weekly' : 'monthly',
+                    'priority'   => $priority,
                 ];
             } else {
                 log_message('error', 'Sitemap: Failed to generate URL for route - ' . $page);
             }
         }
 
+        $response = $this->response ?? service('response');
+
         // If no URLs were generated, return an error
         if (empty($urls)) {
-            $this->response->setStatusCode(500);
-            $this->response->setBody('Error: No valid URLs could be generated for the sitemap.');
-            return $this->response;
+            $response->setStatusCode(500);
+            $response->setBody('Error: No valid URLs could be generated for the sitemap.');
+            return $response;
         }
 
         // Set the correct Content-Type header for an XML sitemap
-        $this->response->setHeader('Content-Type', 'application/xml');
+        $response->setHeader('Content-Type', 'application/xml');
 
         // Pass the array of URLs to the sitemap view
         $viewContent = view('sitemap/index', ['urls' => $urls]);
 
         // Prepend the XML declaration and set the final body
         $sitemapContent = '<?xml version="1.0" encoding="UTF-8" ?>' . "\n" . $viewContent;
-        $this->response->setBody($sitemapContent);
+        $response->setBody($sitemapContent);
 
-        return $this->response;
+        return $response;
     }
 }

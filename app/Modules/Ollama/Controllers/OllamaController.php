@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Ollama\Controllers;
 
 use App\Controllers\BaseController;
-use App\Entities\User;
 use App\Modules\Ollama\Libraries\OllamaService;
 use App\Modules\Ollama\Libraries\OllamaDocumentService;
-use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use Parsedown;
@@ -20,22 +18,30 @@ use Parsedown;
  * local LLM inference capabilities via the Ollama server.
  *
  * Architecture:
- * - Skinny Controller: Delegates all business logic to OllamaService.
+ * - Decoupled Controller: Delegates all business logic, wallet deductions, and user checks to OllamaService.
  * - Handles Request/Response cycle only.
  *
  * @package App\Modules\Ollama\Controllers
+ * @author  Senior Developer
+ * @since   1.0.0
+ *
+ * @property \CodeIgniter\HTTP\IncomingRequest $request
  */
 class OllamaController extends BaseController
 {
     /**
-     * Constructor setup
+     * Injected Ollama AI orchestration service.
      */
-    public function __construct(
-        protected ?UserModel $userModel = null,
-        protected ?OllamaService $ollamaService = null
-    ) {
-        $this->userModel = $userModel ?? new UserModel();
-        $this->ollamaService = $ollamaService ?? service('ollamaService');
+    protected OllamaService $ollamaService;
+
+    /**
+     * Initializes the controller with its dependencies resolved via the Service Container.
+     */
+    public function __construct()
+    {
+        /** @var OllamaService $ollamaService */
+        $ollamaService = service('ollamaService');
+        $this->ollamaService = $ollamaService;
     }
 
     // --- Core Methods ---
@@ -70,18 +76,6 @@ class OllamaController extends BaseController
         ];
 
         return view('App\Modules\Ollama\Views\ollama\query_form', $data);
-    }
-
-    public function publicPage(): string
-    {
-        return view('App\Modules\Ollama\Views\ollama\public_page', [
-            'pageTitle'       => 'Ollama Local AI | Private & Secure Offline Workspace | Afrikenkid',
-            'metaDescription' => 'Run powerful open-source LLMs directly on your own hardware. Absolute privacy, self-hosted intelligence, and zero latency.',
-            'canonicalUrl'    => url_to('ollama.public'),
-            'robotsTag'       => 'index, follow',
-            'heroTitle'       => 'Ownership of Intelligence.',
-            'heroSubtitle'    => 'Run powerful open-source LLMs directly on your own hardware. Absolute privacy, self-hosted intelligence, and zero latency.'
-        ]);
     }
 
     // --- Media Handling ---
@@ -137,7 +131,7 @@ class OllamaController extends BaseController
 
     // --- Generation ---
 
-    public function generate()
+    public function generate(): ResponseInterface|RedirectResponse
     {
         set_time_limit(300);
         $userId = (int) session()->get('userId');
@@ -312,10 +306,17 @@ class OllamaController extends BaseController
         return $this->_respondError('Failed to save');
     }
 
-    public function deletePrompt($id): ResponseInterface
+    /**
+     * Deletes a saved prompt.
+     *
+     * @param int|string $id Prompt ID.
+     *
+     * @return ResponseInterface
+     */
+    public function deletePrompt(int|string $id): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        if ($this->ollamaService->deletePrompt($userId, (int)$id)) {
+        if ($this->ollamaService->deletePrompt($userId, (int) $id)) {
             return $this->response->setJSON(['status' => 'success', 'csrf_token' => csrf_hash()]);
         }
         return $this->_respondError('Failed to delete');
@@ -369,10 +370,12 @@ class OllamaController extends BaseController
         return $this->_respondError('Failed to delete.');
     }
 
-    public function downloadDocument()
+    public function downloadDocument(): ResponseInterface|RedirectResponse
     {
         $userId = (int) session()->get('userId');
-        if ($userId <= 0) return $this->response->setStatusCode(403);
+        if ($userId <= 0) {
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Auth required.']);
+        }
 
         $content = $this->request->getPost('raw_response');
         $format  = $this->request->getPost('format');
@@ -394,7 +397,7 @@ class OllamaController extends BaseController
 
     // --- Helpers ---
 
-    private function _respondSuccess(string $message, array $data = [])
+    private function _respondSuccess(string $message, array $data = []): ResponseInterface|RedirectResponse
     {
         if ($this->request->isAJAX()) {
             return $this->response->setJSON(array_merge(['status' => 'success', 'message' => $message, 'csrf_token' => csrf_hash()], $data));
@@ -402,7 +405,7 @@ class OllamaController extends BaseController
         return redirect()->back()->with('success', $message);
     }
 
-    private function _respondError(string $message)
+    private function _respondError(string $message): ResponseInterface|RedirectResponse
     {
         if ($this->request->isAJAX()) {
             return $this->response->setJSON(['status' => 'error', 'message' => $message, 'csrf_token' => csrf_hash()]);
@@ -418,7 +421,7 @@ class OllamaController extends BaseController
         $this->response->setHeader('X-Accel-Buffering', 'no');
     }
 
-    private function _sendSSEError(string $msg)
+    private function _sendSSEError(string $msg): void
     {
         $this->response->setBody("data: " . json_encode(['error' => $msg, 'csrf_token' => csrf_hash()]) . "\n\n");
     }
@@ -431,7 +434,7 @@ class OllamaController extends BaseController
         ]);
     }
 
-    private function _buildGenerationResponse(array $result)
+    private function _buildGenerationResponse(array $result): ResponseInterface|RedirectResponse
     {
         $finalResult = $result['result'];
         $parsedHtml = $this->_parseMarkdown($finalResult);

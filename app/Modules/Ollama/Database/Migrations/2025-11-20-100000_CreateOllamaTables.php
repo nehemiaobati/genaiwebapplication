@@ -47,7 +47,12 @@ class CreateOllamaTables extends Migration
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addKey('prompt_hash');
         $this->forge->addKey('created_at');
-        $this->forge->createTable('ollama_interactions');
+        $this->forge->createTable('ollama_interactions', true, [
+            'ENGINE'        => 'InnoDB',
+            'CHARACTER SET' => 'utf8mb4',
+            'COLLATE'       => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'    => 'DYNAMIC',
+        ]);
     }
 
     public function down()

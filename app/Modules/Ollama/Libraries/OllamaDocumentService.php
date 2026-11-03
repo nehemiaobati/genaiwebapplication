@@ -7,7 +7,7 @@ namespace App\Modules\Ollama\Libraries;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Parsedown;
-use App\Modules\Ollama\Libraries\PandocService;
+use App\Modules\Ollama\Libraries\OllamaPandocService;
 
 /**
  * Ollama Document Service

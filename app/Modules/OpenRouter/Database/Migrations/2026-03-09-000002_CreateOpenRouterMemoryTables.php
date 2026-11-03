@@ -38,7 +38,12 @@ class CreateOpenRouterMemoryTables extends Migration
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addKey('timestamp');
         $this->forge->addKey('created_at');
-        $this->forge->createTable('openrouter_interactions');
+        $this->forge->createTable('openrouter_interactions', true, [
+            'ENGINE'        => 'InnoDB',
+            'CHARACTER SET' => 'utf8mb4',
+            'COLLATE'       => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'    => 'DYNAMIC',
+        ]);
 
         // --- openrouter_entities ---
         $this->forge->addField([
@@ -59,7 +64,12 @@ class CreateOpenRouterMemoryTables extends Migration
         $this->forge->addUniqueKey(['user_id', 'entity_key']);
         $this->forge->addKey('type');
         $this->forge->addKey('created_at');
-        $this->forge->createTable('openrouter_entities');
+        $this->forge->createTable('openrouter_entities', true, [
+            'ENGINE'        => 'InnoDB',
+            'CHARACTER SET' => 'utf8mb4',
+            'COLLATE'       => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'    => 'DYNAMIC',
+        ]);
     }
 
     /**

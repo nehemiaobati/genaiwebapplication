@@ -26,7 +26,12 @@ class CreateOpenRouterUserSettingsTable extends Migration
         ]);
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->createTable('openrouter_user_settings');
+        $this->forge->createTable('openrouter_user_settings', true, [
+            'ENGINE'        => 'InnoDB',
+            'CHARACTER SET' => 'utf8mb4',
+            'COLLATE'       => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'    => 'DYNAMIC',
+        ]);
     }
 
     /**

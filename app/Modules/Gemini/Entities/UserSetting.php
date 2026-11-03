@@ -7,13 +7,19 @@ namespace App\Modules\Gemini\Entities;
 use CodeIgniter\Entity\Entity;
 
 /**
+ * Class UserSetting
+ *
+ * @package App\Modules\Gemini\Entities
+ * @author  Senior Developer
+ * @since   1.0.0
+ *
  * @property int $id
  * @property int $user_id
  * @property bool $assistant_mode_enabled
  * @property bool $voice_output_enabled
  * @property bool $stream_output_enabled
- * @property string|null $created_at
- * @property string|null $updated_at
+ * @property \CodeIgniter\I18n\Time|null $created_at
+ * @property \CodeIgniter\I18n\Time|null $updated_at
  */
 class UserSetting extends Entity
 {

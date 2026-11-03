@@ -1,3 +1,29 @@
+<?php
+/**
+ * @var string $pageTitle
+ * @var string $metaDescription
+ * @var string $canonicalUrl
+ * @var string $robotsTag
+ * @var string|null $result
+ * @var string|null $error
+ * @var array $prompts
+ * @var bool $assistant_mode_enabled
+ * @var bool $voice_output_enabled
+ * @var bool $stream_output_enabled
+ * @var string|null $audio_url
+ * @var int $maxFileSize
+ * @var int $maxFiles
+ * @var string $supportedMimeTypes
+ * @var array<string, array<string, mixed>> $mediaConfigs
+ * @var string $currency_symbol
+ * @var int|float $exchange_rate
+ */
+
+$mediaConfigs = $mediaConfigs ?? [];
+$assistant_mode_enabled = $assistant_mode_enabled ?? true;
+$voice_output_enabled = $voice_output_enabled ?? false;
+$stream_output_enabled = $stream_output_enabled ?? false;
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
@@ -691,11 +717,10 @@
 
                     <!-- Main Text Input -->
                     <div class="flex-grow-1">
-                        <input type="hidden" name="model_id" id="selectedModelId" value="gemini-2.0-flash">
+                        <input type="hidden" name="model_id" id="selectedModelId" value="gemini-2.5-flash">
                         <input type="hidden" name="generation_type" id="generationType" value="text">
                         <div class="prompt-input-wrapper">
                             <textarea id="prompt" name="prompt" class="form-control border-0 bg-transparent prompt-textarea shadow-none" placeholder="Message Gemini..." rows="1" style="height: auto;"><?= old('prompt') ?></textarea>
-                            <!-- Label Removed: Using TinyMCE Placeholder -->
                         </div>
                     </div>
 
@@ -817,13 +842,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label>Title</label>
-                    <input type="text" id="saveGeminiPromptTitle" name="title" class="form-control" required>
+                <div class="form-floating mb-3">
+                    <input type="text" id="saveGeminiPromptTitle" name="title" class="form-control" placeholder="Title" required>
+                    <label for="saveGeminiPromptTitle">Title</label>
                 </div>
-                <div class="mb-3">
-                    <label>Content</label>
-                    <textarea name="prompt_text" id="modalPromptText" class="form-control" rows="4" required></textarea>
+                <div class="form-floating mb-3">
+                    <textarea name="prompt_text" id="modalPromptText" class="form-control" placeholder="Content" style="height: 120px;" required></textarea>
+                    <label for="modalPromptText">Content</label>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1509,7 +1534,7 @@
 
             let placeholder = 'Message Gemini...';
             if (type === 'text') {
-                mInput.value = 'gemini-2.0-flash';
+                mInput.value = 'gemini-2.5-flash';
             } else {
                 area.classList.remove('d-none');
                 if (type === 'image') {

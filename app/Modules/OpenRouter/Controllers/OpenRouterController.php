@@ -15,7 +15,6 @@ use Parsedown;
  * OpenRouterController — HTTP Orchestration for the OpenRouter module.
  *
  * Mirrors the Gemini module's controller structure:
- * - publicPage()       → Marketing landing page.
  * - index()            → Authenticated AI workspace.
  * - generate()         → Synchronous chat generation.
  * - stream()           → SSE streaming generation.
@@ -40,7 +39,7 @@ class OpenRouterController extends BaseController
         protected ?OpenRouterPandocService $pandocService = null
     ) {
         $this->openRouterService = $openRouterService ?? service('openRouterService');
-        $this->pandocService     = $pandocService ?? service('openRouterPandoc');
+        $this->pandocService     = $pandocService ?? service('openRouterPandocService');
     }
 
     // --- Helper Methods ---
@@ -101,7 +100,7 @@ class OpenRouterController extends BaseController
      * @param array  $data
      * @return ResponseInterface|RedirectResponse
      */
-    private function _respondSuccess(string $message, array $data = [])
+    private function _respondSuccess(string $message, array $data = []): ResponseInterface|RedirectResponse
     {
         if ($this->request->isAJAX()) {
             return $this->response->setJSON(array_merge([
@@ -120,7 +119,7 @@ class OpenRouterController extends BaseController
      * @param array  $errors
      * @return ResponseInterface|RedirectResponse
      */
-    private function _respondError(string $message, array $errors = [])
+    private function _respondError(string $message, array $errors = []): ResponseInterface|RedirectResponse
     {
         if ($this->request->isAJAX()) {
             return $this->response->setJSON([
@@ -182,26 +181,6 @@ class OpenRouterController extends BaseController
         return $parsedown->text($text);
     }
 
-    // --- Public API ---
-
-    /**
-     * Renders the OpenRouter public marketing landing page.
-     *
-     * @return string
-     */
-    public function publicPage(): string
-    {
-        $data = [
-            'pageTitle'       => 'OpenRouter AI | Access 100+ Models & Free LLMs | Afrikenkid',
-            'metaDescription' => 'Access the world\'s best open-source and proprietary AI models through one seamless interface. Includes free high-speed models to start prompting immediately.',
-            'canonicalUrl'    => url_to('openrouter.public'),
-            'robotsTag'       => 'index, follow',
-            'heroTitle'       => 'Multi-Model AI, Unified.',
-            'heroSubtitle'    => 'Access the world\'s best open-source and proprietary AI models through one seamless interface. Intelligent conversations, fast responses, zero friction.'
-        ];
-        return view('App\Modules\OpenRouter\Views\openrouter\public_page', $data);
-    }
-
     /**
      * Renders the authenticated AI workspace.
      *
@@ -238,7 +217,7 @@ class OpenRouterController extends BaseController
      *
      * @return ResponseInterface|RedirectResponse
      */
-    public function generate()
+    public function generate(): ResponseInterface|RedirectResponse
     {
         $ctx = $this->_prepareInteractionContext();
         if (isset($ctx['error'])) {
@@ -436,7 +415,7 @@ class OpenRouterController extends BaseController
      *
      * @return ResponseInterface|RedirectResponse
      */
-    public function addPrompt()
+    public function addPrompt(): ResponseInterface|RedirectResponse
     {
         $userId = (int) session()->get('userId');
         $rules  = ['title' => 'required|max_length[255]', 'prompt_text' => 'required'];
@@ -465,7 +444,7 @@ class OpenRouterController extends BaseController
      * @param int $id
      * @return ResponseInterface|RedirectResponse
      */
-    public function deletePrompt(int $id)
+    public function deletePrompt(int $id): ResponseInterface|RedirectResponse
     {
         $userId = (int) session()->get('userId');
         if ($this->openRouterService->deletePrompt($userId, $id)) {
@@ -599,7 +578,7 @@ class OpenRouterController extends BaseController
      *
      * @return ResponseInterface|RedirectResponse Binary file or redirect on error.
      */
-    public function downloadDocument()
+    public function downloadDocument(): ResponseInterface|RedirectResponse
     {
         $userId = (int) session()->get('userId');
 

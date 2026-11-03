@@ -1,3 +1,11 @@
+<?php
+/**
+ * @var string $pageTitle
+ * @var string $metaDescription
+ * @var string $canonicalUrl
+ * @var string $robotsTag
+ */
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>
@@ -46,10 +54,12 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.querySelector('form');
-        if (form) {
+        const registerSubmit = document.getElementById('registerSubmit');
+        if (form && registerSubmit) {
             form.addEventListener('submit', function(event) {
                 if (form.checkValidity()) {
-                    // fbq('track', 'CompleteRegistration');
+                    registerSubmit.setAttribute('disabled', 'disabled');
+                    registerSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Creating Account...';
                 }
             });
         }

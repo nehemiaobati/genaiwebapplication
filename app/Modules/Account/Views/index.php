@@ -1,3 +1,15 @@
+<?php
+/**
+ * @var \App\Entities\User $user
+ * @var array<int, \App\Modules\Payments\Entities\Payment> $transactions
+ * @var \CodeIgniter\Pager\Pager $pager
+ * @var array<int, string> $display_references
+ * @var string $pageTitle
+ * @var string $metaDescription
+ * @var string $canonicalUrl
+ * @var string $robotsTag
+ */
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>

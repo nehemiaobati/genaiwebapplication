@@ -8,17 +8,18 @@ use App\Controllers\BaseController;
 use App\Modules\Gemini\Libraries\MediaGenerationService;
 use CodeIgniter\API\ResponseTrait;
 use CodeIgniter\HTTP\IncomingRequest;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
+ * Class MediaController
+ *
  * Manages media generation lifecycle (Images and Videos).
  *
- * Handles:
- * - Multimodal input validation.
- * - MediaGenerationService orchestration.
- * - Asynchronous job polling for video synthesis.
- * - Secure resource delivery with serverless compliance.
- * 
+ * @package App\Modules\Gemini\Controllers
+ * @author  Senior Developer
+ * @since   1.0.0
+ *
  * @property IncomingRequest $request
  */
 class MediaController extends BaseController
@@ -26,41 +27,40 @@ class MediaController extends BaseController
     use ResponseTrait;
 
     /**
-     * Initializes the controller with its dependencies.
+     * Injected Media Generation Service instance.
      *
-     * @param MediaGenerationService|null $mediaService Specialized service for multimodal synthesis.
+     * @var MediaGenerationService
      */
-    public function __construct(
-        protected $mediaService = null
-    ) {
-        $this->mediaService = $mediaService ?? service('mediaGenerationService');
-    }
+    protected MediaGenerationService $mediaService;
 
     /**
-     * Handles the request to generate media.
-     *
-     * Validates the input prompt and model ID, then delegates the generation
-     * task to the MediaGenerationService.
-     *
-     * @return ResponseInterface JSON response containing the result or error details.
+     * Initializes the controller with its dependencies resolved via the Service Container.
      */
+    public function __construct()
+    {
+        /** @var MediaGenerationService $service */
+        $service = service('mediaGenerationService');
+        $this->mediaService = $service;
+    }
+
     // --- Helper Methods ---
 
     /**
      * Reports processing errors via JSON or context-aware redirect.
      *
-     * @param string $message Descriptive error detail.
-     * @param int $code HTTP status code.
-     * @param array $data Contextual metadata for frontend error handling.
-     * @return ResponseInterface structured error response.
+     * @param string              $message Descriptive error detail.
+     * @param int                 $code    HTTP status code.
+     * @param array<string, mixed> $data    Contextual metadata for frontend error handling.
+     *
+     * @return ResponseInterface|RedirectResponse Structured error response.
      */
-    private function _respondError(string $message, int $code = 400, array $data = [])
+    private function _respondError(string $message, int $code = 400, array $data = []): ResponseInterface|RedirectResponse
     {
         if ($this->request->isAJAX()) {
             return $this->respond(array_merge([
-                'status' => 'error',
-                'message' => $message,
-                'csrf_token' => csrf_hash()
+                'status'     => 'error',
+                'message'    => $message,
+                'csrf_token' => csrf_hash(),
             ], $data), $code);
         }
 
@@ -113,56 +113,36 @@ class MediaController extends BaseController
      * Performs multimodal part construction, validates provider configs,
      * and processes financial deductions upon successful job initiation.
      *
-     * @return ResponseInterface structured generation results.
+     * @return ResponseInterface|RedirectResponse Structured generation results.
      */
-    public function generate()
+    public function generate(): ResponseInterface|RedirectResponse
     {
         $rules = [
-            'prompt' => 'required|min_length[3]|max_length[1000]',
+            'prompt'   => 'required|min_length[3]|max_length[1000]',
             'model_id' => 'required',
         ];
 
-        if (!$this->validate($rules)) {
+        if (! $this->validate($rules)) {
             $errors = $this->validator->getErrors();
-            $msg = implode('. ', $errors);
+            $msg    = implode('. ', $errors);
+
             return $this->_respondError($msg, 400, ['errors' => $errors]);
         }
 
-        $userId = (int) session()->get('userId');
-        $prompt = $this->request->getVar('prompt');
-        $modelId = $this->request->getVar('model_id');
+        $userId          = (int) session()->get('userId');
+        $prompt          = (string) $this->request->getVar('prompt');
+        $modelId         = (string) $this->request->getVar('model_id');
         $uploadedFileIds = (array) $this->request->getVar('uploaded_media');
-
-        $input = $prompt;
-        if (!empty($uploadedFileIds)) {
-            $parts = [['text' => $prompt]];
-            $userTempPath = WRITEPATH . 'uploads/gemini_temp/' . $userId . '/';
-
-            foreach ($uploadedFileIds as $fileId) {
-                $filePath = $userTempPath . basename($fileId);
-                if (file_exists($filePath)) {
-                    $mimeType = mime_content_type($filePath);
-                    $parts[] = ['inlineData' => [
-                        'mimeType' => $mimeType,
-                        'data' => base64_encode(file_get_contents($filePath))
-                    ]];
-
-                    if (!unlink($filePath)) {
-                        log_message('error', "[MediaController] Failed to delete temporary uploaded file: {$filePath}");
-                    }
-                }
-            }
-            $input = $parts;
-        }
 
         // Validate that the requested model ID exists in the configuration
         $configs = MediaGenerationService::MEDIA_CONFIGS;
-        if (!array_key_exists($modelId, $configs)) {
+        if (! array_key_exists($modelId, $configs)) {
             return $this->_respondError('Invalid model ID selected.');
         }
 
         try {
-            $result = $this->mediaService->generateMedia($userId, $input, $modelId);
+            // Business logic and filesystem handling encapsulated strictly within MediaGenerationService
+            $result = $this->mediaService->generateMediaFromPrompt($userId, $prompt, $uploadedFileIds, $modelId);
 
             // Handle Concurrency Conflict
             if (isset($result['status']) && $result['status'] === 'conflict') {
@@ -214,17 +194,20 @@ class MediaController extends BaseController
      *
      * @return ResponseInterface JSON job object.
      */
-    public function active()
+    public function active(): ResponseInterface
     {
         $userId = (int) session()->get('userId');
         try {
             $job = $this->mediaService->getActiveJob($userId);
+
             return $this->respond([
-                'status' => 'success',
-                'job' => $job,
-                'csrf_token' => csrf_hash()
+                'status'     => 'success',
+                'job'        => $job,
+                'csrf_token' => csrf_hash(),
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            log_message('error', '[MediaController] Active job check error: ' . $e->getMessage());
+
             return $this->failServerError('Failed to fetch active job.');
         }
     }
@@ -234,11 +217,11 @@ class MediaController extends BaseController
      *
      * @return ResponseInterface JSON status packet.
      */
-    public function poll()
+    public function poll(): ResponseInterface
     {
-        $opId = $this->request->getVar('op_id');
+        $opId = (string) $this->request->getVar('op_id');
 
-        if (!$opId) {
+        if ($opId === '') {
             return $this->fail('Operation ID is required.');
         }
 
@@ -278,30 +261,31 @@ class MediaController extends BaseController
      * Delivers generated media resources.
      *
      * @param string $filename Resource identifier shard.
+     *
      * @return ResponseInterface Streamed binary data.
      * @throws \CodeIgniter\Exceptions\PageNotFoundException
      */
-    public function serve($filename)
+    public function serve(string $filename): ResponseInterface
     {
         $userId = (int) session()->get('userId');
-        $path = WRITEPATH . 'uploads/generated/' . $userId . '/' . basename($filename);
+        $path   = WRITEPATH . 'uploads/generated/' . $userId . '/' . basename($filename);
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $response = $this->response
-            ->setHeader('Content-Type', mime_content_type($path))
-            ->setHeader('Content-Length', (string)filesize($path));
-
-        // Use download() if forced or via query param
         if ($this->request->getGet('download') === '1') {
             return $this->response->download($path, null);
         }
 
-        // Otherwise stream for inline viewing
-        // We read it into memory because the response object needs body set if not using download()
-        // Or we can use the native approach but without exit;
-        return $this->response->setBody(file_get_contents($path));
+        $body = file_get_contents($path);
+        if ($body === false) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        return $this->response
+            ->setHeader('Content-Type', mime_content_type($path))
+            ->setHeader('Content-Length', (string) filesize($path))
+            ->setBody($body);
     }
 }

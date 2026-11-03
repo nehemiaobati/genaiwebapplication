@@ -1,11 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\OpenRouter\Config;
 
 use CodeIgniter\Config\BaseConfig;
 
 /**
  * Configuration for the OpenRouter AGI (Artificial General Intelligence) system.
+ *
+ * @package App\Modules\OpenRouter\Config
+ * @author  Senior Developer
+ * @since   1.0.0
  */
 class OpenRouterAGI extends BaseConfig
 {
@@ -20,7 +26,7 @@ class OpenRouterAGI extends BaseConfig
      * The model used for embeddings.
      * OpenRouter supports many, including free variants.
      */
-    public string $embeddingModel = 'text-embedding-ada-002:free';
+    public string $embeddingModel = 'text-embedding-ada-002';
 
     // --- Memory Logic Configuration ---
 

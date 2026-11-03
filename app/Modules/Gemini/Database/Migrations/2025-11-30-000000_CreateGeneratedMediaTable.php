@@ -1,12 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\Gemini\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
+/**
+ * Class CreateGeneratedMediaTable
+ *
+ * @package App\Modules\Gemini\Database\Migrations
+ * @author  Senior Developer
+ * @since   1.0.0
+ */
 class CreateGeneratedMediaTable extends Migration
 {
-    public function up()
+    public function up(): void
     {
         $this->forge->addField([
             'id' => [
@@ -28,7 +37,6 @@ class CreateGeneratedMediaTable extends Migration
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
             ],
-
             'local_path' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
@@ -64,11 +72,16 @@ class CreateGeneratedMediaTable extends Migration
         $this->forge->addKey('status');
         $this->forge->addKey('type');
         $this->forge->addKey('created_at');
-        $this->forge->createTable('generated_media');
+        $this->forge->createTable('generated_media', true, [
+            'ENGINE'          => 'InnoDB',
+            'CHARACTER SET'   => 'utf8mb4',
+            'COLLATE'         => 'utf8mb4_unicode_ci',
+            'ROW_FORMAT'      => 'DYNAMIC',
+        ]);
     }
 
-    public function down()
+    public function down(): void
     {
-        $this->forge->dropTable('generated_media');
+        $this->forge->dropTable('generated_media', true);
     }
 }

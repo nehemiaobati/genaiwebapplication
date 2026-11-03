@@ -45,14 +45,14 @@ class MemoryService
         private ?EmbeddingService $embeddingService = null,
         private ?TokenService $tokenService = null,
         private ?AGI $config = null,
-        private $db = null
+        private ?\CodeIgniter\Database\BaseConnection $db = null
     ) {
         $this->interactionModel = $interactionModel ?? model(InteractionModel::class);
-        $this->entityModel = $entityModel ?? model(EntityModel::class);
+        $this->entityModel      = $entityModel ?? model(EntityModel::class);
         $this->embeddingService = $embeddingService ?? service('embedding');
-        $this->tokenService = $tokenService ?? service('tokenService');
-        $this->config = $config ?? config(AGI::class);
-        $this->db = $db ?? \Config\Database::connect();
+        $this->tokenService     = $tokenService ?? service('tokenService');
+        $this->config           = $config ?? config(AGI::class);
+        $this->db               = $db ?? \Config\Database::connect();
     }
 
     // --- Helper Methods ---
@@ -344,7 +344,7 @@ class MemoryService
                 ->where('user_id', $this->userId)
                 ->whereIn('unique_id', $usedInteractionIds)
                 ->set('relevance_score', "relevance_score + {$this->config->rewardScore}", false)
-                ->set('last_accessed', date('Y-m-d H-i-s'))
+                ->set('last_accessed', date('Y-m-d H:i:s'))
                 ->update();
         }
 
