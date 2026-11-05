@@ -14,7 +14,7 @@
         "ext-bcmath": "*",
         "ext-intl": "*",
         "ext-mbstring": "*",
-        "dompdf/dompdf": "^2.0",
+        "dompdf/dompdf": "^3.0",
         "erusev/parsedown": "^1.7",
         "ezyang/htmlpurifier": "^4.19",
         "laminas/laminas-escaper": "^2.17",
