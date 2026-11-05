@@ -95,7 +95,7 @@
             /* Glassmorphism base */
 
             /* Landing Page specific */
-            --hero-gradient: linear-gradient(145deg, var(--bs-primary), 80%, #000);
+            --hero-gradient: linear-gradient(145deg, var(--bs-primary) 80%, #000);
             /* Richer gradient */
             --cta-bg: var(--bs-dark);
             --feature-icon-color: var(--bs-white);
@@ -112,7 +112,6 @@
             font-family: 'Poppins', sans-serif;
             background-color: var(--light-bg);
             color: var(--text-body);
-            visibility: hidden;
             /* Prevents FOUC */
             transition: background-color 0.3s ease, color 0.3s ease;
             -webkit-font-smoothing: antialiased;
@@ -389,6 +388,9 @@
     <?php if (! $hasConsent): ?>
         <?= $this->include('partials/cookie_banner') ?>
     <?php endif; ?>
+    <noscript>
+        <style>body { visibility: visible !important; }</style>
+    </noscript>
 
     <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>" defer></script>
     <script defer>

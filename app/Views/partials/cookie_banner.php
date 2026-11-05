@@ -24,11 +24,12 @@
                 This website uses cookies to ensure you get the best experience on our website. This includes cookies necessary for the website's operation, security, and to comply with our legal obligations.
                 <a href="<?= url_to('privacy') ?>" class="text-white fw-bold">Learn more</a>.
             </p>
-            <div class="d-flex flex-shrink-0">
-                <form action="<?= url_to('cookie.accept') ?>" method="post">
+            <div class="d-flex flex-shrink-0 gap-2">
+                <form action="<?= url_to('cookie.accept') ?>" method="post" class="d-flex w-100">
                     <?= csrf_field() ?>
-                    <button type="submit" id="acceptCookies" class="btn btn-primary fw-bold w-100">Accept</button>
+                    <button type="submit" id="acceptCookies" class="btn btn-primary fw-bold flex-fill">Accept</button>
                 </form>
+                <button id="rejectCookies" class="btn btn-outline-secondary fw-bold w-100" aria-label="Reject optional cookies">Reject</button>
             </div>
         </div>
     </div>
@@ -81,6 +82,29 @@
                         });
                 });
             }
+        }
+
+        // Reject optional cookies
+        const rejectBtn = document.getElementById('rejectCookies');
+        if (rejectBtn) {
+            rejectBtn.addEventListener('click', function() {
+                fetch('<?= url_to('cookie.reject') ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': '<?= csrf_hash() ?>'
+                    }
+                }).then(response => response.json())
+                  .then(data => {
+                    if (data.status === 'success') {
+                        banner.style.transition = 'opacity 0.5s ease-out';
+                        banner.style.opacity = '0';
+                        setTimeout(() => {
+                            banner.style.display = 'none';
+                        }, 500);
+                    }
+                  });
+            });
         }
     });
 </script>
