@@ -1,3 +1,17 @@
+<?php
+/**
+ * Privacy Policy view.
+ *
+ * @var string                           $pageTitle
+ * @var string                           $metaDescription
+ * @var string                           $metaKeywords
+ * @var string                           $pageIdentifier
+ * @var string                           $canonicalUrl
+ * @var string                           $robotsTag
+ * @var string                           $metaImage
+ * @var array<string, mixed>|string|null $schemaJson
+ */
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('styles') ?>

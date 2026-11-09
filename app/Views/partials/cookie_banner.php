@@ -1,3 +1,11 @@
+<?php
+
+/**
+ * Cookie consent banner partial.
+ *
+ * @var \CodeIgniter\View\View $this
+ */
+?>
 <!-- Cookie Consent Banner -->
 <style>
     .cookie-consent-banner {
@@ -25,10 +33,9 @@
                 <a href="<?= url_to('privacy') ?>" class="text-white fw-bold">Learn more</a>.
             </p>
             <div class="d-flex flex-shrink-0">
-                <form action="<?= url_to('cookie.accept') ?>" method="post">
-                    <?= csrf_field() ?>
+                <?= form_open(url_to('cookie.accept')) ?>
                     <button type="submit" id="acceptCookies" class="btn btn-primary fw-bold w-100">Accept</button>
-                </form>
+                <?= form_close() ?>
             </div>
         </div>
     </div>

@@ -1,3 +1,21 @@
+<?php
+/**
+ * Authenticated user dashboard view.
+ *
+ * @var string                           $pageTitle
+ * @var string                           $metaDescription
+ * @var string                           $metaKeywords
+ * @var string                           $pageIdentifier
+ * @var string                           $username
+ * @var string                           $email
+ * @var string|null                      $member_since
+ * @var string                           $balance
+ * @var string                           $canonicalUrl
+ * @var string                           $robotsTag
+ * @var string                           $metaImage
+ * @var array<string, mixed>|string|null $schemaJson
+ */
+?>
 <?= $this->extend('layouts/default') ?>
 
 <?= $this->section('content') ?>
@@ -24,7 +42,7 @@
     <?php endif; ?>
 
     <div class="text-center mt-4 mb-5">
-        <h1 class="fw-bold">Welcome back, <span class="text-primary"><?= esc($username ?? 'User') ?>!</span></h1>
+        <h1 class="fw-bold">Welcome back, <span class="text-primary"><?= esc($username) ?>!</span></h1>
         <p class="lead text-muted">Your digital toolkit is ready. What will you create today?</p>
     </div>
 
