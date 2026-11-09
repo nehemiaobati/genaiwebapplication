@@ -177,7 +177,7 @@
                 <div class="row justify-content-center">
                     <div class="col-lg-8">
                         <h2 class="display-5 fw-bold mb-3">Ready to Start?</h2>
-                        <p class="lead mb-4 text-white-50">Build efficiently with AFRIKENKID.</p>
+                        <p class="lead mb-4 text-white-50">Join thousands of users building efficiently with AFRIKENKID.</p>
                         <a href="<?= url_to('register') ?>" class="btn btn-light btn-lg px-5 fw-bold rounded-pill" aria-label="Create your free Afrikenkid account">Create Free Account</a>
                     </div>
                 </div>

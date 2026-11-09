@@ -70,6 +70,15 @@
         <?= is_array($resolvedSchema) ? json_encode($resolvedSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $resolvedSchema ?>
     </script>
 
+    <!-- Theme Detection (Prevents FOUC deterministically before first paint) -->
+    <script>
+        (function() {
+            const stored = localStorage.getItem('theme');
+            const theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+
     <!-- Stylesheets -->
     <link href="<?= base_url('assets/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/bootstrap-icons/font/bootstrap-icons.css') ?>">
@@ -112,7 +121,6 @@
             font-family: 'Poppins', sans-serif;
             background-color: var(--light-bg);
             color: var(--text-body);
-            /* Prevents FOUC */
             transition: background-color 0.3s ease, color 0.3s ease;
             -webkit-font-smoothing: antialiased;
             /* Crisp text */
@@ -388,9 +396,6 @@
     <?php if (! $hasConsent): ?>
         <?= $this->include('partials/cookie_banner') ?>
     <?php endif; ?>
-    <noscript>
-        <style>body { visibility: visible !important; }</style>
-    </noscript>
 
     <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>" defer></script>
     <script defer>
@@ -407,7 +412,6 @@
                     this.setTheme(preferredTheme);
                     this.updateToggleIcons(preferredTheme);
                     this.bindEvents();
-                    document.body.style.visibility = 'visible';
                 },
                 getStoredTheme: () => localStorage.getItem('theme'),
                 setStoredTheme: theme => localStorage.setItem('theme', theme),
