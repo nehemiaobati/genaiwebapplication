@@ -123,6 +123,7 @@ class AuthController extends BaseController
         $data = [
             'pageTitle'       => 'Sign In to Your Workspace | AFRIKENKID Studio',
             'metaDescription' => 'Log in to your AFRIKENKID Studio workspace to access your generative AI studio, credit balance, API integrations, and saved generative projects.',
+            'metaKeywords'    => 'login, sign in, AFRIKENKID Studio',
             'canonicalUrl'    => url_to('login'),
             'robotsTag'       => 'index, follow',
         ];
