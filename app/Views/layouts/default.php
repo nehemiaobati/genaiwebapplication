@@ -20,9 +20,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 
     <!-- SEO Meta Tags -->
-    <title><?= esc($pageTitle) ?></title>
-    <meta name="description" content="<?= esc($metaDescription) ?>">
-    <meta name="keywords" content="<?= esc($metaKeywords) ?>">
+    <title><?= esc($pageTitle ?? '') ?></title>
+    <meta name="description" content="<?= esc($metaDescription ?? '') ?>">
+    <meta name="keywords" content="<?= esc($metaKeywords ?? '') ?>">
 
     <!-- Geo-targeting -->
     <meta name="geo.region" content="KE">
@@ -35,18 +35,18 @@
 
     <!-- Social Media Meta (Open Graph for Facebook/LinkedIn) -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="<?= esc($canonicalUrl) ?>">
-    <meta property="og:title" content="<?= esc($pageTitle) ?>">
-    <meta property="og:description" content="<?= esc($metaDescription) ?>">
-    <meta property="og:image" content="<?= esc($metaImage) ?>">
+    <meta property="og:url" content="<?= esc($canonicalUrl ?? '') ?>">
+    <meta property="og:title" content="<?= esc($pageTitle ?? '') ?>">
+    <meta property="og:description" content="<?= esc($metaDescription ?? '') ?>">
+    <meta property="og:image" content="<?= esc($metaImage ?? '') ?>">
 
     <!-- Twitter Card (LinkedIn also uses these) -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@afrikenkid">
-    <meta name="twitter:title" content="<?= esc($pageTitle) ?>">
-    <meta name="twitter:description" content="<?= esc($metaDescription) ?>">
-    <meta name="twitter:image" content="<?= esc($metaImage) ?>">
-    <meta name="twitter:image:alt" content="<?= esc($pageTitle) ?>">
+    <meta name="twitter:title" content="<?= esc($pageTitle ?? '') ?>">
+    <meta name="twitter:description" content="<?= esc($metaDescription ?? '') ?>">
+    <meta name="twitter:image" content="<?= esc($metaImage ?? '') ?>">
+    <meta name="twitter:image:alt" content="<?= esc($pageTitle ?? '') ?>">
 
     <!-- Structured Data -->
     <?php if (! empty($schemaJson)): ?>
@@ -224,9 +224,9 @@
         ]
     ];
 
-    $linksToRender = function ($pageIdentifier, $extraClasses = '') use ($navLinks) {
+    $linksToRender = function ($pageIdentifier = 'home', $extraClasses = '') use ($navLinks) {
         $linksToShow = session()->get('isLoggedIn') ? $navLinks['loggedIn'] : $navLinks['loggedOut'];
-        $currentIdentifier = $pageIdentifier;
+        $currentIdentifier = $pageIdentifier ?? 'home';
 
         foreach ($linksToShow as $link) {
             $isActive = ($currentIdentifier === $link['id']) ? 'active' : '';
@@ -249,7 +249,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
 
-                    <?php $linksToRender($pageIdentifier, 'fw-medium'); ?>
+                    <?php $linksToRender($pageIdentifier ?? 'home', 'fw-medium'); ?>
 
                     <?php if (session()->get('isLoggedIn')): ?>
                         <li class="nav-item dropdown">
@@ -291,7 +291,7 @@
         <div class="offcanvas-body d-flex flex-column">
             <ul class="navbar-nav flex-grow-1">
 
-                <?php $linksToRender($pageIdentifier, 'fw-bold fs-5'); ?>
+                <?php $linksToRender($pageIdentifier ?? 'home', 'fw-bold fs-5'); ?>
 
                 <li class="nav-item">
                     <hr class="dropdown-divider my-3">

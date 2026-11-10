@@ -33,9 +33,10 @@
                 <a href="<?= url_to('privacy') ?>" class="text-white fw-bold">Learn more</a>.
             </p>
             <div class="d-flex flex-shrink-0">
-                <?= form_open(url_to('cookie.accept')) ?>
+                <form action="<?= url_to('cookie.accept') ?>" method="post">
+                    <?= csrf_field() ?>
                     <button type="submit" id="acceptCookies" class="btn btn-primary fw-bold w-100">Accept</button>
-                <?= form_close() ?>
+                </form>
             </div>
         </div>
     </div>
