@@ -19,6 +19,13 @@ use CodeIgniter\HTTP\ResponseInterface;
 class HomeController extends BaseController
 {
     /**
+     * Loaded helpers.
+     *
+     * @var array<int, string>
+     */
+    protected $helpers = ['form'];
+
+    /**
      * Home Service instance.
      *
      * @var HomeService
@@ -54,15 +61,18 @@ class HomeController extends BaseController
         }
 
         $data = [
-            'pageTitle'       => 'Dashboard | ' . session()->get('username'),
+            'pageTitle'       => 'Dashboard | ' . (session()->get('username') ?: 'User'),
             'metaDescription' => 'Your dashboard. Check your account balance, manage your details, and access our AI and Blockchain services.',
+            'metaKeywords'    => 'dashboard, account, generative ai studio',
             'pageIdentifier'  => 'dashboard',
-            'username'        => session()->get('username'),
-            'email'           => session()->get('userEmail'),
+            'username'        => (string) (session()->get('username') ?: 'User'),
+            'email'           => (string) (session()->get('userEmail') ?: ''),
             'member_since'    => $user->created_at ?? null,
             'balance'         => $balance,
             'canonicalUrl'    => url_to('home'),
             'robotsTag'       => 'noindex, follow',
+            'metaImage'       => base_url('assets/images/afrikenkid_og_image.jpg'),
+            'schemaJson'      => null,
         ];
 
         return view('home/welcome_user', $data);
@@ -120,8 +130,10 @@ class HomeController extends BaseController
             'metaKeywords'    => 'Generative AI Studio, Generative Models, Google Gemini, OpenRouter AI, Ollama Private LLM, Blockchain Audit, Custom Software Solutions',
             'heroTitle'       => 'Generative AI Studio Platform',
             'heroSubtitle'    => 'Access to generative models, real-time blockchain, and custom software solutions.',
+            'pageIdentifier'  => 'home',
             'canonicalUrl'    => url_to('landing'),
             'robotsTag'       => 'index, follow, max-image-preview:large, max-snippet:-1',
+            'metaImage'       => base_url('assets/images/afrikenkid_og_image.jpg'),
             'schemaJson'      => $schemaJson,
         ];
 
@@ -138,8 +150,12 @@ class HomeController extends BaseController
         $data = [
             'pageTitle'       => 'Terms of Service | AFRIKENKID Generative AI',
             'metaDescription' => 'Review the Terms of Service governing the use of AFRIKENKID Studio platform, generative AI APIs, model billing, credit top-ups, and user rights.',
+            'metaKeywords'    => 'Terms of Service, AFRIKENKID, legal, agreement, policy',
+            'pageIdentifier'  => 'terms',
             'canonicalUrl'    => url_to('terms'),
             'robotsTag'       => 'index, follow',
+            'metaImage'       => base_url('assets/images/afrikenkid_og_image.jpg'),
+            'schemaJson'      => null,
         ];
 
         return view('home/terms', $data);
@@ -155,8 +171,12 @@ class HomeController extends BaseController
         $data = [
             'pageTitle'       => 'Privacy Policy | AFRIKENKID Generative AI',
             'metaDescription' => 'Understand how AFRIKENKID Studio handles your data, ensures confidentiality during local and cloud LLM inference, and protects your account privacy.',
+            'metaKeywords'    => 'Privacy Policy, AFRIKENKID, data protection, privacy',
+            'pageIdentifier'  => 'privacy',
             'canonicalUrl'    => url_to('privacy'),
             'robotsTag'       => 'index, follow',
+            'metaImage'       => base_url('assets/images/afrikenkid_og_image.jpg'),
+            'schemaJson'      => null,
         ];
 
         return view('home/privacy', $data);

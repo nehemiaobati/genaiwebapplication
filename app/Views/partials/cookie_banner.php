@@ -1,3 +1,11 @@
+<?php
+
+/**
+ * Cookie consent banner partial.
+ *
+ * @var \CodeIgniter\View\View $this
+ */
+?>
 <!-- Cookie Consent Banner -->
 <style>
     .cookie-consent-banner {

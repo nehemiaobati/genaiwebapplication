@@ -1,5 +1,17 @@
-<?= '
-' ?>
+<?php
+/**
+ * Master layout template.
+ *
+ * @var string                           $pageTitle
+ * @var string                           $metaDescription
+ * @var string                           $metaKeywords
+ * @var string                           $canonicalUrl
+ * @var string                           $robotsTag
+ * @var string                           $metaImage
+ * @var string                           $pageIdentifier
+ * @var array<string, mixed>|string|null $schemaJson
+ */
+?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
 
@@ -8,67 +20,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 
     <!-- SEO Meta Tags -->
-    <title><?= esc($pageTitle ?? 'AFRIKENKID Studio | Generative AI & Custom Software Engineering') ?></title>
-    <meta name="description" content="<?= esc($metaDescription ?? 'Explore AFRIKENKID Studio: Access unified generative AI models, private local LLM inference, blockchain verification, and custom web software solutions.') ?>">
-    <meta name="keywords" content="<?= esc($metaKeywords ?? 'Generative AI Studio, Generative Models, Google Gemini, OpenRouter, Ollama Private LLM, Blockchain, Custom Software Solutions, Web Application Development') ?>">
+    <title><?= esc($pageTitle ?? '') ?></title>
+    <meta name="description" content="<?= esc($metaDescription ?? '') ?>">
+    <meta name="keywords" content="<?= esc($metaKeywords ?? '') ?>">
 
     <!-- Geo-targeting -->
     <meta name="geo.region" content="KE">
     <meta name="geo.placename" content="Nairobi">
 
     <!-- Canonical & Robots -->
-    <link rel="canonical" href="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta name="robots" content="<?= esc($robotsTag ?? 'index, follow') ?>">
+    <link rel="canonical" href="<?= esc($canonicalUrl) ?>">
+    <meta name="robots" content="<?= esc($robotsTag) ?>">
     <link rel="icon" href="<?= base_url('favicon.ico') ?>" type="image/x-icon">
 
     <!-- Social Media Meta (Open Graph for Facebook/LinkedIn) -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="<?= esc($canonicalUrl ?? current_url()) ?>">
-    <meta property="og:title" content="<?= esc($pageTitle ?? 'AFRIKENKID Studio | Generative AI & Custom Software Engineering') ?>">
-    <meta property="og:description" content="<?= esc($metaDescription ?? 'Explore AFRIKENKID Studio: Access unified generative AI models, private local LLM inference, blockchain verification, and custom web software solutions.') ?>">
-    <meta property="og:image" content="<?= esc($metaImage ?? base_url('assets/images/afrikenkid_og_image.jpg')) ?>">
+    <meta property="og:url" content="<?= esc($canonicalUrl ?? '') ?>">
+    <meta property="og:title" content="<?= esc($pageTitle ?? '') ?>">
+    <meta property="og:description" content="<?= esc($metaDescription ?? '') ?>">
+    <meta property="og:image" content="<?= esc($metaImage ?? '') ?>">
 
     <!-- Twitter Card (LinkedIn also uses these) -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@afrikenkid">
-    <meta name="twitter:title" content="<?= esc($pageTitle ?? 'AFRIKENKID Studio | Generative AI & Custom Software Engineering') ?>">
-    <meta name="twitter:description" content="<?= esc($metaDescription ?? 'Explore AFRIKENKID Studio: Access unified generative AI models, private local LLM inference, blockchain verification, and custom web software solutions.') ?>">
-    <meta name="twitter:image" content="<?= esc($metaImage ?? base_url('assets/images/afrikenkid_og_image.jpg')) ?>">
-    <meta name="twitter:image:alt" content="AFRIKENKID Generative AI Studio Preview">
+    <meta name="twitter:title" content="<?= esc($pageTitle ?? '') ?>">
+    <meta name="twitter:description" content="<?= esc($metaDescription ?? '') ?>">
+    <meta name="twitter:image" content="<?= esc($metaImage ?? '') ?>">
+    <meta name="twitter:image:alt" content="<?= esc($pageTitle ?? '') ?>">
 
     <!-- Structured Data -->
-    <?php
-    $resolvedSchema = ! empty($schemaJson) ? $schemaJson : [
-        '@context'            => 'https://schema.org',
-        '@type'               => 'SoftwareApplication',
-        '@id'                 => base_url('#software'),
-        'name'                => 'AFRIKENKID Studio Platform',
-        'applicationCategory' => 'DeveloperApplication',
-        'operatingSystem'     => 'Web Browser',
-        'description'         => $metaDescription ?? 'Explore AFRIKENKID Studio: Access unified generative AI models, private local LLM inference, blockchain verification, and custom web software solutions.',
-        'url'                 => $canonicalUrl ?? current_url(),
-        'author'              => [
-            '@id' => base_url('#organization'),
-        ],
-        'featureList'         => [
-            'Generative AI Models',
-            'Google Gemini Generative AI',
-            'OpenRouter Multi-Model Hub',
-            'Ollama Private Local LLM Inference',
-            'Real-Time Blockchain Verification',
-            'Custom Software Solutions & High-Performance Architecture',
-        ],
-        'offers'              => [
-            '@type'         => 'Offer',
-            'price'         => '0',
-            'priceCurrency' => 'KES',
-            'description'   => 'Freemium access with credit-based top-ups.',
-        ],
-    ];
-    ?>
+    <?php if (! empty($schemaJson)): ?>
     <script type="application/ld+json">
-        <?= is_array($resolvedSchema) ? json_encode($resolvedSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $resolvedSchema ?>
+        <?= is_array($schemaJson) ? json_encode($schemaJson, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $schemaJson ?>
     </script>
+    <?php endif; ?>
 
     <!-- Theme Detection (Prevents FOUC deterministically before first paint) -->
     <script>
@@ -239,9 +224,9 @@
         ]
     ];
 
-    $linksToRender = function ($pageIdentifier, $extraClasses = '') use ($navLinks) {
+    $linksToRender = function ($pageIdentifier = 'home', $extraClasses = '') use ($navLinks) {
         $linksToShow = session()->get('isLoggedIn') ? $navLinks['loggedIn'] : $navLinks['loggedOut'];
-        $currentIdentifier = $pageIdentifier ?? '';
+        $currentIdentifier = $pageIdentifier ?? 'home';
 
         foreach ($linksToShow as $link) {
             $isActive = ($currentIdentifier === $link['id']) ? 'active' : '';
@@ -264,8 +249,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
 
-                    <?php $linksToRender($pageIdentifier ?? '', 'fw-medium'); // EDIT: Passed .fw-medium to the links 
-                    ?>
+                    <?php $linksToRender($pageIdentifier ?? 'home', 'fw-medium'); ?>
 
                     <?php if (session()->get('isLoggedIn')): ?>
                         <li class="nav-item dropdown">
@@ -307,8 +291,7 @@
         <div class="offcanvas-body d-flex flex-column">
             <ul class="navbar-nav flex-grow-1">
 
-                <?php $linksToRender($pageIdentifier ?? '', 'fw-bold fs-5'); // Larger text for mobile 
-                ?>
+                <?php $linksToRender($pageIdentifier ?? 'home', 'fw-bold fs-5'); ?>
 
                 <li class="nav-item">
                     <hr class="dropdown-divider my-3">
